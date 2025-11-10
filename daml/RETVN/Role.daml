@@ -1,0 +1,292 @@
+-- | Role-based access control for RETVN platform
+-- Users present verifiable credentials to gain role-specific capabilities
+module RETVN.Role where
+
+import DA.Time
+import W3C.VC
+
+-- | User role enumeration based on presented credentials
+data UserRole
+  = PrivateCitizen        -- Government ID only
+  | RealtorAgent          -- RE License + Brokerage Affiliation
+  | RealtorBroker         -- Broker License + Brokerage Registration
+  | RealtorMaster         -- Principal Broker + Business Registration
+  | NotaryPublic          -- Notary Commission
+  | TaxAuthority          -- Government Agency Credential
+  deriving (Eq, Show, Ord)
+
+-- | Verification weight assigned to each role
+getVerificationWeight : UserRole -> Int
+getVerificationWeight role = case role of
+  PrivateCitizen -> 5
+  RealtorAgent -> 8
+  RealtorBroker -> 12
+  RealtorMaster -> 15
+  NotaryPublic -> 25
+  TaxAuthority -> 40
+
+-- | User Account - Created after credential verification
+-- This is the core identity contract for a user on the platform
+template UserAccount
+  with
+    operator : Party                          -- Unlockit platform operator
+    user : Party                              -- The user
+    role : UserRole                           -- Determined by credentials
+    verificationWeight : Int                  -- Trust weight for verifications
+    credentialPresentations : [ContractId PresentationReceipt]  -- Proof of credentials
+    registeredAt : Time
+    status : AccountStatus
+  where
+    signatory operator, user
+    observer operator
+
+    ensure verificationWeight == getVerificationWeight role
+
+    -- | Request submission capability (non-consuming)
+    nonconsuming choice RequestSubmissionRight : ContractId TransactionSubmissionRight
+      controller user
+      do
+        assertMsg "Account must be active" (status == AccountActive)
+        create TransactionSubmissionRight with
+          operator = operator
+          user = user
+          role = role
+          verificationWeight = verificationWeight
+
+    -- | Request verification capability (non-consuming)
+    nonconsuming choice RequestVerificationRight : ContractId TransactionVerificationRight
+      controller user
+      do
+        assertMsg "Account must be active" (status == AccountActive)
+        assertMsg "Role must allow verification" (canVerifyTransactions role)
+        create TransactionVerificationRight with
+          operator = operator
+          user = user
+          role = role
+          verificationWeight = verificationWeight
+
+    -- | Request market data access (non-consuming)
+    nonconsuming choice RequestMarketDataAccess : ContractId MarketDataAccessRight
+      with
+        tier : DataAccessTier
+      controller user
+      do
+        assertMsg "Account must be active" (status == AccountActive)
+        assertMsg "User has required access level" (hasDataAccessLevel role tier)
+        create MarketDataAccessRight with
+          operator = operator
+          user = user
+          role = role
+          tier = tier
+          grantedAt = registeredAt  -- Use registeredAt as current time placeholder
+
+    -- | Suspend account (e.g., if credentials expire)
+    choice SuspendAccount : ContractId UserAccount
+      controller operator
+      do
+        create this with status = AccountSuspended
+
+    -- | Reactivate account
+    choice ReactivateAccount : ContractId UserAccount
+      controller operator
+      do
+        assertMsg "Can only reactivate suspended accounts" (status == AccountSuspended)
+        create this with status = AccountActive
+
+    -- | Archive account permanently
+    choice ArchiveAccount : ()
+      controller operator
+      do
+        return ()
+
+-- | Account status
+data AccountStatus
+  = AccountActive
+  | AccountSuspended
+  | AccountPendingReview
+  deriving (Eq, Show)
+
+-- | Registration request - User presents credentials to request account creation
+template RegistrationRequest
+  with
+    operator : Party
+    user : Party
+    requestedRole : UserRole
+    credentialPresentations : [ContractId PresentationReceipt]
+    requestedAt : Time
+  where
+    signatory user
+    observer operator
+
+    -- | Operator approves registration after credential verification
+    choice ApproveRegistration : ContractId UserAccount
+      controller operator
+      do
+        -- In production, would verify all credential presentations here
+        create UserAccount with
+          operator = operator
+          user = user
+          role = requestedRole
+          verificationWeight = getVerificationWeight requestedRole
+          credentialPresentations = credentialPresentations
+          registeredAt = requestedAt
+          status = AccountActive
+
+    -- | Operator rejects registration
+    choice RejectRegistration : ()
+      with
+        reason : Text
+      controller operator
+      do
+        return ()
+
+-- | Transaction Submission Right - Capability to submit transaction data
+template TransactionSubmissionRight
+  with
+    operator : Party
+    user : Party
+    role : UserRole
+    verificationWeight : Int
+  where
+    signatory operator
+    observer user
+
+    -- | Delegate this right (e.g., to a specific transaction contract)
+    choice DelegateSubmission : ContractId TransactionSubmissionDelegation
+      with
+        transactionId : Text
+      controller user
+      do
+        create TransactionSubmissionDelegation with
+          operator = operator
+          user = user
+          role = role
+          verificationWeight = verificationWeight
+          transactionId = transactionId
+
+-- | Delegation of submission right to specific transaction
+template TransactionSubmissionDelegation
+  with
+    operator : Party
+    user : Party
+    role : UserRole
+    verificationWeight : Int
+    transactionId : Text
+  where
+    signatory operator
+    observer user
+
+-- | Transaction Verification Right - Capability to verify transactions
+template TransactionVerificationRight
+  with
+    operator : Party
+    user : Party
+    role : UserRole
+    verificationWeight : Int
+  where
+    signatory operator
+    observer user
+
+    ensure canVerifyTransactions role
+
+    -- | Delegate verification right to specific transaction
+    choice DelegateVerification : ContractId TransactionVerificationDelegation
+      with
+        transactionId : Text
+      controller user
+      do
+        create TransactionVerificationDelegation with
+          operator = operator
+          user = user
+          role = role
+          verificationWeight = verificationWeight
+          transactionId = transactionId
+
+-- | Delegation of verification right to specific transaction
+template TransactionVerificationDelegation
+  with
+    operator : Party
+    user : Party
+    role : UserRole
+    verificationWeight : Int
+    transactionId : Text
+  where
+    signatory operator
+    observer user
+
+-- | Market Data Access Right - Capability to access market data
+template MarketDataAccessRight
+  with
+    operator : Party
+    user : Party
+    role : UserRole
+    tier : DataAccessTier
+    grantedAt : Time
+  where
+    signatory operator
+    observer user
+
+    -- | Use this access right to query data (non-consuming)
+    nonconsuming choice QueryMarketData : ContractId MarketDataQueryReceipt
+      with
+        postalCode : Text
+        timeRange : Int  -- Days of historical data
+      controller user
+      do
+        assertMsg "Access tier allows this query" (tierAllowsQuery tier timeRange)
+        create MarketDataQueryReceipt with
+          operator = operator
+          user = user
+          role = role
+          tier = tier
+          postalCode = postalCode
+          queriedAt = grantedAt
+
+-- | Receipt of market data query
+template MarketDataQueryReceipt
+  with
+    operator : Party
+    user : Party
+    role : UserRole
+    tier : DataAccessTier
+    postalCode : Text
+    queriedAt : Time
+  where
+    signatory user
+    observer operator
+
+-- | Market data access tiers
+data DataAccessTier
+  = PublicAccess           -- Free, limited data
+  | BasicReport            -- $9.99, 90 days, aggregates only
+  | ProfessionalReport     -- $49.99, 365 days, individual transactions
+  | InstitutionalAccess    -- $499/mo, unlimited, API access
+  deriving (Eq, Show, Ord)
+
+-- | Check if role can verify transactions
+canVerifyTransactions : UserRole -> Bool
+canVerifyTransactions role = case role of
+  PrivateCitizen -> False  -- Citizens cannot verify
+  RealtorAgent -> True
+  RealtorBroker -> True
+  RealtorMaster -> True
+  NotaryPublic -> True
+  TaxAuthority -> True
+
+-- | Check if role has access to data tier
+hasDataAccessLevel : UserRole -> DataAccessTier -> Bool
+hasDataAccessLevel role tier = case tier of
+  PublicAccess -> True  -- Everyone can access public data
+  BasicReport -> True   -- Everyone can purchase basic reports
+  ProfessionalReport -> True  -- Everyone can purchase professional reports
+  InstitutionalAccess ->
+    -- Only professional roles can get institutional access
+    role `elem` [RealtorBroker, RealtorMaster, TaxAuthority]
+
+-- | Check if data tier allows querying specific time range
+tierAllowsQuery : DataAccessTier -> Int -> Bool
+tierAllowsQuery tier days = case tier of
+  PublicAccess -> days <= 30
+  BasicReport -> days <= 90
+  ProfessionalReport -> days <= 365
+  InstitutionalAccess -> True  -- Unlimited

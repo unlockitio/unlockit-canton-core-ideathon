@@ -1,0 +1,292 @@
+-- | Real Estate Transaction data submission and verification
+module RETVN.Transaction where
+
+import DA.Time
+import DA.List (sortOn, dedup)
+import RETVN.Role
+
+-- | Property type enumeration (RESO Standard aligned)
+data PropertyType
+  = SingleFamily
+  | Condo
+  | Townhouse
+  | MultiFamily
+  | Land
+  deriving (Eq, Show)
+
+-- | Transaction data point submitted by a verified user
+template TransactionData
+  with
+    operator : Party                    -- Unlockit platform
+    submitter : Party                   -- Who submitted this data
+    submitterRole : UserRole            -- Role of submitter
+    transactionId : Text                -- Unique transaction identifier
+
+    -- Property information (RESO aligned)
+    propertyAddress : Text              -- Full address (encrypted off-chain in production)
+    postalCode : Text                   -- For aggregation and privacy
+    propertyType : PropertyType
+    livingAreaSqft : Optional Int
+    lotSizeSqft : Optional Int
+    bedroomsTotal : Optional Int
+    bathroomsTotal : Optional Int
+    yearBuilt : Optional Int
+
+    -- Transaction details
+    salePrice : Decimal
+    transactionDate : Time
+    closingDate : Optional Time
+    financingType : Optional Text
+    daysOnMarket : Optional Int
+
+    -- Verification metadata
+    assignedVerifiers : [Party]         -- Who can verify this transaction
+    verifications : [Verification]      -- Verifications received
+    trustScore : Int                    -- Calculated trust score
+    status : TransactionStatus
+
+    submittedAt : Time
+  where
+    signatory operator, submitter
+    observer assignedVerifiers
+
+    ensure
+      transactionId /= "" &&
+      postalCode /= "" &&
+      salePrice > 0.0 &&
+      trustScore >= 0 && trustScore <= 100
+
+    -- | Assign additional verifier to this transaction
+    choice AssignVerifier : ContractId TransactionData
+      with
+        verifier : Party
+      controller operator
+      do
+        create this with
+          assignedVerifiers = verifier :: assignedVerifiers
+
+    -- | Submit verification (requires TransactionVerificationDelegation)
+    choice SubmitVerification : ContractId TransactionData
+      with
+        verificationDelegation : ContractId TransactionVerificationDelegation
+        decision : VerificationDecision
+        notes : Optional Text
+        verifiedAt : Time
+      controller operator  -- Operator mediates verification
+      do
+        -- Fetch and verify the delegation
+        delegation <- fetch verificationDelegation
+        assertMsg "Delegation is for this transaction" (delegation.transactionId == transactionId)
+        assertMsg "Verifier is assigned to this transaction" (delegation.user `elem` assignedVerifiers)
+
+        -- Check verifier hasn't already verified
+        let existingVerifiers = map (\v -> v.verifier) verifications
+        assertMsg "Verifier hasn't already verified" (delegation.user `notElem` existingVerifiers)
+
+        -- Create verification record
+        let verification = Verification with
+              verifier = delegation.user
+              verifierRole = delegation.role
+              verificationWeight = delegation.verificationWeight
+              decision = decision
+              notes = notes
+              verifiedAt = verifiedAt
+
+        -- Calculate new trust score
+        let newVerifications = verification :: verifications
+        let newTrustScore = calculateTrustScore newVerifications
+        let newStatus = determineStatus newVerifications
+
+        -- Archive the delegation (single use)
+        archive verificationDelegation
+
+        create this with
+          verifications = newVerifications
+          trustScore = newTrustScore
+          status = newStatus
+
+    -- | Query transaction details (non-consuming, requires access right)
+    nonconsuming choice QueryTransaction : TransactionDataView
+      with
+        requester : Party
+        accessTier : DataAccessTier
+      controller requester
+      do
+        return $ if accessTier >= ProfessionalReport
+          then FullView this
+          else AggregateView (postalCode, propertyType, salePrice, trustScore)
+
+-- | Verification record
+data Verification = Verification
+  with
+    verifier : Party
+    verifierRole : UserRole
+    verificationWeight : Int
+    decision : VerificationDecision
+    notes : Optional Text
+    verifiedAt : Time
+  deriving (Eq, Show)
+
+-- | Verification decision
+data VerificationDecision
+  = Confirmed                  -- All data accurate
+  | ConfirmedWithNotes        -- Accurate but with context
+  | Disputed                  -- Data is incorrect
+  | RequestClarification      -- Need more info
+  deriving (Eq, Show)
+
+-- | Transaction status based on verifications
+data TransactionStatus
+  = Unverified                -- No verifications yet
+  | PartiallyVerified        -- Some verifications, no disputes
+  | FullyVerified            -- Multiple verifications from different roles
+  | DisputedTransaction      -- At least one dispute
+  deriving (Eq, Show)
+
+-- | View of transaction data (privacy-preserving)
+data TransactionDataView
+  = FullView TransactionData                                    -- Full details
+  | AggregateView (Text, PropertyType, Decimal, Int)           -- (PostalCode, Type, Price, TrustScore)
+  deriving (Show)
+
+-- | Calculate trust score from verifications
+calculateTrustScore : [Verification] -> Int
+calculateTrustScore verifications =
+  let confirmedVerifications = filter isConfirmed verifications
+      disputedVerifications = filter isDisputed verifications
+
+      -- Sum of weights for confirmed verifications
+      confirmedWeight = sum $ map (\v -> v.verificationWeight) confirmedVerifications
+
+      -- Penalty for disputes
+      disputePenalty = sum $ map (\v -> v.verificationWeight * 2) disputedVerifications
+
+      rawScore = confirmedWeight - disputePenalty
+  in
+    if rawScore > 100 then 100
+    else if rawScore < 0 then 0
+    else rawScore
+
+-- | Determine transaction status from verifications
+determineStatus : [Verification] -> TransactionStatus
+determineStatus [] = Unverified
+determineStatus verifications =
+  let hasDispute = any isDisputed verifications
+      confirmedCount = length $ filter isConfirmed verifications
+      uniqueRoles = dedup $ map (\v -> v.verifierRole) $ filter isConfirmed verifications
+  in
+    if hasDispute then DisputedTransaction
+    else if confirmedCount >= 3 && length uniqueRoles >= 2 then FullyVerified
+    else if confirmedCount >= 1 then PartiallyVerified
+    else Unverified
+
+-- | Helper: Is verification a confirmation?
+isConfirmed : Verification -> Bool
+isConfirmed v = v.decision == Confirmed || v.decision == ConfirmedWithNotes
+
+-- | Helper: Is verification a dispute?
+isDisputed : Verification -> Bool
+isDisputed v = v.decision == Disputed
+
+-- | Transaction submission proposal (before operator creates TransactionData)
+template TransactionSubmissionProposal
+  with
+    operator : Party
+    submitter : Party
+    submitterRole : UserRole
+    submissionRight : ContractId TransactionSubmissionDelegation
+
+    transactionId : Text
+    propertyAddress : Text
+    postalCode : Text
+    propertyType : PropertyType
+    livingAreaSqft : Optional Int
+    lotSizeSqft : Optional Int
+    bedroomsTotal : Optional Int
+    bathroomsTotal : Optional Int
+    yearBuilt : Optional Int
+    salePrice : Decimal
+    transactionDate : Time
+    closingDate : Optional Time
+    financingType : Optional Text
+    daysOnMarket : Optional Int
+
+    proposedVerifiers : [Party]
+    submittedAt : Time
+  where
+    signatory submitter
+    observer operator
+
+    -- | Operator accepts and creates TransactionData
+    choice AcceptSubmission : ContractId TransactionData
+      controller operator
+      do
+        -- Verify submission right
+        delegation <- fetch submissionRight
+        assertMsg "Submitter matches delegation" (delegation.user == submitter)
+
+        -- Archive the delegation (single use)
+        archive submissionRight
+
+        -- Create the transaction data with initial trust score from submitter
+        create TransactionData with
+          operator = operator
+          submitter = submitter
+          submitterRole = submitterRole
+          transactionId = transactionId
+          propertyAddress = propertyAddress
+          postalCode = postalCode
+          propertyType = propertyType
+          livingAreaSqft = livingAreaSqft
+          lotSizeSqft = lotSizeSqft
+          bedroomsTotal = bedroomsTotal
+          bathroomsTotal = bathroomsTotal
+          yearBuilt = yearBuilt
+          salePrice = salePrice
+          transactionDate = transactionDate
+          closingDate = closingDate
+          financingType = financingType
+          daysOnMarket = daysOnMarket
+          assignedVerifiers = proposedVerifiers
+          verifications = []
+          trustScore = getVerificationWeight submitterRole  -- Initial score from submitter
+          status = Unverified
+          submittedAt = submittedAt
+
+    -- | Operator rejects submission
+    choice RejectSubmission : ()
+      with
+        reason : Text
+      controller operator
+      do
+        return ()
+
+-- | Aggregate market data for a postal code (created by operator)
+template MarketDataAggregate
+  with
+    operator : Party
+    postalCode : Text
+    timeRangeDays : Int
+
+    -- Aggregate statistics
+    transactionCount : Int
+    medianPrice : Decimal
+    averagePrice : Decimal
+    medianPricePerSqft : Optional Decimal
+    averageDaysOnMarket : Optional Int
+
+    -- Property type distribution
+    propertyTypeDistribution : [(PropertyType, Int)]
+
+    -- Trust metrics
+    averageTrustScore : Int
+
+    generatedAt : Time
+  where
+    signatory operator
+
+    -- | Query aggregate data (public, non-consuming)
+    nonconsuming choice QueryAggregate : MarketDataAggregate
+      controller operator
+      do
+        return this

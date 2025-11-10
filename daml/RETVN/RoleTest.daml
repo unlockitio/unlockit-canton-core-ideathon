@@ -1,0 +1,528 @@
+-- | Test scenarios for RETVN role-based access control and transaction flow
+module RETVN.RoleTest where
+
+import Daml.Script
+import DA.Time
+import DA.Date (date, Month(..))
+import W3C.VC
+import RETVN.Role
+import RETVN.Transaction
+
+-- | Complete flow: Credential presentation -> Account creation -> Transaction submission and verification
+testCompleteRetvnFlow : Script ()
+testCompleteRetvnFlow = script do
+  -- Setup parties
+  operator <- allocateParty "Unlockit_Operator"
+  caDRE <- allocateParty "CA_Dept_of_Real_Estate"
+  caDMV <- allocateParty "California_DMV"
+  kellerWilliams <- allocateParty "Keller_Williams"
+  maria <- allocateParty "Maria_Rodriguez"
+  john <- allocateParty "John_Doe"
+  sarah <- allocateParty "Sarah_Chen"
+
+  let now = time (date 2024 Dec 15) 10 0 0
+  let futureExpiry = time (date 2025 Jun 30) 23 59 59
+
+  -- ========================================
+  -- STEP 1: Maria obtains credentials
+  -- ========================================
+
+  -- Maria gets government ID
+  govIdRequest <- submit maria do
+    createCmd CredentialIssuanceRequest with
+      requestId = "GOV-ID-MARIA-001"
+      issuer = caDMV
+      subject = maria
+      requestedCredentialType = ["VerifiableCredential", "GovernmentIDCredential"]
+      requestedClaims = [("licenseNumber", "D7654321"), ("state", "California")]
+      supportingDocuments = []
+
+  govIdCred <- submit caDMV do
+    exerciseCmd govIdRequest ApproveAndIssue with
+      credentialId = "urn:uuid:gov-id-maria"
+      issuanceDate = now
+      expirationDate = Some futureExpiry
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dmv#key-1"
+        proofValue = "dmv-signature"
+      subjectDid = "did:example:maria"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  -- Add operator as verifier
+  govIdCred <- submit caDMV do
+    exerciseCmd govIdCred AddVerifier with verifier = operator
+
+  -- Maria gets real estate license
+  licenseRequest <- submit maria do
+    createCmd CredentialIssuanceRequest with
+      requestId = "RE-LIC-MARIA-001"
+      issuer = caDRE
+      subject = maria
+      requestedCredentialType = ["VerifiableCredential", "RealEstateLicenseCredential"]
+      requestedClaims = [("licenseNumber", "02056789"), ("licenseType", "Real Estate Agent")]
+      supportingDocuments = []
+
+  licenseCred <- submit caDRE do
+    exerciseCmd licenseRequest ApproveAndIssue with
+      credentialId = "urn:uuid:re-license-maria"
+      issuanceDate = now
+      expirationDate = Some futureExpiry
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dre#key-1"
+        proofValue = "dre-signature"
+      subjectDid = "did:example:maria"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  licenseCred <- submit caDRE do
+    exerciseCmd licenseCred AddVerifier with verifier = operator
+
+  -- Maria gets brokerage affiliation
+  brokerageRequest <- submit maria do
+    createCmd CredentialIssuanceRequest with
+      requestId = "BROKER-AFF-MARIA-001"
+      issuer = kellerWilliams
+      subject = maria
+      requestedCredentialType = ["VerifiableCredential", "BrokerageAffiliationCredential"]
+      requestedClaims = [("affiliationId", "KW-CA-12345")]
+      supportingDocuments = []
+
+  brokerageCred <- submit kellerWilliams do
+    exerciseCmd brokerageRequest ApproveAndIssue with
+      credentialId = "urn:uuid:brokerage-aff-maria"
+      issuanceDate = now
+      expirationDate = Some futureExpiry
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:kw#key-1"
+        proofValue = "kw-signature"
+      subjectDid = "did:example:maria"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  brokerageCred <- submit kellerWilliams do
+    exerciseCmd brokerageCred AddVerifier with verifier = operator
+
+  -- ========================================
+  -- STEP 2: Maria presents credentials to RETVN platform
+  -- ========================================
+
+  govIdReceipt <- submit maria do
+    exerciseCmd govIdCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-maria"
+      presentationProof = "maria-gov-id-proof"
+
+  licenseReceipt <- submit maria do
+    exerciseCmd licenseCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-maria"
+      presentationProof = "maria-license-proof"
+
+  brokerageReceipt <- submit maria do
+    exerciseCmd brokerageCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-maria"
+      presentationProof = "maria-brokerage-proof"
+
+  -- ========================================
+  -- STEP 3: Maria requests account registration
+  -- ========================================
+
+  mariaRegRequest <- submit maria do
+    createCmd RegistrationRequest with
+      operator = operator
+      user = maria
+      requestedRole = RealtorAgent
+      credentialPresentations = [govIdReceipt, licenseReceipt, brokerageReceipt]
+      requestedAt = now
+
+  -- ========================================
+  -- STEP 4: Operator approves and creates UserAccount
+  -- ========================================
+
+  mariaAccount <- submit operator do
+    exerciseCmd mariaRegRequest ApproveRegistration
+
+  -- ========================================
+  -- STEP 5: Maria requests submission and verification rights
+  -- ========================================
+
+  mariaSubmissionRight <- submit maria do
+    exerciseCmd mariaAccount RequestSubmissionRight
+
+  mariaVerificationRight <- submit maria do
+    exerciseCmd mariaAccount RequestVerificationRight
+
+  -- ========================================
+  -- STEP 6: John (another agent) also registers
+  -- ========================================
+
+  -- John gets government ID
+  johnGovIdRequest <- submit john do
+    createCmd CredentialIssuanceRequest with
+      requestId = "GOV-ID-JOHN-001"
+      issuer = caDMV
+      subject = john
+      requestedCredentialType = ["VerifiableCredential", "GovernmentIDCredential"]
+      requestedClaims = [("licenseNumber", "D1234567")]
+      supportingDocuments = []
+
+  johnGovIdCred <- submit caDMV do
+    exerciseCmd johnGovIdRequest ApproveAndIssue with
+      credentialId = "urn:uuid:gov-id-john"
+      issuanceDate = now
+      expirationDate = Some futureExpiry
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dmv#key-1"
+        proofValue = "dmv-sig-john"
+      subjectDid = "did:example:john"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  johnGovIdCred <- submit caDMV do
+    exerciseCmd johnGovIdCred AddVerifier with verifier = operator
+
+  -- John gets real estate license
+  johnLicenseRequest <- submit john do
+    createCmd CredentialIssuanceRequest with
+      requestId = "RE-LIC-JOHN-001"
+      issuer = caDRE
+      subject = john
+      requestedCredentialType = ["VerifiableCredential", "RealEstateLicenseCredential"]
+      requestedClaims = [("licenseNumber", "02067890")]
+      supportingDocuments = []
+
+  johnLicenseCred <- submit caDRE do
+    exerciseCmd johnLicenseRequest ApproveAndIssue with
+      credentialId = "urn:uuid:re-license-john"
+      issuanceDate = now
+      expirationDate = Some futureExpiry
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dre#key-1"
+        proofValue = "dre-sig-john"
+      subjectDid = "did:example:john"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  johnLicenseCred <- submit caDRE do
+    exerciseCmd johnLicenseCred AddVerifier with verifier = operator
+
+  -- John presents credentials
+  johnGovIdReceipt <- submit john do
+    exerciseCmd johnGovIdCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-john"
+      presentationProof = "john-gov-id-proof"
+
+  johnLicenseReceipt <- submit john do
+    exerciseCmd johnLicenseCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-john"
+      presentationProof = "john-license-proof"
+
+  -- John registers
+  johnRegRequest <- submit john do
+    createCmd RegistrationRequest with
+      operator = operator
+      user = john
+      requestedRole = RealtorAgent
+      credentialPresentations = [johnGovIdReceipt, johnLicenseReceipt]
+      requestedAt = now
+
+  johnAccount <- submit operator do
+    exerciseCmd johnRegRequest ApproveRegistration
+
+  johnVerificationRight <- submit john do
+    exerciseCmd johnAccount RequestVerificationRight
+
+  -- ========================================
+  -- STEP 7: Sarah (private citizen) registers
+  -- ========================================
+
+  sarahGovIdRequest <- submit sarah do
+    createCmd CredentialIssuanceRequest with
+      requestId = "GOV-ID-SARAH-001"
+      issuer = caDMV
+      subject = sarah
+      requestedCredentialType = ["VerifiableCredential", "GovernmentIDCredential"]
+      requestedClaims = [("licenseNumber", "D9876543")]
+      supportingDocuments = []
+
+  sarahGovIdCred <- submit caDMV do
+    exerciseCmd sarahGovIdRequest ApproveAndIssue with
+      credentialId = "urn:uuid:gov-id-sarah"
+      issuanceDate = now
+      expirationDate = Some futureExpiry
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dmv#key-1"
+        proofValue = "dmv-sig-sarah"
+      subjectDid = "did:example:sarah"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  sarahGovIdCred <- submit caDMV do
+    exerciseCmd sarahGovIdCred AddVerifier with verifier = operator
+
+  sarahGovIdReceipt <- submit sarah do
+    exerciseCmd sarahGovIdCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-sarah"
+      presentationProof = "sarah-gov-id-proof"
+
+  sarahRegRequest <- submit sarah do
+    createCmd RegistrationRequest with
+      operator = operator
+      user = sarah
+      requestedRole = PrivateCitizen
+      credentialPresentations = [sarahGovIdReceipt]
+      requestedAt = now
+
+  sarahAccount <- submit operator do
+    exerciseCmd sarahRegRequest ApproveRegistration
+
+  sarahSubmissionRight <- submit sarah do
+    exerciseCmd sarahAccount RequestSubmissionRight
+
+  -- ========================================
+  -- STEP 8: Maria submits a transaction
+  -- ========================================
+
+  -- Maria delegates her submission right
+  mariaDelegation <- submit maria do
+    exerciseCmd mariaSubmissionRight DelegateSubmission with
+      transactionId = "TXN-2024-001"
+
+  -- Maria creates submission proposal
+  mariaProposal <- submit maria do
+    createCmd TransactionSubmissionProposal with
+      operator = operator
+      submitter = maria
+      submitterRole = RealtorAgent
+      submissionRight = mariaDelegation
+      transactionId = "TXN-2024-001"
+      propertyAddress = "123 Main St, San Francisco, CA"
+      postalCode = "94102"
+      propertyType = SingleFamily
+      livingAreaSqft = Some 1500
+      lotSizeSqft = Some 3000
+      bedroomsTotal = Some 3
+      bathroomsTotal = Some 2
+      yearBuilt = Some 1995
+      salePrice = 850000.0
+      transactionDate = now
+      closingDate = Some now
+      financingType = Some "Conventional"
+      daysOnMarket = Some 30
+      proposedVerifiers = [john, sarah]
+      submittedAt = now
+
+  -- Operator accepts the submission
+  transaction <- submit operator do
+    exerciseCmd mariaProposal AcceptSubmission
+
+  -- ========================================
+  -- STEP 9: John verifies the transaction
+  -- ========================================
+
+  johnVerificationDelegation <- submit john do
+    exerciseCmd johnVerificationRight DelegateVerification with
+      transactionId = "TXN-2024-001"
+
+  transactionAfterJohn <- submit operator do
+    exerciseCmd transaction SubmitVerification with
+      verificationDelegation = johnVerificationDelegation
+      decision = Confirmed
+      notes = Some "I represented the buyer in this transaction. All details are accurate."
+      verifiedAt = now
+
+  -- ========================================
+  -- STEP 10: Sarah cannot verify (PrivateCitizen role)
+  -- ========================================
+
+  -- This should fail because PrivateCitizen cannot verify
+  submitMustFail sarah do
+    exerciseCmd sarahAccount RequestVerificationRight
+
+  return ()
+
+-- | Test: Private citizen cannot verify transactions
+testPrivateCitizenCannotVerify : Script ()
+testPrivateCitizenCannotVerify = script do
+  operator <- allocateParty "Unlockit_Operator"
+  caDMV <- allocateParty "California_DMV"
+  citizen <- allocateParty "Jane_Citizen"
+
+  let now = time (date 2024 Dec 15) 10 0 0
+
+  -- Citizen gets government ID
+  govIdRequest <- submit citizen do
+    createCmd CredentialIssuanceRequest with
+      requestId = "GOV-ID-CITIZEN-001"
+      issuer = caDMV
+      subject = citizen
+      requestedCredentialType = ["VerifiableCredential", "GovernmentIDCredential"]
+      requestedClaims = [("licenseNumber", "D5555555")]
+      supportingDocuments = []
+
+  govIdCred <- submit caDMV do
+    exerciseCmd govIdRequest ApproveAndIssue with
+      credentialId = "urn:uuid:gov-id-citizen"
+      issuanceDate = now
+      expirationDate = Some (time (date 2025 Dec 15) 23 59 59)
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dmv#key-1"
+        proofValue = "dmv-signature"
+      subjectDid = "did:example:citizen"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  govIdCred <- submit caDMV do
+    exerciseCmd govIdCred AddVerifier with verifier = operator
+
+  govIdReceipt <- submit citizen do
+    exerciseCmd govIdCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-citizen"
+      presentationProof = "citizen-proof"
+
+  regRequest <- submit citizen do
+    createCmd RegistrationRequest with
+      operator = operator
+      user = citizen
+      requestedRole = PrivateCitizen
+      credentialPresentations = [govIdReceipt]
+      requestedAt = now
+
+  citizenAccount <- submit operator do
+    exerciseCmd regRequest ApproveRegistration
+
+  -- This should fail: PrivateCitizen cannot request verification rights
+  submitMustFail citizen do
+    exerciseCmd citizenAccount RequestVerificationRight
+
+  return ()
+
+-- | Test: Market data access tiers
+testMarketDataAccess : Script ()
+testMarketDataAccess = script do
+  operator <- allocateParty "Unlockit_Operator"
+  caDRE <- allocateParty "CA_DRE"
+  caDMV <- allocateParty "California_DMV"
+  broker <- allocateParty "Broker_Bob"
+
+  let now = time (date 2024 Dec 15) 10 0 0
+
+  -- Broker gets credentials
+  govIdRequest <- submit broker do
+    createCmd CredentialIssuanceRequest with
+      requestId = "GOV-ID-BROKER-001"
+      issuer = caDMV
+      subject = broker
+      requestedCredentialType = ["VerifiableCredential", "GovernmentIDCredential"]
+      requestedClaims = [("licenseNumber", "D3333333")]
+      supportingDocuments = []
+
+  govIdCred <- submit caDMV do
+    exerciseCmd govIdRequest ApproveAndIssue with
+      credentialId = "urn:uuid:gov-id-broker"
+      issuanceDate = now
+      expirationDate = Some (time (date 2025 Dec 15) 23 59 59)
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dmv#key-1"
+        proofValue = "dmv-signature"
+      subjectDid = "did:example:broker"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  govIdCred <- submit caDMV do
+    exerciseCmd govIdCred AddVerifier with verifier = operator
+
+  brokerLicenseRequest <- submit broker do
+    createCmd CredentialIssuanceRequest with
+      requestId = "BROKER-LIC-001"
+      issuer = caDRE
+      subject = broker
+      requestedCredentialType = ["VerifiableCredential", "BrokerLicenseCredential"]
+      requestedClaims = [("licenseNumber", "01234567")]
+      supportingDocuments = []
+
+  brokerLicenseCred <- submit caDRE do
+    exerciseCmd brokerLicenseRequest ApproveAndIssue with
+      credentialId = "urn:uuid:broker-license"
+      issuanceDate = now
+      expirationDate = Some (time (date 2025 Dec 15) 23 59 59)
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dre#key-1"
+        proofValue = "dre-signature"
+      subjectDid = "did:example:broker"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  brokerLicenseCred <- submit caDRE do
+    exerciseCmd brokerLicenseCred AddVerifier with verifier = operator
+
+  -- Present credentials
+  govIdReceipt <- submit broker do
+    exerciseCmd govIdCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-broker"
+      presentationProof = "broker-gov-id-proof"
+
+  licenseReceipt <- submit broker do
+    exerciseCmd brokerLicenseCred PresentCredential with
+      verifier = operator
+      challenge = "retvn-registration-broker"
+      presentationProof = "broker-license-proof"
+
+  -- Register
+  regRequest <- submit broker do
+    createCmd RegistrationRequest with
+      operator = operator
+      user = broker
+      requestedRole = RealtorBroker
+      credentialPresentations = [govIdReceipt, licenseReceipt]
+      requestedAt = now
+
+  brokerAccount <- submit operator do
+    exerciseCmd regRequest ApproveRegistration
+
+  -- Broker can access institutional tier
+  institutionalAccess <- submit broker do
+    exerciseCmd brokerAccount RequestMarketDataAccess with
+      tier = InstitutionalAccess
+
+  -- Query market data
+  queryReceipt <- submit broker do
+    exerciseCmd institutionalAccess QueryMarketData with
+      postalCode = "94102"
+      timeRange = 365
+
+  return ()

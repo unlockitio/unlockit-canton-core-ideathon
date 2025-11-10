@@ -1,0 +1,328 @@
+-- | Test and example scenarios for W3C Verifiable Credentials
+module W3C.VCTest where
+
+import Daml.Script
+import DA.Time
+import DA.Date (date, Month(..))
+import W3C.VC
+
+-- | Test scenario: Real estate agent credential lifecycle
+testRealEstateCredential : Script ()
+testRealEstateCredential = script do
+  -- Setup parties
+  caDRE <- allocateParty "CA_Dept_of_Real_Estate"
+  maria <- allocateParty "Maria_Rodriguez"
+  retvnPlatform <- allocateParty "RETVN_Platform"
+  kellerWilliams <- allocateParty "Keller_Williams"
+
+  -- Timestamps
+  let issuanceTime = time (date 2024 Feb 1) 9 0 0
+  let expirationTime = time (date 2025 Jun 30) 23 59 59
+  let currentTime = time (date 2024 Dec 15) 14 30 0
+
+  -- Step 1: Maria requests a real estate agent license credential
+  requestId <- submit maria do
+    createCmd CredentialIssuanceRequest with
+      requestId = "REQ-2024-001"
+      issuer = caDRE
+      subject = maria
+      requestedCredentialType = ["VerifiableCredential", "RealEstateLicenseCredential"]
+      requestedClaims =
+        [ ("licenseType", "Real Estate Agent")
+        , ("licenseNumber", "02056789")
+        , ("jurisdiction", "California")
+        , ("status", "Active")
+        ]
+      supportingDocuments =
+        [ "hash://license-exam-certificate"
+        , "hash://background-check"
+        ]
+
+  -- Step 2: CA DRE approves and issues the credential
+  licenseCredential <- submit caDRE do
+    exerciseCmd requestId ApproveAndIssue with
+      credentialId = "urn:uuid:credential-re-agent-02056789"
+      issuanceDate = issuanceTime
+      expirationDate = Some expirationTime
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = issuanceTime
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:ca-dre#key-1"
+        proofValue = "eyJhbGciOiJFZERTQSJ9..."
+      subjectDid = "did:example:maria-rodriguez"
+      credentialSchema = Some "https://ca.gov/schemas/real-estate-license.json"
+      credentialContext = ["https://www.w3.org/2018/credentials/v1", "https://ca.gov/contexts/real-estate/v1"]
+
+  -- Step 3: Add RETVN platform as a verifier
+  licenseCredential <- submit caDRE do
+    exerciseCmd licenseCredential AddVerifier with
+      verifier = retvnPlatform
+
+  -- Step 4: Check if credential is valid
+  isValid <- submit maria do
+    exerciseCmd licenseCredential IsValid with
+      currentTime = currentTime
+
+  assert isValid
+
+  -- Step 5: Maria presents her credential to RETVN platform
+  receipt <- submit maria do
+    exerciseCmd licenseCredential PresentCredential with
+      verifier = retvnPlatform
+      challenge = "retvn-challenge-12345"
+      presentationProof = "eyJhbGciOiJFZERTQSJ9.proof-of-possession"
+
+  -- Step 6: RETVN platform acknowledges the presentation
+  submit retvnPlatform do
+    exerciseCmd receipt AcknowledgePresentation
+
+  -- Step 7: Simulate credential suspension (e.g., pending investigation)
+  suspendedCredential <- submit caDRE do
+    exerciseCmd licenseCredential Suspend
+
+  -- Step 8: Later, reactivate the credential
+  activeCredential <- submit caDRE do
+    exerciseCmd suspendedCredential Reactivate
+
+  return ()
+
+-- | Test scenario: Government ID credential
+testGovernmentIDCredential : Script ()
+testGovernmentIDCredential = script do
+  -- Setup parties
+  caDMV <- allocateParty "California_DMV"
+  john <- allocateParty "John_Doe"
+  retvnPlatform <- allocateParty "RETVN_Platform"
+
+  let issuanceTime = time (date 2019 Jan 15) 10 0 0
+  let expirationTime = time (date 2026 Dec 15) 23 59 59
+
+  -- John requests a driver's license credential
+  requestId <- submit john do
+    createCmd CredentialIssuanceRequest with
+      requestId = "DL-REQ-2019-001"
+      issuer = caDMV
+      subject = john
+      requestedCredentialType = ["VerifiableCredential", "DriversLicenseCredential"]
+      requestedClaims =
+        [ ("licenseNumber", "D1234567")
+        , ("class", "C")
+        , ("dateOfBirth", "1985-03-15")
+        , ("state", "California")
+        ]
+      supportingDocuments =
+        [ "hash://birth-certificate"
+        , "hash://proof-of-residency"
+        ]
+
+  -- DMV issues the credential
+  dlCredential <- submit caDMV do
+    exerciseCmd requestId ApproveAndIssue with
+      credentialId = "urn:uuid:credential-dl-d1234567"
+      issuanceDate = issuanceTime
+      expirationDate = Some expirationTime
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = issuanceTime
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:ca-dmv#key-1"
+        proofValue = "eyJhbGciOiJFZERTQSJ9.dmv-signature"
+      subjectDid = "did:example:john-doe"
+      credentialSchema = Some "https://dmv.ca.gov/schemas/drivers-license.json"
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  -- Add RETVN as verifier
+  dlCredential <- submit caDMV do
+    exerciseCmd dlCredential AddVerifier with
+      verifier = retvnPlatform
+
+  -- John presents to RETVN
+  receipt <- submit john do
+    exerciseCmd dlCredential PresentCredential with
+      verifier = retvnPlatform
+      challenge = "retvn-kyc-challenge-67890"
+      presentationProof = "eyJhbGciOiJFZERTQSJ9.john-proof"
+
+  submit retvnPlatform do
+    exerciseCmd receipt AcknowledgePresentation
+
+  return ()
+
+-- | Test scenario: Credential revocation
+testCredentialRevocation : Script ()
+testCredentialRevocation = script do
+  -- Setup
+  issuer <- allocateParty "License_Board"
+  holder <- allocateParty "Agent_Smith"
+
+  let issuanceTime = time (date 2023 Jan 1) 0 0 0
+  let expirationTime = time (date 2025 Dec 31) 23 59 59
+  let revocationTime = time (date 2024 Jun 15) 10 30 0
+
+  -- Request and issue credential
+  requestId <- submit holder do
+    createCmd CredentialIssuanceRequest with
+      requestId = "REQ-SMITH-001"
+      issuer = issuer
+      subject = holder
+      requestedCredentialType = ["VerifiableCredential", "ProfessionalLicense"]
+      requestedClaims = [("licenseNumber", "LIC-12345")]
+      supportingDocuments = []
+
+  credential <- submit issuer do
+    exerciseCmd requestId ApproveAndIssue with
+      credentialId = "urn:uuid:credential-smith-12345"
+      issuanceDate = issuanceTime
+      expirationDate = Some expirationTime
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = issuanceTime
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:board#key-1"
+        proofValue = "signature-data"
+      subjectDid = "did:example:smith"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  -- Revoke the credential (e.g., license suspended for misconduct)
+  submit issuer do
+    exerciseCmd credential Revoke
+
+  -- Create revocation registry entry
+  submit issuer do
+    createCmd RevocationRegistryEntry with
+      credentialId = "urn:uuid:credential-smith-12345"
+      issuer = issuer
+      revokedAt = revocationTime
+      reason = Some "License suspended due to professional misconduct"
+
+  return ()
+
+-- | Test scenario: Multiple credentials and verification
+testMultipleCredentials : Script ()
+testMultipleCredentials = script do
+  -- Setup parties
+  caDRE <- allocateParty "CA_DRE"
+  caDMV <- allocateParty "CA_DMV"
+  kellerWilliams <- allocateParty "Keller_Williams"
+  maria <- allocateParty "Maria_Rodriguez"
+  retvnPlatform <- allocateParty "RETVN_Platform"
+
+  let now = time (date 2024 Dec 15) 12 0 0
+
+  -- Maria gets government ID
+  govIdRequest <- submit maria do
+    createCmd CredentialIssuanceRequest with
+      requestId = "GOV-ID-001"
+      issuer = caDMV
+      subject = maria
+      requestedCredentialType = ["VerifiableCredential", "GovernmentIDCredential"]
+      requestedClaims = [("idNumber", "D7654321"), ("state", "California")]
+      supportingDocuments = []
+
+  govIdCred <- submit caDMV do
+    exerciseCmd govIdRequest ApproveAndIssue with
+      credentialId = "urn:uuid:gov-id-maria"
+      issuanceDate = now
+      expirationDate = Some (time (date 2029 Dec 15) 23 59 59)
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dmv#key-1"
+        proofValue = "dmv-sig"
+      subjectDid = "did:example:maria"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  -- Maria gets real estate license
+  licenseRequest <- submit maria do
+    createCmd CredentialIssuanceRequest with
+      requestId = "RE-LIC-001"
+      issuer = caDRE
+      subject = maria
+      requestedCredentialType = ["VerifiableCredential", "RealEstateLicenseCredential"]
+      requestedClaims = [("licenseNumber", "02056789")]
+      supportingDocuments = []
+
+  licenseCred <- submit caDRE do
+    exerciseCmd licenseRequest ApproveAndIssue with
+      credentialId = "urn:uuid:re-license-maria"
+      issuanceDate = now
+      expirationDate = Some (time (date 2025 Jun 30) 23 59 59)
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:dre#key-1"
+        proofValue = "dre-sig"
+      subjectDid = "did:example:maria"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  -- Maria gets brokerage affiliation credential
+  brokerageRequest <- submit maria do
+    createCmd CredentialIssuanceRequest with
+      requestId = "BROKER-AFF-001"
+      issuer = kellerWilliams
+      subject = maria
+      requestedCredentialType = ["VerifiableCredential", "BrokerageAffiliationCredential"]
+      requestedClaims = [("affiliationId", "KW-CA-12345"), ("agentLicense", "02056789")]
+      supportingDocuments = []
+
+  brokerageCred <- submit kellerWilliams do
+    exerciseCmd brokerageRequest ApproveAndIssue with
+      credentialId = "urn:uuid:brokerage-aff-maria"
+      issuanceDate = now
+      expirationDate = Some (time (date 2025 Dec 31) 23 59 59)
+      proof = Proof with
+        proofType = "Ed25519Signature2020"
+        created = now
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:kw#key-1"
+        proofValue = "kw-sig"
+      subjectDid = "did:example:maria"
+      credentialSchema = None
+      credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+  -- Add RETVN as verifier for all credentials
+  govIdCred <- submit caDMV do
+    exerciseCmd govIdCred AddVerifier with verifier = retvnPlatform
+
+  licenseCred <- submit caDRE do
+    exerciseCmd licenseCred AddVerifier with verifier = retvnPlatform
+
+  brokerageCred <- submit kellerWilliams do
+    exerciseCmd brokerageCred AddVerifier with verifier = retvnPlatform
+
+  -- Maria presents all three credentials to RETVN (proving she's a Realtor Agent)
+  receipt1 <- submit maria do
+    exerciseCmd govIdCred PresentCredential with
+      verifier = retvnPlatform
+      challenge = "retvn-registration-001"
+      presentationProof = "proof-1"
+
+  receipt2 <- submit maria do
+    exerciseCmd licenseCred PresentCredential with
+      verifier = retvnPlatform
+      challenge = "retvn-registration-001"
+      presentationProof = "proof-2"
+
+  receipt3 <- submit maria do
+    exerciseCmd brokerageCred PresentCredential with
+      verifier = retvnPlatform
+      challenge = "retvn-registration-001"
+      presentationProof = "proof-3"
+
+  -- RETVN acknowledges all presentations
+  submit retvnPlatform do
+    exerciseCmd receipt1 AcknowledgePresentation
+
+  submit retvnPlatform do
+    exerciseCmd receipt2 AcknowledgePresentation
+
+  submit retvnPlatform do
+    exerciseCmd receipt3 AcknowledgePresentation
+
+  return ()

@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Daml Sandbox (in-memory ledger for development)
+  daml-sandbox:
+    build:
+      context: ./docker/sandbox
+      dockerfile: Dockerfile
+    container_name: retvn-sandbox
+    ports:
+      - "6865:6865"  # Ledger API
+    environment:
+      - SANDBOX_PORT=6865
+    volumes:
+      - ./.daml/dist:/dars
+    healthcheck:
+      test: ["CMD", "grpc_health_probe", "-addr=localhost:6865"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - retvn-sandbox-network
+
+  # JSON API (HTTP/WebSocket API for Daml)
+  json-api:
+    build:
+      context: ./docker/sandbox
+      dockerfile: Dockerfile.json-api
+    container_name: retvn-sandbox-json-api
+    ports:
+      - "7575:7575"
+    environment:
+      LEDGER_HOST: daml-sandbox
+      LEDGER_PORT: 6865
+      HTTP_PORT: 7575
+    depends_on:
+      daml-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7575/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - retvn-sandbox-network
+
+  # React frontend
+  frontend:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+      args:
+        VITE_CANTON_API_URL: http://localhost:7575
+    container_name: retvn-sandbox-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_CANTON_API_URL=http://localhost:7575
+      - VITE_CANTON_WS_URL=ws://localhost:7575
+    depends_on:
+      - json-api
+    networks:
+      - retvn-sandbox-network
+
+networks:
+  retvn-sandbox-network:
+    driver: bridge

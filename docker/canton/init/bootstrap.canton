@@ -1,0 +1,54 @@
+// Bootstrap script for Canton
+// Initializes domain, participant, and uploads DAR files
+
+import better.files._
+
+// Connect participant to domain
+participant1.domains.connect_local(domain1)
+
+// Wait for connection
+utils.retry_until_true {
+  participant1.domains.active("domain1").nonEmpty
+}
+
+// Upload DAR files
+val darDir = File("/canton/dars")
+if (darDir.exists && darDir.isDirectory) {
+  darDir.list.filter(_.extension.contains(".dar")).foreach { darFile =>
+    println(s"Uploading DAR: ${darFile.name}")
+    participant1.dars.upload(darFile.pathAsString)
+  }
+}
+
+// Create operator party
+val operator = participant1.parties.enable("Unlockit_Operator")
+
+// Create test users and parties
+val users = Seq(
+  ("maria", "Maria_Rodriguez"),
+  ("john", "John_Doe"),
+  ("sarah", "Sarah_Chen"),
+  ("broker_bob", "Bob_Smith")
+)
+
+users.foreach { case (userId, partyHint) =>
+  val party = participant1.parties.enable(partyHint)
+  participant1.ledger_api.users.create(
+    id = userId,
+    actAs = Set(party.toLf),
+    primaryParty = Some(party.toLf)
+  )
+  println(s"Created user: $userId with party: ${party.toLf}")
+}
+
+// Create operator user
+participant1.ledger_api.users.create(
+  id = "operator",
+  actAs = Set(operator.toLf),
+  primaryParty = Some(operator.toLf),
+  isDeactivated = false
+)
+
+println("Bootstrap completed successfully!")
+println(s"Operator party: ${operator.toLf}")
+println("Users created: maria, john, sarah, broker_bob, operator")

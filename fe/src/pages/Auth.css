@@ -1,0 +1,203 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+}
+
+.auth-card {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 450px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #5850ec;
+  margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+  color: #718096;
+  font-size: 0.95rem;
+}
+
+.auth-form {
+  margin-top: 2rem;
+}
+
+.btn-block {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.auth-footer {
+  margin-top: 2rem;
+  text-align: center;
+  color: #718096;
+}
+
+.auth-link {
+  color: #5850ec;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.credential-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.credential-card {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+}
+
+.credential-card:hover {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+}
+
+.credential-card.selected {
+  border-color: #5850ec;
+  background: #f0f4ff;
+}
+
+.credential-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.credential-info {
+  flex: 1;
+}
+
+.credential-title {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+}
+
+.credential-detail {
+  font-size: 0.875rem;
+  color: #718096;
+  margin: 0.25rem 0;
+}
+
+.credential-status {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.status-valid {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.status-required {
+  background: #fed7d7;
+  color: #742a2a;
+}
+
+.status-expired {
+  background: #feebc8;
+  color: #7c2d12;
+}
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.step-indicator::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #718096;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.step.active .step-number {
+  background: #5850ec;
+  color: white;
+}
+
+.step.completed .step-number {
+  background: #48bb78;
+  color: white;
+}
+
+.step-label {
+  font-size: 0.75rem;
+  color: #718096;
+  font-weight: 600;
+}
+
+.step.active .step-label {
+  color: #5850ec;
+}

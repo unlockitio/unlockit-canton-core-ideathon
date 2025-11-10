@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for Canton
+  postgres:
+    image: postgres:15-alpine
+    container_name: retvn-postgres
+    environment:
+      POSTGRES_DB: canton
+      POSTGRES_USER: canton
+      POSTGRES_PASSWORD: canton_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U canton"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - retvn-network
+
+  # Canton participant node
+  canton:
+    build:
+      context: ./docker/canton
+      dockerfile: Dockerfile
+    container_name: retvn-canton
+    ports:
+      - "5011:5011"  # Admin API
+      - "5021:5021"  # Ledger API
+      - "7575:7575"  # JSON API
+    environment:
+      CANTON_DB_HOST: postgres
+      CANTON_DB_PORT: 5432
+      CANTON_DB_NAME: canton
+      CANTON_DB_USER: canton
+      CANTON_DB_PASSWORD: canton_password
+    volumes:
+      - ./docker/canton/config:/canton/config
+      - ./docker/canton/init:/canton/init
+      - ./.daml/dist:/canton/dars
+      - canton_data:/canton/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - retvn-network
+
+  # JSON API (HTTP/WebSocket API for Daml)
+  json-api:
+    build:
+      context: ./docker/json-api
+      dockerfile: Dockerfile
+    container_name: retvn-json-api
+    ports:
+      - "7575:7575"
+    environment:
+      LEDGER_HOST: canton
+      LEDGER_PORT: 5021
+      HTTP_PORT: 7575
+    depends_on:
+      canton:
+        condition: service_healthy
+    networks:
+      - retvn-network
+
+  # React frontend
+  frontend:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+      args:
+        VITE_CANTON_API_URL: http://localhost:7575
+    container_name: retvn-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_CANTON_API_URL=http://localhost:7575
+      - VITE_CANTON_WS_URL=ws://localhost:7575
+    depends_on:
+      - json-api
+    networks:
+      - retvn-network
+
+  # Nginx reverse proxy (optional, for production)
+  nginx:
+    image: nginx:alpine
+    container_name: retvn-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - json-api
+    networks:
+      - retvn-network
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  canton_data:
+    driver: local
+
+networks:
+  retvn-network:
+    driver: bridge
