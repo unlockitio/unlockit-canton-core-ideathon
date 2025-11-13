@@ -1,22 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
-const MOCK_USERS = [
-  { userId: 'operator', name: 'Unlockit Operator', role: 'Operator' },
-  { userId: 'maria', name: 'Maria Rodriguez', role: 'Realtor Agent' },
-  { userId: 'john', name: 'John Doe', role: 'Realtor Agent' },
-  { userId: 'sarah', name: 'Sarah Chen', role: 'Private Citizen' },
-  { userId: 'broker_bob', name: 'Bob Smith', role: 'Realtor Broker' },
-];
+interface User {
+  id: string;
+  primaryParty?: string;
+  isDeactivated: boolean;
+}
 
 export default function Login() {
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_CANTON_API_URL || 'http://localhost:7575';
+        const response = await fetch(`${apiUrl}/v2/users`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        const data = await response.json();
+        setUsers(data.users.filter((u: User) => !u.isDeactivated));
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        setError('Failed to load users from Canton');
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,9 +76,9 @@ export default function Login() {
               disabled={isLoading}
             >
               <option value="">Choose a user...</option>
-              {MOCK_USERS.map((user) => (
-                <option key={user.userId} value={user.userId}>
-                  {user.name} ({user.role})
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.id}
                 </option>
               ))}
             </select>
