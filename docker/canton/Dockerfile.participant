@@ -1,0 +1,46 @@
+# Canton Participant Dockerfile
+FROM eclipse-temurin:21-jdk-jammy
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Canton
+ARG CANTON_VERSION=3.4.7
+WORKDIR /opt
+
+RUN wget https://github.com/digital-asset/canton/releases/download/v${CANTON_VERSION}/canton-open-source-${CANTON_VERSION}.tar.gz && \
+    tar -xzf canton-open-source-${CANTON_VERSION}.tar.gz && \
+    mv canton-open-source-${CANTON_VERSION} canton && \
+    rm canton-open-source-${CANTON_VERSION}.tar.gz
+
+# Create Canton directories
+RUN mkdir -p /canton/config /canton/init /canton/data /canton/dars
+
+# Copy configuration files
+COPY config/participant.conf /canton/config/
+COPY init/bootstrap.canton /canton/init/
+
+# Set permissions
+RUN chmod -R 755 /canton
+
+WORKDIR /canton
+
+# Expose ports
+# 10001 - Ledger API
+# 10002 - Participant Admin API
+# 10003 - grpc-health-server
+# 10004 - http-health-server
+# 10005 - HTTP Ledger API
+EXPOSE 10001 10002 10003 10004 10005
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+  CMD curl -f http://localhost:10002/health || exit 1
+
+# Start Canton participant with configuration and bootstrap script
+CMD ["/opt/canton/bin/canton", "daemon", "-c", "/canton/config/mediator.conf", "--bootstrap", "/canton/init/participant.canton"] 
+#, "--bootstrap", "/canton/init/bootstrap.canton"]

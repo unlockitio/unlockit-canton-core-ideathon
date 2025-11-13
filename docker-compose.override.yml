@@ -1,8 +1,6 @@
 # Docker Compose override for development
 # This file is automatically used by docker-compose in addition to docker-compose.yml
 
-version: '3.8'
-
 services:
   # Development overrides for Canton
   canton:

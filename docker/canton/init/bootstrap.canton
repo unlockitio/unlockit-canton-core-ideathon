@@ -1,10 +1,10 @@
-// Bootstrap script for Canton
-// Initializes domain, participant, and uploads DAR files
+// Bootstrap script for Canton Participant
+// Initializes participant, connects to domain, and uploads DAR files
 
 import better.files._
 
-// Connect participant to domain
-participant1.domains.connect_local(domain1)
+// Connect participant to remote domain
+participant1.domains.connect("domain1", "domain1")
 
 // Wait for connection
 utils.retry_until_true {

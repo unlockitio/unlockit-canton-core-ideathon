@@ -1,0 +1,43 @@
+# Canton Domain Dockerfile (Mediator)
+FROM eclipse-temurin:21-jdk-jammy
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Canton
+ARG CANTON_VERSION=3.4.7
+WORKDIR /opt
+
+RUN wget https://github.com/digital-asset/canton/releases/download/v${CANTON_VERSION}/canton-open-source-${CANTON_VERSION}.tar.gz && \
+    tar -xzf canton-open-source-${CANTON_VERSION}.tar.gz && \
+    mv canton-open-source-${CANTON_VERSION} canton && \
+    rm canton-open-source-${CANTON_VERSION}.tar.gz
+
+# Create Canton directories
+RUN mkdir -p /canton/config /canton/init /canton/data
+
+# Copy configuration files
+COPY config/mediator.conf /canton/config/
+COPY config/mediator-remote.conf /canton/config/
+
+# Set permissions
+RUN chmod -R 755 /canton
+
+WORKDIR /canton
+
+# Expose ports
+# 10042 - Admin API
+# 10043 - grpc-health-server
+# 10044 - http-health-server
+EXPOSE 10042 10043 10044
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+  CMD curl -f http://localhost:10042/health || exit 1
+
+# Start Canton domain with configuration
+CMD ["/opt/canton/bin/canton", "daemon", "-c", "/canton/config/mediator.conf", "--bootstrap", "/canton/init/mediator.canton"]

@@ -1,26 +1,29 @@
 -- PostgreSQL initialization script for Canton
 
--- Create databases if they don't exist
-SELECT 'CREATE DATABASE canton'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'canton')\gexec
+-- Create separate databases for each Canton component
+CREATE DATABASE canton_sequencer;
+CREATE DATABASE canton_unlockit_participant;
+CREATE DATABASE canton_mediator;
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON DATABASE canton TO canton;
+GRANT ALL PRIVILEGES ON DATABASE canton_sequencer TO canton;
+GRANT ALL PRIVILEGES ON DATABASE canton_unlockit_participant TO canton;
+GRANT ALL PRIVILEGES ON DATABASE canton_mediator TO canton;
 
--- Connect to canton database
-\c canton
+-- Connect to canton_sequencer database
+\c canton_sequencer
 
--- Create schemas for Canton
-CREATE SCHEMA IF NOT EXISTS participant1;
-CREATE SCHEMA IF NOT EXISTS domain1;
+-- Create extension for UUID support
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Grant permissions on schemas
-GRANT ALL PRIVILEGES ON SCHEMA participant1 TO canton;
-GRANT ALL PRIVILEGES ON SCHEMA domain1 TO canton;
+-- Connect to canton_unlockit_participant database
+\c canton_unlockit_participant
 
--- Set default privileges
-ALTER DEFAULT PRIVILEGES IN SCHEMA participant1 GRANT ALL PRIVILEGES ON TABLES TO canton;
-ALTER DEFAULT PRIVILEGES IN SCHEMA domain1 GRANT ALL PRIVILEGES ON TABLES TO canton;
+-- Create extension for UUID support
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Connect to canton_mediator database
+\c canton_mediator
 
 -- Create extension for UUID support
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

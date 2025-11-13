@@ -1,0 +1,3 @@
+nodes.local.start()
+
+#participant.dars.upload("dars/unlockit-canton-core-ideathon-0.0.1.dar")

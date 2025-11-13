@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   # PostgreSQL database for Canton
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17.6
     container_name: retvn-postgres
     environment:
       POSTGRES_DB: canton
@@ -22,36 +20,141 @@ services:
     networks:
       - retvn-network
 
-  # Canton participant node
-  canton:
+  # Canton sequencer (sequencer)
+  canton-sequencer:
     build:
       context: ./docker/canton
-      dockerfile: Dockerfile
-    container_name: retvn-canton
+      dockerfile: Dockerfile.sequencer
+    container_name: retvn-canton-sequencer
     ports:
-      - "5011:5011"  # Admin API
-      - "5021:5021"  # Ledger API
-      - "7575:7575"  # JSON API
+      - 10038:10038 # Public API
+      - 10039:10039 # Admin API
+      - 10033:10033 #  grpc-health-server
+      - 10034:10034 #  http-health-server
     environment:
       CANTON_DB_HOST: postgres
       CANTON_DB_PORT: 5432
-      CANTON_DB_NAME: canton
+      CANTON_DB_NAME: canton-sequencer
+      CANTON_DB_USER: canton
+      CANTON_DB_PASSWORD: canton_password
+    volumes:
+      - ./docker/canton/config:/canton/config
+      - ./docker/canton/init:/canton/init
+      - canton_domain_data:/canton/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:10039/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#      start_period: 60s
+    networks:
+      - retvn-network
+
+  # Canton mediator (mediator)
+  canton-mediator:
+    build:
+      context: ./docker/canton
+      dockerfile: Dockerfile.mediator
+    container_name: retvn-canton-mediator
+    ports:
+      - 10042:10042  # Admin API
+      - 10043:10043  # 
+      - 10044:10044  #
+    environment:
+      CANTON_DB_HOST: postgres
+      CANTON_DB_PORT: 5432
+      CANTON_DB_NAME: canton-mediator
+      CANTON_DB_USER: canton
+      CANTON_DB_PASSWORD: canton_password
+    volumes:
+      - ./docker/canton/config:/canton/config
+      - ./docker/canton/init:/canton/init
+      - canton_domain_data:/canton/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:10042/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#      start_period: 60s
+    networks:
+      - retvn-network
+
+  # Canton domain (sequencer + mediator)
+  canton-domain:
+    build:
+      context: ./docker/canton
+      dockerfile: Dockerfile.domain
+    container_name: retvn-canton-domain
+    ports:
+      - 10038:10038 # Public API
+      - 10039:10039 # Admin API
+      - 10033:10033 #  grpc-health-server
+      - 10034:10034 #  http-health-server
+      - 10042:10042  # Admin API
+      - 10043:10043  # grpc-health-server
+      - 10044:10044  # http-health-server
+    environment:
+      CANTON_DB_HOST: postgres
+      CANTON_DB_PORT: 5432
+      CANTON_DB_NAME: canton-domain
+      CANTON_DB_USER: canton
+      CANTON_DB_PASSWORD: canton_password
+    volumes:
+      - ./docker/canton/config:/canton/config
+      - ./docker/canton/init:/canton/init
+      - canton_domain_data:/canton/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:10039/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#      start_period: 60s
+    networks:
+      - retvn-network
+
+  # Canton participant node
+  canton-unlockit-participant:
+    build:
+      context: ./docker/canton
+      dockerfile: Dockerfile.participant
+    container_name: retvn-canton-unlockit-participant
+    ports:
+      - 10001:10001  # Ledger API
+      - 10002:10002  # Participant Admin API
+      - 10003:10003  # grpc-health-server
+      - 10004:10004  # http-health-server
+      - 10005:10005  # HTTP Ledger API
+    environment:
+      CANTON_DB_HOST: postgres
+      CANTON_DB_PORT: 5432
+      CANTON_DB_NAME: canton-unlockit-participant
       CANTON_DB_USER: canton
       CANTON_DB_PASSWORD: canton_password
     volumes:
       - ./docker/canton/config:/canton/config
       - ./docker/canton/init:/canton/init
       - ./.daml/dist:/canton/dars
-      - canton_data:/canton/data
+      - canton_unlockit_participant_data:/canton/data
     depends_on:
-      postgres:
+      canton-sequencer:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5011/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      canton-mediator:
+        condition: service_healthy
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:10002/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#      start_period: 60s
     networks:
       - retvn-network
 
@@ -64,11 +167,11 @@ services:
     ports:
       - "7575:7575"
     environment:
-      LEDGER_HOST: canton
+      LEDGER_HOST: canton-participant
       LEDGER_PORT: 5021
       HTTP_PORT: 7575
     depends_on:
-      canton:
+      canton-unlockit-participant:
         condition: service_healthy
     networks:
       - retvn-network
@@ -112,7 +215,9 @@ services:
 volumes:
   postgres_data:
     driver: local
-  canton_data:
+  canton_domain_data:
+    driver: local
+  canton_unlockit_participant_data:
     driver: local
 
 networks:

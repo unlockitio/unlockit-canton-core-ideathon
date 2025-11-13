@@ -1,30 +1,60 @@
-FROM eclipse-temurin:17-jdk-jammy
+# Multi-stage build for size optimization and security
+# Stage 1: Builder - for building and installing DAML SDK
+FROM eclipse-temurin:21-jdk AS builder
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Version variables (must be provided via build args)
+ARG DAML_SDK_VERSION_SHORT
+ARG DAML_SDK_VERSION_FULL
+ENV DAML_SDK_VERSION_SHORT=${DAML_SDK_VERSION_SHORT}
+ENV DAML_SDK_VERSION_FULL=${DAML_SDK_VERSION_FULL}
 
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    unzip \
-    netcat \
-    && rm -rf /var/lib/apt/lists/*
+# Install necessary dependencies for build
+RUN apt-get update && \
+    apt-get install -y curl git unzip libtinfo6 bash make maven && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ARG DAML_VERSION=2.8.0
+# Install DAML SDK
+RUN set -eux; \
+    URL="https://github.com/digital-asset/daml/releases/download/v${DAML_SDK_VERSION_SHORT}/daml-sdk-${DAML_SDK_VERSION_FULL}-linux.tar.gz"; \
+    curl -fSL "$URL" -o /tmp/daml-sdk.tar.gz; \
+    mkdir -p /opt/daml-tmp; \
+    tar -xzf /tmp/daml-sdk.tar.gz -C /opt/daml-tmp; \
+    SDK_DIR=$(find /opt/daml-tmp -maxdepth 1 -type d -iname "*sdk*" -print -quit || true); \
+    [ -n "$SDK_DIR" ] || (echo "Extraction failed — contents:" && ls -la /opt/daml-tmp && false); \
+    cd "$SDK_DIR"; bash ./install.sh
 
-RUN wget https://github.com/digital-asset/daml/releases/download/v${DAML_VERSION}/daml-sdk-${DAML_VERSION}-linux.tar.gz && \
-    tar -xzf daml-sdk-${DAML_VERSION}-linux.tar.gz -C /opt && \
-    rm daml-sdk-${DAML_VERSION}-linux.tar.gz
+# Stage 2: Runtime - optimized final image
+FROM eclipse-temurin:21-jre
 
-ENV PATH="/opt/sdk-${DAML_VERSION}/daml:${PATH}"
-ENV DAML_HOME="/opt/sdk-${DAML_VERSION}"
+# Configure environment variables
+ENV DAML_SDK_VERSION_SHORT=${DAML_SDK_VERSION_SHORT}
+ENV DAML_SDK_VERSION_FULL=${DAML_SDK_VERSION_FULL}
+ENV PATH="/home/daml/.daml/bin:${PATH}"
 
-WORKDIR /sandbox
+# Install only necessary dependencies for runtime
+RUN apt-get update && \
+    apt-get install -y curl libtinfo6 bash && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /dars
+# Create non-root user for security
+RUN groupadd -r daml && useradd -r -g daml -m -s /bin/bash daml
 
-EXPOSE 6865
+# Copy DAML SDK from builder stage
+COPY --from=builder /root/.daml /home/daml/.daml
+RUN chown -R daml:daml /home/daml/.daml
 
-HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=30s \
-  CMD curl -f http://localhost:6865/readyz || exit 1
+# Set working directory
+WORKDIR /app
 
-CMD ["sh", "-c", "daml sandbox --port 6865 --ledgerid retvn-sandbox /dars/*.dar"]
+# Create log directory with correct permissions
+RUN mkdir -p /app/log && chown -R daml:daml /app
+
+# Switch to non-root user
+USER daml
+
+# Optimized healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD daml version > /dev/null 2>&1 || exit 1
+
+# Default command
+CMD ["daml", "version"]
