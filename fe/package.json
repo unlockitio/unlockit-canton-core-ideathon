@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@daml/ledger": "^2.8.0",
-    "@daml/react": "^2.8.0",
-    "@daml/types": "^2.8.0",
+    "@daml/hub-react": "^1.1.5",
+    "@daml/ledger": "^2.10.2",
+    "@daml/react": "^2.10.2",
+    "@daml/types": "^2.10.2",
+    "jose": "^6.1.2",
+    "jwt-decode": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.0",
-    "jwt-decode": "^4.0.0"
+    "react-router-dom": "^6.20.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -23,6 +25,6 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "codegen": "daml codegen js -o codegen .daml/dist/unlockit-canton-core-ideathon-0.0.1.dar"
+    "codegen": "daml codegen js -o codegen ../.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar"
   }
 }

@@ -55,7 +55,7 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const apiUrl = import.meta.env.VITE_CANTON_API_URL || 'http://localhost:7575';
+  const apiUrl = 'http://localhost:8080';
 
   useEffect(() => {
     fetchExistingUsers();

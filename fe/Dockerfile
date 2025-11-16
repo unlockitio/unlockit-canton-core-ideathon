@@ -15,8 +15,8 @@ RUN npm ci --legacy-peer-deps
 COPY . .
 
 # Build arguments
-ARG VITE_CANTON_API_URL=http://localhost:7575
-ARG VITE_CANTON_WS_URL=ws://localhost:7575
+ARG VITE_CANTON_API_URL=http://localhost:8080
+ARG VITE_CANTON_WS_URL=ws://localhost:8080
 
 # Set environment variables for build
 ENV VITE_CANTON_API_URL=$VITE_CANTON_API_URL

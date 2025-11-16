@@ -1,15 +1,14 @@
 import React from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Outlet, Link } from 'react-router-dom';
 import './Layout.css';
 
-export default function Layout() {
-  const { userId, logout } = useAuth();
-  const navigate = useNavigate();
+type LayoutProps = {
+  onLogout: () => void;
+};
 
+export default function Layout({ onLogout }: LayoutProps) {
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    onLogout();
   };
 
   return (
@@ -29,7 +28,6 @@ export default function Layout() {
           </ul>
 
           <div className="navbar-user">
-            <span className="user-info">{userId}</span>
             <button onClick={handleLogout} className="btn btn-secondary btn-sm">
               Logout
             </button>

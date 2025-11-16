@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (selectedUserId: string) => {
     try {
       const token = await cantonApi.getToken(selectedUserId);
-
+      
       cantonApi.setAuth(token, selectedUserId);
       const userParty = cantonApi.getParty();
 

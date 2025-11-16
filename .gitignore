@@ -1,3 +1,4 @@
 /.daml
 /log
 .dlint.yaml
+fe/codegen/

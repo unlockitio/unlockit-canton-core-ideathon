@@ -5,9 +5,7 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@daml': path.resolve(__dirname, './codegen')
-    }
+    alias: {}
   },
   server: {
     port: 3000,
