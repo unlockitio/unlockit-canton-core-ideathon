@@ -10,10 +10,38 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/v1': {
-        target: 'http://localhost:7575',
+      '/v2': {
+        target: 'http://localhost:8080',
         changeOrigin: true
       }
     }
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'esbuild',
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      }
+    }
+  },
+  optimizeDeps: {
+    include: [
+      'react', 
+      'react-dom',
+      '@mojotech/json-type-validation',
+      '@daml/types',
+      '@daml/ledger',
+      '@daml/hub-react'
+    ],
+  },
+  define: {
+    'process.env': {},
+    global: 'globalThis',
   }
 })
