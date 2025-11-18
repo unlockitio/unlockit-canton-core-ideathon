@@ -1,6 +1,63 @@
+# Daml
 /.daml
 /log
 .dlint.yaml
+
+# Frontend (fe/)
 fe/codegen/
-node_modules
+fe/node_modules
+fe/.pnp
+fe/pnp.js
+fe/coverage
+fe/dist
+fe/build
+fe/.env
+fe/.env.local
+fe/.env.development.local
+fe/.env.test.local
+fe/.env.production.local
+fe/npm-debug.log*
+fe/yarn-debug.log*
+fe/yarn-error.log*
+fe/pnpm-debug.log*
+fe/lerna-debug.log*
+
+# Backend (be/)
+be/target/
+be/pom.xml.tag
+be/pom.xml.releaseBackup
+be/pom.xml.versionsBackup
+be/pom.xml.next
+be/release.properties
+be/dependency-reduced-pom.xml
+be/buildNumber.properties
+be/.mvn/timing.properties
+be/.quarkus/
+be/quarkus.log
+be/logs/
+
+# IDE
+.idea/
 .vscode/
+.project
+.classpath
+.settings/
+.factorypath
+*.iml
+*.ipr
+*.iws
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Node modules (anywhere)
+node_modules
