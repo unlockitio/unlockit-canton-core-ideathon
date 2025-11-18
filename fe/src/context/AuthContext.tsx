@@ -1,14 +1,29 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { cantonApi } from '../services/cantonApi';
+import { TemplateIds } from '../utils/daml';
+
+interface UserAccount {
+  operator: string;
+  user: string;
+  role: string;
+  verificationWeight: number;
+  credentialPresentations: string[];
+  registeredAt: string;
+  status: string;
+}
 
 interface AuthContextType {
   party: string | null;
   userId: string | null;
   token: string | null;
   isAuthenticated: boolean;
+  userAccount: UserAccount | null;
+  userRole: string | null;
+  verificationWeight: number;
   login: (userId: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  refreshUserAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [party, setParty] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,10 +49,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  const refreshUserAccount = async () => {
+    if (!party || !token) return;
+
+    try {
+      // Query for user's UserAccount contract
+      const accounts = await cantonApi.query<UserAccount>(
+        TemplateIds.UserAccount,
+        { user: party }
+      );
+
+      if (accounts.length > 0) {
+        setUserAccount(accounts[0].payload);
+        localStorage.setItem('userAccount', JSON.stringify(accounts[0].payload));
+      }
+    } catch (error) {
+      console.error('Failed to fetch user account:', error);
+      // Don't throw - user might not have account yet (in registration)
+    }
+  };
+
   const login = async (selectedUserId: string) => {
     try {
       const token = await cantonApi.getToken(selectedUserId);
-      
+
       cantonApi.setAuth(token, selectedUserId);
       const userParty = cantonApi.getParty();
 
@@ -48,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('party', userParty);
         localStorage.setItem('userId', selectedUserId);
         localStorage.setItem('token', token);
+
+        // Fetch user account after login
+        await refreshUserAccount();
       }
     } catch (error) {
       console.error('Login failed:', error);
@@ -59,13 +98,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setParty(null);
     setUserId(null);
     setToken(null);
+    setUserAccount(null);
 
     localStorage.removeItem('party');
     localStorage.removeItem('userId');
     localStorage.removeItem('token');
+    localStorage.removeItem('userAccount');
 
     cantonApi.clearAuth();
   };
+
+  // Load user account from localStorage on mount
+  useEffect(() => {
+    const storedUserAccount = localStorage.getItem('userAccount');
+    if (storedUserAccount) {
+      try {
+        setUserAccount(JSON.parse(storedUserAccount));
+      } catch (error) {
+        console.error('Failed to parse stored user account:', error);
+      }
+    }
+  }, []);
+
+  // Refresh user account when party/token changes
+  useEffect(() => {
+    if (party && token && !isLoading) {
+      refreshUserAccount();
+    }
+  }, [party, token, isLoading]);
 
   return (
     <AuthContext.Provider
@@ -74,9 +134,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userId,
         token,
         isAuthenticated: !!party && !!token,
+        userAccount,
+        userRole: userAccount?.role || null,
+        verificationWeight: userAccount?.verificationWeight || 0,
         login,
         logout,
         isLoading,
+        refreshUserAccount,
       }}
     >
       {children}

@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { cantonApi } from '../services/cantonApi';
+import {
+  generateTransactionId,
+  isoStringToDamlTime,
+  toOptionalInt,
+  toOptional,
+  TemplateIds
+} from '../utils/daml';
 
 interface TransactionForm {
   propertyAddress: string;
@@ -18,8 +27,10 @@ interface TransactionForm {
 
 export default function SubmitTransaction() {
   const navigate = useNavigate();
+  const { party, userAccount, userRole, verificationWeight } = useAuth();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<TransactionForm>({
     propertyAddress: '',
     postalCode: '',
@@ -45,12 +56,114 @@ export default function SubmitTransaction() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      navigate('/', { state: { message: 'Transaction submitted successfully!' } });
-    } catch (error) {
+      if (!party || !userRole) {
+        throw new Error('User not authenticated or account not found');
+      }
+
+      // Step 1: Query for existing submission rights
+      const submissionRights = await cantonApi.query(
+        TemplateIds.TransactionSubmissionRight,
+        { user: party }
+      );
+
+      let submissionRightId: string;
+
+      if (submissionRights.length === 0) {
+        // Need to create a submission right first by exercising RequestSubmissionRight
+        // Find the user's UserAccount contract
+        const userAccounts = await cantonApi.query(
+          TemplateIds.UserAccount,
+          { user: party }
+        );
+
+        if (userAccounts.length === 0) {
+          throw new Error('UserAccount not found. Please complete registration first.');
+        }
+
+        // Exercise RequestSubmissionRight to create the submission right
+        const requestResult = await cantonApi.exercise(
+          TemplateIds.UserAccount,
+          userAccounts[0].contractId,
+          'RequestSubmissionRight',
+          {}
+        );
+
+        // Extract the created TransactionSubmissionRight contract ID
+        const submissionRightEvent = requestResult.result.events.find(
+          (event: any) => event.templateId === TemplateIds.TransactionSubmissionRight
+        );
+
+        if (!submissionRightEvent || !('contractId' in submissionRightEvent)) {
+          throw new Error('Failed to create submission right');
+        }
+
+        submissionRightId = (submissionRightEvent as any).contractId;
+      } else {
+        submissionRightId = submissionRights[0].contractId;
+      }
+
+      // Step 2: Delegate submission right to create a delegation for this transaction
+      const transactionId = generateTransactionId();
+      const delegationResult = await cantonApi.exercise(
+        TemplateIds.TransactionSubmissionRight,
+        submissionRightId,
+        'DelegateSubmission',
+        { transactionId }
+      );
+
+      // Extract delegation contract ID from the result
+      const delegationEvent = delegationResult.result.events.find(
+        (event: any) => event.templateId === TemplateIds.TransactionSubmissionDelegation
+      );
+
+      if (!delegationEvent || !('contractId' in delegationEvent)) {
+        throw new Error('Failed to create submission delegation');
+      }
+
+      const delegationContractId = (delegationEvent as any).contractId;
+
+      // Step 3: Create TransactionSubmissionProposal
+      const now = new Date();
+      const transactionDate = formData.closingDate
+        ? new Date(formData.closingDate)
+        : now;
+
+      const proposal = {
+        operator: userAccount?.operator || 'operator::122...', // TODO: Get from config
+        submitter: party,
+        submitterRole: userRole,
+        submissionRight: delegationContractId,
+        transactionId,
+        propertyAddress: formData.propertyAddress,
+        postalCode: formData.postalCode,
+        propertyType: formData.propertyType,
+        livingAreaSqft: toOptionalInt(formData.livingAreaSqft),
+        lotSizeSqft: toOptionalInt(formData.lotSizeSqft),
+        bedroomsTotal: toOptionalInt(formData.bedroomsTotal),
+        bathroomsTotal: toOptionalInt(formData.bathroomsTotal),
+        yearBuilt: toOptionalInt(formData.yearBuilt),
+        salePrice: formData.salePrice,
+        transactionDate: isoStringToDamlTime(transactionDate.toISOString()),
+        closingDate: formData.closingDate ? isoStringToDamlTime(formData.closingDate) : null,
+        financingType: toOptional(formData.financingType),
+        daysOnMarket: toOptionalInt(formData.daysOnMarket),
+        proposedVerifiers: [],  // TODO: Allow user to select verifiers
+        submittedAt: isoStringToDamlTime(now.toISOString()),
+      };
+
+      await cantonApi.create(TemplateIds.TransactionSubmissionProposal, proposal);
+
+      navigate('/', {
+        state: {
+          message: `Transaction ${transactionId} submitted successfully! Waiting for operator approval.`
+        }
+      });
+    } catch (error: any) {
       console.error('Submission failed:', error);
+      setError(error.message || 'Failed to submit transaction. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -64,6 +177,12 @@ export default function SubmitTransaction() {
       </div>
 
       <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
+        {error && (
+          <div className="alert alert-error mb-4">
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+
         <div className="step-indicator mb-4">
           <div className={`step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
             <div className="step-number">{step > 1 ? '✓' : '1'}</div>
