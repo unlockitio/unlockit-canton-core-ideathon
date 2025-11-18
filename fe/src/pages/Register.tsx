@@ -88,6 +88,8 @@ export default function Register() {
   const [selectedWallet, setSelectedWallet] = useState<WalletType>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [partyId, setPartyId] = useState<string>(''); // Store the actual party ID
+  const [operatorPartyId, setOperatorPartyId] = useState<string>(''); // Store the operator party ID
   const [existingUsers, setExistingUsers] = useState<string[]>([]);
   const [selectedCredentials, setSelectedCredentials] = useState<string[]>(['mock-contract-gov-id']);
   const [credentials, setCredentials] = useState<CredentialDisplay[]>(MOCK_W3C_CREDENTIALS);
@@ -98,14 +100,26 @@ export default function Register() {
 
   useEffect(() => {
     fetchExistingUsers();
+    fetchOperatorParty();
   }, []);
+
+  const fetchOperatorParty = async () => {
+    try {
+      const operatorId = await findPartyByHint('operator');
+      if (operatorId) {
+        setOperatorPartyId(operatorId);
+      }
+    } catch (err) {
+      console.error('Error fetching operator party:', err);
+    }
+  };
 
   // Fetch real credentials from ledger when reaching step 2
   useEffect(() => {
-    if (step === 2 && username) {
+    if (step === 2 && partyId) {
       fetchUserCredentials();
     }
-  }, [step, username]);
+  }, [step, partyId]);
 
   const fetchExistingUsers = async () => {
     try {
@@ -120,25 +134,47 @@ export default function Register() {
 
   const fetchUserCredentials = async () => {
     try {
-      // Get JWT token and set auth
-      const token = await cantonApi.getToken(username);
-      cantonApi.setAuth(token, username);
+      console.log('[Register] Fetching credentials for partyId:', partyId);
+      console.log('[Register] Username:', username);
+
+      // Get JWT token with the actual party ID (not username)
+      const token = await cantonApi.getToken(partyId);
+      cantonApi.setAuth(token, partyId);
+
+      console.log('[Register] Using templateId:', W3C_VC.VerifiableCredential.templateId);
 
       // Query VerifiableCredential contracts for this user
       const vcs = await cantonApi.query<W3C_VC.VerifiableCredential>(
         W3C_VC.VerifiableCredential.templateId
       );
 
+      console.log('[Register] Received VCs:', JSON.stringify(vcs, null, 2));
+
       if (vcs && vcs.length > 0) {
         // Convert VerifiableCredential contracts to CredentialDisplay format
-        const realCredentials: CredentialDisplay[] = vcs.map((vc) => {
+        const realCredentials: CredentialDisplay[] = vcs.map((vc, index) => {
+          console.log(`[Register] Processing VC ${index}:`, JSON.stringify(vc, null, 2));
+
+          // Defensive checks for nested properties
+          if (!vc.payload) {
+            console.error(`[Register] VC ${index} missing payload:`, vc);
+            throw new Error(`Contract ${index} is missing payload`);
+          }
+
+          if (!vc.payload.subject) {
+            console.error(`[Register] VC ${index} missing subject:`, vc.payload);
+            throw new Error(`Contract ${index} payload is missing subject`);
+          }
+
           const claims: Record<string, string> = {};
 
           // Convert DAML Tuple2 array to claims object
-          vc.payload.subject.claims.forEach((tuple: any) => {
-            // DAML Tuple2 has _1 and _2 properties
-            claims[tuple._1] = tuple._2;
-          });
+          if (vc.payload.subject.claims && Array.isArray(vc.payload.subject.claims)) {
+            vc.payload.subject.claims.forEach((tuple: any) => {
+              // DAML Tuple2 has _1 and _2 properties
+              claims[tuple._1] = tuple._2;
+            });
+          }
 
           // Determine icon based on credential type
           let icon = '📜';
@@ -195,6 +231,7 @@ export default function Register() {
   const handleConnectWallet = () => {
     setShowWalletModal(true);
   };
+  
 
   const handleSelectWallet = (wallet: WalletType) => {
     setSelectedWallet(wallet);
@@ -215,12 +252,17 @@ export default function Register() {
     try {
       const userExists = existingUsers.includes(username);
 
+      // First, try to find an existing party for this username
+      let foundPartyId = await findPartyByHint(username);
+
       if (userExists) {
-        // User exists, go to credentials step
+        // User exists, use the found party or username as fallback
+        setPartyId(foundPartyId || username);
         setStep(2);
       } else {
-        // Create new party and user
-        await createPartyAndUser(username);
+        // Create new party and user, or use existing party if found
+        const createdPartyId = await createPartyAndUser(username, foundPartyId);
+        setPartyId(createdPartyId);
         setStep(2);
       }
     } catch (err: any) {
@@ -261,12 +303,9 @@ export default function Register() {
     }
   };
 
-  const createPartyAndUser = async (userId: string) => {
+  const createPartyAndUser = async (userId: string, existingPartyId: string | null): Promise<string> => {
     try {
-      let partyId: string | null = null;
-
-      // Step 1: Check if party already exists (e.g., from credential seeding)
-      partyId = await findPartyByHint(userId);
+      let partyId: string = existingPartyId || '';
 
       // Step 2: If party doesn't exist, create it
       if (!partyId) {
@@ -316,6 +355,7 @@ export default function Register() {
       }
 
       await fetchExistingUsers();
+      return partyId;
     } catch (err) {
       throw err;
     }
@@ -344,9 +384,9 @@ export default function Register() {
     setError('');
 
     try {
-      // Get JWT token and set auth for canton API
-      const token = await cantonApi.getToken(username);
-      cantonApi.setAuth(token, username);
+      // Get JWT token with the actual party ID (not username)
+      const token = await cantonApi.getToken(partyId);
+      cantonApi.setAuth(token, partyId);
 
       // TODO: In production, these contractIds would come from actual VerifiableCredential contracts on the ledger
       // For now, we're using mock contractIds that will be created by the seeding script
@@ -375,8 +415,8 @@ export default function Register() {
           // For now, create PresentationReceipt directly (bypassing VerifiableCredential)
           const receiptPayload = {
             credentialId: cred.credentialId,
-            holder: username,
-            verifier: 'operator',
+            holder: partyId,
+            verifier: operatorPartyId || 'operator',
             presentedAt: new Date().toISOString(),
             challenge: `registration-${username}-${Date.now()}`,
             presentationProof: 'mock-proof-of-possession'
@@ -411,8 +451,8 @@ export default function Register() {
 
       // Step 3: Create RegistrationRequest contract
       const registrationPayload = {
-        operator: 'operator',
-        user: username,
+        operator: operatorPartyId || 'operator',
+        user: partyId,
         requestedRole,
         credentialPresentations: presentationReceiptIds,
         requestedAt: new Date().toISOString()
