@@ -21,7 +21,7 @@ export default defineConfig({
     sourcemap: false,
     minify: 'esbuild',
     commonjsOptions: {
-      include: [/node_modules/],
+      include: [/node_modules/, /codegen/],
       transformMixedEsModules: true
     },
     rollupOptions: {
@@ -32,13 +32,19 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      'react', 
+      'react',
       'react-dom',
       '@mojotech/json-type-validation',
       '@daml/types',
       '@daml/ledger',
       '@daml/hub-react'
     ],
+    esbuildOptions: {
+      // Node.js global to browser globalThis
+      define: {
+        global: 'globalThis'
+      }
+    }
   },
   define: {
     'process.env': {},

@@ -80,14 +80,17 @@ async query<T>(
   activeAtOffset = '0'
 ): Promise<Contract<T>[]> {
   if (!this.party) {
-    this.party = 'testParty'
+    throw new Error('Party not set. Call setAuth() first.')
   }
 
-  const response = await this.request<{ result: Contract<T>[] }>('/v2/state/active-contracts', {
+  // Ensure templateId has the package prefix
+  const fullTemplateId = templateId.startsWith('#') ? templateId : `#unlockit-canton-core-ideathon:${templateId}`
+
+  const response = await this.request<Contract<T>[]>('/v2/state/active-contracts', {
     method: 'POST',
     body: JSON.stringify({
       filter: {
-        templateIds: [templateId],
+        templateIds: [fullTemplateId],
         filtersByParty: {
           [this.party]: query || {}
         }
@@ -97,19 +100,31 @@ async query<T>(
     }),
   });
 
-  return response.result;
+  // Canton API returns array directly, not { result: [...] }
+  return response;
 }
 
 
 
   async create<T>(templateId: string, payload: T): Promise<Contract<T>> {
+    if (!this.party) {
+      throw new Error('Party not set. Call setAuth() first.')
+    }
+
+    // Ensure templateId has the package prefix
+    const fullTemplateId = templateId.startsWith('#') ? templateId : `#unlockit-canton-core-ideathon:${templateId}`
+
+    const commandId = `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
     const response = await this.request<CreateResult<T>>('/v2/commands/submit-and-wait', {
       method: 'POST',
       body: JSON.stringify({
+        commandId,
+        actAs: [this.party],
         commands: [
           {
             create: {
-              templateId,
+              templateId: fullTemplateId,
               payload
             }
           }
@@ -126,13 +141,24 @@ async query<T>(
     choice: string,
     argument: TChoice
   ): Promise<ExerciseResult<TResult>> {
+    if (!this.party) {
+      throw new Error('Party not set. Call setAuth() first.')
+    }
+
+    // Ensure templateId has the package prefix
+    const fullTemplateId = templateId.startsWith('#') ? templateId : `#unlockit-canton-core-ideathon:${templateId}`
+
+    const commandId = `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
     return this.request('/v2/commands/submit-and-wait', {
       method: 'POST',
       body: JSON.stringify({
+        commandId,
+        actAs: [this.party],
         commands: [
           {
             exercise: {
-              templateId,
+              templateId: fullTemplateId,
               contractId,
               choice,
               argument
