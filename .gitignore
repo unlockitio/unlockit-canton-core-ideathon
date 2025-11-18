@@ -2,3 +2,5 @@
 /log
 .dlint.yaml
 fe/codegen/
+node_modules
+.vscode/
