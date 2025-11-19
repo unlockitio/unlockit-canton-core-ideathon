@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@daml.js/unlockit-canton-core-ideathon-0.0.1": "file:./codegen/unlockit-canton-core-ideathon-0.0.1",
     "@daml/hub-react": "^1.1.5",
     "@daml/ledger": "^2.10.2",
     "@daml/react": "^2.10.2",
