@@ -15,13 +15,20 @@ services:
       - .:/workspace
     command: >
       bash -c "
-        cd /workspace &&
+        cd /workspace
         echo 'Testing DAML command...' &&
         daml version &&
         echo 'Building DAML packages...' &&
         daml build --no-cache &&
         echo 'Starting Local Ledger and Json Ledger API...' &&
-        daml sandbox --port 6865 --json-api-port 7575 --dar .daml/dist/unlockit-canton-core-ideathon-0.0.1.dar -C canton.participants.sandbox.ledger-api.address=0.0.0.0 -C canton.participants.sandbox.http-ledger-api.server.address=0.0.0.0 --log-level-root=INFO --log-profile=container
+        daml sandbox --port 6865 --json-api-port 7575 --dar .daml/dist/unlockit-canton-core-ideathon-0.0.1.dar -C canton.participants.sandbox.ledger-api.address=0.0.0.0 -C canton.participants.sandbox.http-ledger-api.server.address=0.0.0.0 --log-level-root=WARN --log-profile=container 2>&1 | tee /tmp/sandbox.log &
+        echo 'Waiting for Canton sandbox ready message...' &&
+        while [ ! -f /tmp/sandbox.log ]; do sleep 1; done &&
+        tail -f /tmp/sandbox.log | grep -q 'Canton sandbox is ready' &&
+        echo 'Canton sandbox is ready, seeding test credentials...' &&
+        daml script --dar /workspace/.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar --script-name SeedCredentials:seedTestCredentials --ledger-host localhost --ledger-port 6865 &&
+        echo 'Test credentials seeded successfully!' &&
+        tail -f /tmp/sandbox.log
       "
     ports:
       - "6865:6865"   # Sandbox Ledger API
@@ -66,6 +73,34 @@ services:
       - VITE_CANTON_WS_URL=ws://localhost:8080/
     depends_on:
       - nginx-cors
+    networks:
+      - retvn-sandbox-network
+
+  # Swagger UI for Canton JSON Ledger API
+  swagger-ui-canton:
+    image: swaggerapi/swagger-ui:latest
+    container_name: retvn-swagger-ui-canton
+    ports:
+      - "8081:8080"
+    environment:
+      - SWAGGER_JSON=/openapi/openapi.yaml
+      - BASE_URL=/
+    volumes:
+      - ./openapi.yaml:/openapi/openapi.yaml:ro
+    networks:
+      - retvn-sandbox-network
+
+  # Swagger UI for Backend API documentation
+  swagger-ui-backend:
+    image: swaggerapi/swagger-ui:latest
+    container_name: retvn-swagger-ui-backend
+    ports:
+      - "8082:8080"
+    environment:
+      - SWAGGER_JSON=/openapi/openapi.yaml
+      - BASE_URL=/
+    volumes:
+      - ./be/openapi.yaml:/openapi/openapi.yaml:ro
     networks:
       - retvn-sandbox-network
 

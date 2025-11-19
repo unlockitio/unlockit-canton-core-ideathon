@@ -1,5 +1,6 @@
 package com.unlockit.api.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unlockit.api.client.CantonApiClient;
 import com.unlockit.api.dto.CantonActiveContractsRequest;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -21,27 +22,73 @@ public class UserAccountService {
     @RestClient
     CantonApiClient cantonApiClient;
 
+    @Inject
+    ObjectMapper objectMapper;
+
     @ConfigProperty(name = "canton.api.package-id", defaultValue = "")
     String packageId;
 
+    @ConfigProperty(name = "canton.api.operator-party-id", defaultValue = "")
+    String operatorPartyId;
+
     /**
-     * Get UserAccount contracts for a specific party
+     * Get UserAccount contracts for the operator party
+     * The JWT token is used for authentication only, not for party filtering
      *
      * @param bearerToken The JWT bearer token (must be valid format)
-     * @param partyId The party ID to query contracts for
-     * @return List of UserAccount contracts
+     * @return List of UserAccount contracts visible to the operator
      */
-    public List<Object> getUserAccounts(String bearerToken, String partyId) {
+    public List<Object> getUserAccounts(String bearerToken) {
+        if (operatorPartyId == null || operatorPartyId.isBlank()) {
+            throw new IllegalStateException("Operator party ID not configured. Please set canton.api.operator-party-id in application.properties");
+        }
+
         // Build template ID: <PACKAGE_ID>:RETVN.Role:UserAccount
         String templateId = buildTemplateId("RETVN.Role", "UserAccount");
 
-        LOG.infof("Querying Canton for template: %s, party: %s", templateId, partyId);
+        LOG.infof("Querying Canton for template: %s, operator party: %s", templateId, operatorPartyId);
 
-        // Build request
-        CantonActiveContractsRequest request = buildActiveContractsRequest(partyId, templateId);
+        String authHeader = "Bearer " + bearerToken;
+
+        // Get ledger end offset
+        String offset = getLedgerEndOffset(authHeader);
+        LOG.infof("Using ledger offset: %s", offset);
+
+        // Build request using operator party ID
+        CantonActiveContractsRequest request = buildActiveContractsRequest(operatorPartyId, templateId, offset);
+
+        try {
+            String requestJson = objectMapper.writeValueAsString(request);
+            LOG.infof("Canton API request - Authorization: %s", authHeader);
+            LOG.infof("Canton API request - Body: %s", requestJson);
+        } catch (Exception e) {
+            LOG.warnf("Failed to serialize request for logging: %s", e.getMessage());
+        }
 
         // Call Canton API with Bearer token
-        return cantonApiClient.getActiveContracts("Bearer " + bearerToken, request);
+        return cantonApiClient.getActiveContracts(authHeader, request);
+    }
+
+    private String getLedgerEndOffset(String authHeader) {
+        try {
+            Object response = cantonApiClient.getLedgerEnd(authHeader);
+            LOG.infof("Ledger end response: %s", response);
+
+            // Extract offset from response
+            if (response instanceof Map) {
+                Map<?, ?> responseMap = (Map<?, ?>) response;
+                Object offset = responseMap.get("offset");
+                if (offset != null) {
+                    return offset.toString();
+                }
+            }
+
+            LOG.warn("Could not extract offset from ledger-end response, using '0'");
+            return "0";
+        } catch (Exception e) {
+            LOG.warnf(e, "Error getting ledger end, using default offset '0'");
+            return "0";
+        }
     }
 
     /**
@@ -131,7 +178,7 @@ public class UserAccountService {
         throw new IllegalStateException("Package ID not configured. Please set canton.api.package-id in application.properties");
     }
 
-    private CantonActiveContractsRequest buildActiveContractsRequest(String partyId, String templateId) {
+    private CantonActiveContractsRequest buildActiveContractsRequest(String partyId, String templateId, String offset) {
         // Build the nested structure for Canton API
         var templateFilterValue = new CantonActiveContractsRequest.FilterConfig.PartyFilter
             .TemplateFilterWrapper.IdentifierFilter.TemplateFilter.TemplateFilterValue(templateId, true);
@@ -153,6 +200,6 @@ public class UserAccountService {
             Map.of(partyId, partyFilter)
         );
 
-        return new CantonActiveContractsRequest(filterConfig, false, "0");
+        return new CantonActiveContractsRequest(filterConfig, true, offset);
     }
 }

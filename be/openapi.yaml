@@ -1,0 +1,192 @@
+openapi: 3.0.3
+info:
+  title: Canton UserAccount API
+  description: |
+    Simple API that proxies requests to the Canton JSON API to retrieve UserAccount contracts.
+
+    **⚠️ SECURITY WARNING**: This is an unrealistic API for development/demo purposes only.
+    - Token signature is NOT validated
+    - Token expiration is NOT checked
+    - Party ID from token is trusted without verification
+
+    **DO NOT USE IN PRODUCTION**
+  version: 1.0.0
+  contact:
+    name: Unlockit
+servers:
+  - url: http://localhost:9090
+    description: Local development server
+
+tags:
+  - name: UserAccounts
+    description: Query UserAccount contracts from Canton ledger
+
+paths:
+  /api/user-accounts:
+    get:
+      tags:
+        - UserAccounts
+      summary: Get UserAccount contracts
+      description: |
+        Retrieves UserAccount contracts for the authenticated user from the Canton ledger.
+
+        **Authentication:**
+        - Requires Bearer token (JWT format)
+        - Token must have `sub` claim containing the party ID
+        - Token signature is NOT validated (dev only)
+
+        **How it works:**
+        1. Validates JWT token format (structure only)
+        2. Extracts party ID from token's `sub` claim
+        3. Queries Canton JSON API for UserAccount contracts
+        4. Returns array of contracts (empty if none found)
+      operationId: getUserAccounts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved contracts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contract'
+              examples:
+                emptyArray:
+                  summary: No contracts found
+                  value: []
+                withContracts:
+                  summary: UserAccount contracts found
+                  value:
+                    - contractId: "00abc123..."
+                      payload:
+                        operator: "operator::122..."
+                        user: "testParty::122..."
+                        role: "PrivateCitizen"
+                        verificationWeight: 5
+                        credentialPresentations: []
+                        registeredAt: "2024-11-18T12:00:00Z"
+                        status: "AccountActive"
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingHeader:
+                  summary: Missing Authorization header
+                  value:
+                    error: "Missing or invalid Authorization header"
+                invalidFormat:
+                  summary: Invalid JWT format
+                  value:
+                    error: "Invalid JWT token format"
+                missingSubject:
+                  summary: Missing subject claim
+                  value:
+                    error: "Invalid token: missing subject claim"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                cantonError:
+                  summary: Canton API error
+                  value:
+                    error: "Error calling Canton API"
+                    message: "Connection refused"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token with the following claims:
+        - `sub`: Party ID (required)
+        - `aud`: "daml_ledger_api" (recommended)
+        - `exp`: Expiration time (not validated in this dev API)
+
+        **Example token generation (Node.js):**
+        ```javascript
+        import { SignJWT } from 'jose'
+
+        const secret = new TextEncoder().encode('mydevsecretkeythatshouldbelongenough123')
+        const jwt = await new SignJWT({})
+          .setProtectedHeader({ alg: 'HS256' })
+          .setSubject('testParty')
+          .setAudience('daml_ledger_api')
+          .setExpirationTime('2h')
+          .sign(secret)
+        ```
+
+  schemas:
+    Contract:
+      type: object
+      description: Canton contract representation
+      properties:
+        contractId:
+          type: string
+          description: Unique contract identifier
+          example: "00abc123def456..."
+        payload:
+          type: object
+          description: Contract payload (UserAccount data)
+          properties:
+            operator:
+              type: string
+              description: Platform operator party
+              example: "operator::122..."
+            user:
+              type: string
+              description: User party
+              example: "testParty::122..."
+            role:
+              type: string
+              enum:
+                - PrivateCitizen
+                - RealtorAgent
+                - RealtorBroker
+                - RealtorMaster
+                - NotaryPublic
+                - TaxAuthority
+              description: User role based on credentials
+            verificationWeight:
+              type: integer
+              description: Trust weight for verifications
+              example: 5
+            credentialPresentations:
+              type: array
+              items:
+                type: string
+              description: Contract IDs of credential presentations
+            registeredAt:
+              type: string
+              format: date-time
+              description: Account registration timestamp
+            status:
+              type: string
+              enum:
+                - AccountActive
+                - AccountSuspended
+                - AccountPendingReview
+              description: Current account status
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid JWT token format"
+        message:
+          type: string
+          description: Additional error details
+          example: "Token has 2 parts, expected 3"

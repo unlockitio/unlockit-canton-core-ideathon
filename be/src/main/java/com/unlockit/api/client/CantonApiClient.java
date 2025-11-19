@@ -23,4 +23,11 @@ public interface CantonApiClient {
         @HeaderParam("Authorization") String authorization,
         CantonActiveContractsRequest request
     );
+
+    @jakarta.ws.rs.GET
+    @Path("/state/ledger-end")
+    @Produces(MediaType.APPLICATION_JSON)
+    Object getLedgerEnd(
+        @HeaderParam("Authorization") String authorization
+    );
 }

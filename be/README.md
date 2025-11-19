@@ -17,10 +17,11 @@ A simple Quarkus-based Java API that proxies requests to the Canton JSON API to 
 
 ## Configuration
 
-Before running, you need to configure the Canton package ID in `src/main/resources/application.properties`:
+Before running, you need to configure the Canton package ID and operator party ID in `src/main/resources/application.properties`:
 
 ```properties
 canton.api.package-id=<YOUR_PACKAGE_ID>
+canton.api.operator-party-id=<YOUR_OPERATOR_PARTY_ID>
 ```
 
 To find your package ID:
@@ -28,6 +29,12 @@ To find your package ID:
 1. Build your Daml project: `daml build`
 2. The `.dar` file will contain the package ID
 3. You can also query it from Canton JSON API or check the codegen output
+
+To find your operator party ID:
+
+1. Check the Canton sandbox logs when it starts
+2. Query the `/v2/parties` endpoint
+3. The operator party is created by the seedTestCredentials script
 
 ## Running the Application
 
@@ -38,6 +45,27 @@ To find your package ID:
 ```
 
 The API will be available at `http://localhost:9090`
+
+### API Documentation
+
+When running with Docker Compose, two Swagger UI instances are available:
+
+**Backend API (UserAccount API):**
+```
+http://localhost:8082
+```
+
+**Canton JSON Ledger API:**
+```
+http://localhost:8081
+```
+
+The Swagger UI instances allow you to:
+- View all available endpoints
+- See request/response schemas
+- Try out API calls directly from the browser
+- Generate JWT tokens for testing (Backend API)
+- Explore the full Canton JSON API capabilities
 
 ### Building for Production
 
@@ -59,9 +87,9 @@ Authorization: Bearer <JWT_TOKEN>
 
 **JWT Token Requirements (Format Only):**
 - Must be a valid JWT structure (3 parts separated by dots)
-- Must contain a `sub` (subject) claim with the party ID
 - Signature is **NOT** validated (unrealistic API for development)
-- Should have `aud` claim set to `"daml_ledger_api"` (not enforced)
+- Token is used for authentication only, not for party filtering
+- The API always queries using the operator party ID from configuration
 
 **Example Request:**
 ```bash
@@ -94,7 +122,7 @@ curl -X GET http://localhost:9090/api/user-accounts \
 
 - `401 Unauthorized`: Missing or invalid Authorization header
 - `401 Unauthorized`: Invalid JWT token format
-- `401 Unauthorized`: Missing subject claim in token
+- `500 Internal Server Error`: Operator party ID not configured
 - `500 Internal Server Error`: Error calling Canton API
 
 ## Token Generation (Frontend)
@@ -120,10 +148,12 @@ async function makeLocalToken(userId: string): Promise<string> {
 
 1. Client sends request with Bearer token
 2. API validates token format (3-part JWT structure)
-3. API extracts party ID from token's `sub` claim
-4. API calls Canton JSON API at `localhost:7575/v2/state/active-contracts`
-5. Canton API filters for `RETVN.Role:UserAccount` templates for the party
+3. API calls Canton JSON API at `localhost:7575/v2/state/active-contracts` using the operator party ID
+4. Canton API filters for `RETVN.Role:UserAccount` templates visible to the operator
+5. API returns all UserAccount contracts (operator can see all accounts as a signatory)
 6. API returns Canton's response to the client
+
+**Note**: The operator party can see all UserAccount contracts because it's a signatory on all of them (required by the UserAccount template design).
 
 ## Canton JSON API Request Format
 
@@ -133,7 +163,7 @@ The API constructs this request body:
 {
   "filter": {
     "filtersByParty": {
-      "<PARTY_ID>": {
+      "<OPERATOR_PARTY_ID>": {
         "cumulative": [
           {
             "identifierFilter": {
@@ -149,10 +179,15 @@ The API constructs this request body:
       }
     }
   },
-  "verbose": false,
-  "activeAtOffset": "0"
+  "verbose": true,
+  "activeAtOffset": "<LEDGER_OFFSET>"
 }
 ```
+
+Where:
+- `<OPERATOR_PARTY_ID>` is from `canton.api.operator-party-id` config
+- `<PACKAGE_ID>` is from `canton.api.package-id` config
+- `<LEDGER_OFFSET>` is fetched from `/v2/state/ledger-end` endpoint
 
 ## Development Notes
 
@@ -183,10 +218,18 @@ Error calling Canton API: Connection refused
 ### No Contracts Returned
 
 Check:
-1. UserAccount contracts exist for the party ID
-2. Package ID is correct
-3. Party ID in JWT token matches contracts
+1. UserAccount contracts exist on the ledger (run seedTestCredentials script)
+2. Package ID is correct in `canton.api.package-id`
+3. Operator party ID is correct in `canton.api.operator-party-id`
 4. Canton API is accessible and responding
+
+### Operator Party ID Not Configured
+
+```
+IllegalStateException: Operator party ID not configured
+```
+
+**Solution**: Set `canton.api.operator-party-id` in `application.properties`
 
 ## License
 

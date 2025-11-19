@@ -23,7 +23,8 @@ public class UserAccountResource {
     UserAccountService userAccountService;
 
     /**
-     * Get UserAccount contracts for the authenticated user
+     * Get UserAccount contracts visible to the operator
+     * JWT token is required for authentication but not used for party filtering
      *
      * @param authorization Bearer token from Authorization header
      * @return List of UserAccount contracts
@@ -53,20 +54,11 @@ public class UserAccountResource {
                 .build();
         }
 
-        // Extract party ID from token
-        String partyId = userAccountService.extractPartyId(token);
-        if (partyId == null) {
-            LOG.warn("Could not extract party ID from token");
-            return Response.status(Response.Status.UNAUTHORIZED)
-                .entity(Map.of("error", "Invalid token: missing subject claim"))
-                .build();
-        }
-
-        LOG.infof("Querying UserAccount contracts for party: %s", partyId);
+        LOG.info("Querying UserAccount contracts for operator");
 
         try {
-            // Call Canton API
-            List<Object> contracts = userAccountService.getUserAccounts(token, partyId);
+            // Call Canton API (uses operator party ID from config)
+            List<Object> contracts = userAccountService.getUserAccounts(token);
 
             LOG.infof("Successfully retrieved %d contracts", contracts != null ? contracts.size() : 0);
 
