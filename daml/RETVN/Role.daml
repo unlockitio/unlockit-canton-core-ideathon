@@ -151,31 +151,6 @@ template TransactionSubmissionRight
     signatory operator
     observer user
 
-    -- | Delegate this right (e.g., to a specific transaction contract)
-    choice DelegateSubmission : ContractId TransactionSubmissionDelegation
-      with
-        transactionId : Text
-      controller user
-      do
-        create TransactionSubmissionDelegation with
-          operator = operator
-          user = user
-          role = role
-          verificationWeight = verificationWeight
-          transactionId = transactionId
-
--- | Delegation of submission right to specific transaction
-template TransactionSubmissionDelegation
-  with
-    operator : Party
-    user : Party
-    role : UserRole
-    verificationWeight : Int
-    transactionId : Text
-  where
-    signatory operator
-    observer user
-
 -- | Transaction Verification Right - Capability to verify transactions
 template TransactionVerificationRight
   with

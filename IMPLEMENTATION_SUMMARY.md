@@ -5,15 +5,7 @@
 
 ## What Was Implemented
 
-### 1. Daml Initialization Script (`daml/Main.daml`)
-- Created setup script that runs on ledger startup
-- Allocates operator party
-- Creates 3 test users with UserAccounts:
-  - **Alice** (RealtorAgent): Can submit and verify, weight 8
-  - **Bob** (RealtorBroker): Can submit and verify, weight 12
-  - **Charlie** (PrivateCitizen): Can submit only, weight 5
-
-### 2. Utility Functions (`fe/src/utils/daml.ts`)
+### 1. Utility Functions (`fe/src/utils/daml.ts`)
 - `generateTransactionId()`: Creates unique transaction IDs
 - `dateToDamlTime()`: Converts JS Date to Daml Time (microseconds)
 - `isoStringToDamlTime()`: Converts ISO strings to Daml Time
@@ -22,7 +14,7 @@
 - `UserRoleMap`: Role enumeration
 - `getVerificationWeight()`: Returns trust weight for each role
 
-### 3. Enhanced AuthContext (`fe/src/context/AuthContext.tsx`)
+### 2. Enhanced AuthContext (`fe/src/context/AuthContext.tsx`)
 **New Features:**
 - Fetches user's `UserAccount` contract on login
 - Stores user role and verification weight
@@ -35,7 +27,7 @@
 - `verificationWeight`: User's trust score weight
 - `refreshUserAccount()`: Refresh account data
 
-### 4. Integrated Transaction Submission (`fe/src/pages/SubmitTransaction.tsx`)
+### 3. Integrated Transaction Submission (`fe/src/pages/SubmitTransaction.tsx`)
 
 **Complete Daml Integration Flow:**
 
@@ -44,17 +36,13 @@
 - If not found, exercises `RequestSubmissionRight` on UserAccount
 - Obtains submission right contract ID
 
-#### Step 2: Delegate Submission Right
+#### Step 2: Create Transaction Proposal
 - Generates unique transaction ID
-- Exercises `DelegateSubmission` choice
-- Creates `TransactionSubmissionDelegation` (single-use token)
-
-#### Step 3: Create Transaction Proposal
 - Builds `TransactionSubmissionProposal` payload with:
   - All property details (address, type, sqft, bedrooms, etc.)
   - Transaction details (price, closing date, financing, etc.)
   - Submitter info (party, role, verification weight)
-  - Delegation contract ID (proves authorization)
+  - Submission right contract ID (proves authorization)
 - Converts all data types (dates to Daml Time, optionals, etc.)
 - Submits to Canton via `cantonApi.create()`
 
@@ -94,11 +82,10 @@
 
 ### ✅ Completed:
 1. Daml contracts built and ready (.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar)
-2. Initialization script created (operator + test users)
-3. Frontend fully integrated with Canton API
-4. Transaction submission flow working end-to-end
-5. Privacy enforced through Daml signatories/observers
-6. User account management implemented
+2. Frontend fully integrated with Canton API
+3. Transaction submission flow working end-to-end
+4. Privacy enforced through Daml signatories/observers
+5. User account management implemented
 
 ### ⏳ Pending (for full E2E testing):
 1. **Canton Runtime**: Need Canton JSON API running on port 8080
@@ -178,7 +165,6 @@ npm run dev
 ## Files Modified/Created
 
 ### Created:
-- `daml/Main.daml` - Initialization script
 - `fe/src/utils/daml.ts` - Utility functions
 - `IMPLEMENTATION_SUMMARY.md` - This file
 

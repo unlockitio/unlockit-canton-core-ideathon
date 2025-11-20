@@ -100,7 +100,6 @@ export function getVerificationWeight(role: keyof typeof UserRoleMap): number {
 export const TemplateIds = {
   UserAccount: 'RETVN.Role:UserAccount',
   TransactionSubmissionRight: 'RETVN.Role:TransactionSubmissionRight',
-  TransactionSubmissionDelegation: 'RETVN.Role:TransactionSubmissionDelegation',
   TransactionSubmissionProposal: 'RETVN.Transaction:TransactionSubmissionProposal',
   TransactionData: 'RETVN.Transaction:TransactionData',
   TransactionVerificationRight: 'RETVN.Role:TransactionVerificationRight',

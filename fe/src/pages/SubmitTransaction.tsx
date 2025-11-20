@@ -105,27 +105,8 @@ export default function SubmitTransaction() {
         submissionRightId = submissionRights[0].contractId;
       }
 
-      // Step 2: Delegate submission right to create a delegation for this transaction
+      // Step 2: Create TransactionSubmissionProposal
       const transactionId = generateTransactionId();
-      const delegationResult = await cantonApi.exercise(
-        TemplateIds.TransactionSubmissionRight,
-        submissionRightId,
-        'DelegateSubmission',
-        { transactionId }
-      );
-
-      // Extract delegation contract ID from the result
-      const delegationEvent = delegationResult.result.events.find(
-        (event: any) => event.templateId === TemplateIds.TransactionSubmissionDelegation
-      );
-
-      if (!delegationEvent || !('contractId' in delegationEvent)) {
-        throw new Error('Failed to create submission delegation');
-      }
-
-      const delegationContractId = (delegationEvent as any).contractId;
-
-      // Step 3: Create TransactionSubmissionProposal
       const now = new Date();
       const transactionDate = formData.closingDate
         ? new Date(formData.closingDate)
@@ -135,7 +116,7 @@ export default function SubmitTransaction() {
         operator: userAccount?.operator || 'operator::122...', // TODO: Get from config
         submitter: party,
         submitterRole: userRole,
-        submissionRight: delegationContractId,
+        submissionRight: submissionRightId,
         transactionId,
         propertyAddress: formData.propertyAddress,
         postalCode: formData.postalCode,

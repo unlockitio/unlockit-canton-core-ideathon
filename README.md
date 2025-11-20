@@ -55,7 +55,6 @@ unlockit-canton-core-ideathon/
 │   │   ├── Transaction.daml   # Transaction verification
 │   │   ├── RoleTest.daml      # Integration tests
 │   │   └── README.md          # RETVN documentation
-│   └── Main.daml              # Entry point
 │
 ├── fe/                         # React frontend
 │   ├── src/

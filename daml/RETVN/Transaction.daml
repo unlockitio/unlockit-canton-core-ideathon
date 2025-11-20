@@ -194,7 +194,7 @@ template TransactionSubmissionProposal
     operator : Party
     submitter : Party
     submitterRole : UserRole
-    submissionRight : ContractId TransactionSubmissionDelegation
+    submissionRight : ContractId TransactionSubmissionRight
 
     transactionId : Text
     propertyAddress : Text
@@ -222,11 +222,8 @@ template TransactionSubmissionProposal
       controller operator
       do
         -- Verify submission right
-        delegation <- fetch submissionRight
-        assertMsg "Submitter matches delegation" (delegation.user == submitter)
-
-        -- Archive the delegation (single use)
-        archive submissionRight
+        right <- fetch submissionRight
+        assertMsg "Submitter matches submission right" (right.user == submitter)
 
         -- Create the transaction data with initial trust score from submitter
         create TransactionData with
