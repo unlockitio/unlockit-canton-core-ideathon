@@ -1,7 +1,6 @@
 // Credentials type for DAML authentication
 // This is used to find the public party.
-// On DAML Hub, we use @daml/hub-react for this.
-// Locally we infer it from the token.
+// We infer it from the token.
 
 export type PublicParty = {
   usePublicParty: () => string | undefined;

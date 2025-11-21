@@ -22,32 +22,35 @@ export default function Login() {
   useEffect(() => {
     const fetchUserAccounts = async () => {
       try {
-        // Fetch UserAccount contracts from backend (queries as operator)
-        const accounts = await cantonApi.getAllUserAccounts()
-        console.log('Fetched UserAccount contracts:', accounts)
+        // Fetch users from Canton JSON API /v2/users
+        const response = await fetch('http://localhost:8080/v2/users', {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
 
-        // Transform to display format
-        const displayAccounts: UserAccountDisplay[] = accounts
-          .filter((account: any) => {
-            // Handle both Canton v2 structure and simplified structure
-            const payload = account.payload || account.contractEntry?.JsActiveContract?.createdEvent?.createArgument
-            return payload && payload.status === 'AccountActive'
-          })
-          .map((account: any) => {
-            // Extract payload from either structure
-            const payload = account.payload || account.contractEntry?.JsActiveContract?.createdEvent?.createArgument
-            return {
-              user: payload.user,
-              displayName: payload.user.split('::')[0] || payload.user,
-              role: payload.role,
-              status: payload.status
-            }
-          })
+        if (!response.ok) {
+          throw new Error(`Canton API Error: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log('Fetched users from /v2/users:', data)
+
+        // Transform /v2/users response to display format
+        // /v2/users returns: { users: [{ id, primaryParty, actAs, readAs, isDeactivated, ... }] }
+        const displayAccounts: UserAccountDisplay[] = data.users
+          .filter((user: any) => !user.isDeactivated)
+          .map((user: any) => ({
+            user: user.primaryParty,
+            displayName: user.id || user.primaryParty.split('::')[0] || user.primaryParty,
+            role: 'User', // Default role, /v2/users doesn't have role info
+            status: user.isDeactivated ? 'Inactive' : 'Active'
+          }))
 
         setUserAccounts(displayAccounts)
       } catch (err) {
         console.error('Error fetching user accounts:', err)
-        setError('Failed to load user accounts. Is the backend running on port 9090?')
+        setError('Failed to load user accounts. Is Canton running on port 8080?')
       }
     }
 

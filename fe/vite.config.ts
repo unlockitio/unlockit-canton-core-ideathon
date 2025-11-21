@@ -35,9 +35,7 @@ export default defineConfig({
       'react',
       'react-dom',
       '@mojotech/json-type-validation',
-      '@daml/types',
-      '@daml/ledger',
-      '@daml/hub-react'
+      '@daml/types'
     ],
     esbuildOptions: {
       // Node.js global to browser globalThis
