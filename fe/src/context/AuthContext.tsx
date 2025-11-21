@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { cantonApi } from '../services/cantonApi';
 import { TemplateIds } from '../utils/daml';
 
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load auth state from localStorage on mount
   useEffect(() => {
     const storedParty = localStorage.getItem('party');
     const storedUserId = localStorage.getItem('userId');
@@ -73,10 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = await cantonApi.getToken(selectedUserId);
 
-      cantonApi.setAuth(token, selectedUserId);
-      const userParty = cantonApi.getParty();
+      if (token) {
 
-      if (userParty) {
+        const userParty = selectedUserId; // FIXME: Assuming userId is the party for simplicity 
+        cantonApi.setAuth(token, userParty);
+
         setParty(userParty);
         setUserId(selectedUserId);
         setToken(token);
@@ -135,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         isAuthenticated: !!party && !!token,
         userAccount,
-        userRole: userAccount?.role || null,
+        userRole: userAccount?.role || "user-role-null", // FIXME: should be null, but we havent't add user roles yet
         verificationWeight: userAccount?.verificationWeight || 0,
         login,
         logout,

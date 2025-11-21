@@ -27,10 +27,12 @@ export const authConfig = {
   userManagement: userManagement
 }
 
-export const CANTON_JSON_API_URL = import.meta.env.VITE_CANTON_API_URL
+export const CANTON_JSON_API_URL = import.meta.env.VITE_CANTON_API_URL || 'http://localhost:8080'
 export const CANTON_WS_URL = import.meta.env.VITE_CANTON_WS_URL
+export const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:9090'
 
 export const config = {
   apiUrl: CANTON_JSON_API_URL,
-  wsUrl: CANTON_WS_URL
+  wsUrl: CANTON_WS_URL,
+  backendUrl: BACKEND_API_URL
 }

@@ -306,18 +306,13 @@ testCompleteRetvnFlow = script do
   -- STEP 8: Maria submits a transaction
   -- ========================================
 
-  -- Maria delegates her submission right
-  mariaDelegation <- submit maria do
-    exerciseCmd mariaSubmissionRight DelegateSubmission with
-      transactionId = "TXN-2024-001"
-
   -- Maria creates submission proposal
   mariaProposal <- submit maria do
     createCmd TransactionSubmissionProposal with
       operator = operator
       submitter = maria
       submitterRole = RealtorAgent
-      submissionRight = mariaDelegation
+      submissionRight = mariaSubmissionRight
       transactionId = "TXN-2024-001"
       propertyAddress = "123 Main St, San Francisco, CA"
       postalCode = "94102"
@@ -343,13 +338,14 @@ testCompleteRetvnFlow = script do
   -- STEP 9: John verifies the transaction
   -- ========================================
 
-  johnVerificationDelegation <- submit john do
+  -- John delegates his verification right to this specific transaction
+  johnDelegation <- submit john do
     exerciseCmd johnVerificationRight DelegateVerification with
       transactionId = "TXN-2024-001"
 
   transactionAfterJohn <- submit operator do
     exerciseCmd transaction SubmitVerification with
-      verificationDelegation = johnVerificationDelegation
+      verificationDelegation = johnDelegation
       decision = Confirmed
       notes = Some "I represented the buyer in this transaction. All details are accurate."
       verifiedAt = now

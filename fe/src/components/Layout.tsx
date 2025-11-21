@@ -25,6 +25,7 @@ export default function Layout({ onLogout }: LayoutProps) {
             <li><Link to="/verify">Verify Transactions</Link></li>
             <li><Link to="/market-data">Market Data</Link></li>
             <li><Link to="/admin/approvals">Admin</Link></li>
+            <li><Link to="/debug/ledger" style={{ color: '#e53e3e' }}>Debug</Link></li>
           </ul>
 
           <div className="navbar-user">

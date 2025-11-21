@@ -1,42 +1,57 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
-import Ledger from '@daml/ledger'
-import Credentials from '../types/Credentials'
-import { authConfig, config } from '../config'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { cantonApi } from '../services/cantonApi'
 import './Auth.css'
 
-interface User {
-  id: string
-  primaryParty?: string
-  isDeactivated: boolean
+interface UserAccountDisplay {
+  user: string // Party ID
+  displayName: string // Extracted from party ID
+  role: string
+  status: string
 }
 
-type LoginProps = {
-  onLogin: (credentials: Credentials) => void
-}
-
-export default function Login({ onLogin }: LoginProps) {
-  const [users, setUsers] = useState<User[]>([])
+export default function Login() {
+  const navigate = useNavigate()
+  const { login: authLogin } = useAuth()
+  const [userAccounts, setUserAccounts] = useState<UserAccountDisplay[]>([])
   const [selectedUser, setSelectedUser] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchUserAccounts = async () => {
       try {
-        const response = await fetch(`${config.apiUrl}/v2/users`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch users')
-        }
-        const data = await response.json()
-        setUsers(data.users.filter((u: User) => !u.isDeactivated))
+        // Fetch UserAccount contracts from backend (queries as operator)
+        const accounts = await cantonApi.getAllUserAccounts()
+        console.log('Fetched UserAccount contracts:', accounts)
+
+        // Transform to display format
+        const displayAccounts: UserAccountDisplay[] = accounts
+          .filter((account: any) => {
+            // Handle both Canton v2 structure and simplified structure
+            const payload = account.payload || account.contractEntry?.JsActiveContract?.createdEvent?.createArgument
+            return payload && payload.status === 'AccountActive'
+          })
+          .map((account: any) => {
+            // Extract payload from either structure
+            const payload = account.payload || account.contractEntry?.JsActiveContract?.createdEvent?.createArgument
+            return {
+              user: payload.user,
+              displayName: payload.user.split('::')[0] || payload.user,
+              role: payload.role,
+              status: payload.status
+            }
+          })
+
+        setUserAccounts(displayAccounts)
       } catch (err) {
-        console.error('Error fetching users:', err)
-        setError('Failed to load users from Canton')
+        console.error('Error fetching user accounts:', err)
+        setError('Failed to load user accounts. Is the backend running on port 9090?')
       }
     }
 
-    fetchUsers()
+    fetchUserAccounts()
   }, [])
 
   const handleInsecureLogin = useCallback(
@@ -52,49 +67,20 @@ export default function Login({ onLogin }: LoginProps) {
       setError('')
 
       try {
-        const auth = authConfig
+        // Call AuthContext's login method
+        await authLogin(selectedUser)
 
-        const token = await auth.makeToken(selectedUser)
-        const ledger = new Ledger({ token, httpBaseUrl: config.apiUrl })
-
-        const primaryParty = await auth.userManagement.primaryParty(selectedUser)
-
-        const useGetPublicParty = () => {
-          const [publicParty, setPublicParty] = useState<string | undefined>()
-
-          const setup = useCallback(() => {
-            const fn = async () => {
-              const p = await auth.userManagement.publicParty()
-              setPublicParty(p)
-            }
-            fn()
-          }, [])
-
-          return {
-            usePublicParty: () => publicParty,
-            setup: setup
-          }
-        }
-
-        const credentials: Credentials = {
-          user: { userId: selectedUser, primaryParty: primaryParty },
-          party: primaryParty,
-          token: token,
-          getPublicParty: useGetPublicParty
-        }
-
-        onLogin(credentials)
+        // Navigate to dashboard after successful login
+        navigate('/')
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Login failed'
-        if (!error) {
-          setError(msg)
-        }
+        setError(msg)
         console.error('Login error:', err)
       } finally {
         setIsLoading(false)
       }
     },
-    [selectedUser, onLogin, error]
+    [selectedUser, authLogin, navigate]
   )
 
   return (
@@ -115,9 +101,9 @@ export default function Login({ onLogin }: LoginProps) {
               disabled={isLoading}
             >
               <option value="">Choose a user...</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.id}
+              {userAccounts.map((account) => (
+                <option key={account.user} value={account.user}>
+                  {account.displayName} ({account.role})
                 </option>
               ))}
             </select>

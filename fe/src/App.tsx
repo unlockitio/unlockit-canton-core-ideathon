@@ -1,13 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { createLedgerContext } from './context/LedgerContext';
-import DamlHub, {
-  damlHubLogout,
-  isRunningOnHub,
-  usePublicParty,
-  usePublicToken,
-} from '@daml/hub-react';
-import Credentials from './types/Credentials';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -16,37 +9,34 @@ import VerifyTransactions from './pages/VerifyTransactions';
 import MarketData from './pages/MarketData';
 import AdminApprovals from './pages/AdminApprovals';
 import AdminUsers from './pages/AdminUsers';
+import LedgerDebug from './pages/LedgerDebug';
 import Layout from './components/Layout';
-import { AuthProvider } from './context/AuthContext';
-
-// Context for the party of the user
-export const userContext = createLedgerContext();
-
-// Context for the public party used to query user aliases
-export const publicContext = isRunningOnHub()
-  ? createLedgerContext()
-  : userContext;
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 function AppContent() {
-  const [credentials, setCredentials] = React.useState<Credentials | undefined>();
+  const { isAuthenticated, isLoading, logout } = useAuth();
 
-if (credentials) {
-  return (
-    <Routes>
-      <Route path="/" element={<Layout onLogout={() => setCredentials(undefined)} />}>
-        <Route index element={<Dashboard />} />
-        <Route path="submit" element={<SubmitTransaction />} />
-        <Route path="verify" element={<VerifyTransactions />} />
-        <Route path="market-data" element={<MarketData />} />
-        <Route path="admin/approvals" element={<AdminApprovals />} />
-        <Route path="admin/users" element={<AdminUsers />} />
-      </Route>
-    </Routes>
-  )
-}
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
+  if (isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/" element={<Layout onLogout={logout} />}>
+          <Route index element={<Dashboard />} />
+          <Route path="submit" element={<SubmitTransaction />} />
+          <Route path="verify" element={<VerifyTransactions />} />
+          <Route path="market-data" element={<MarketData />} />
+          <Route path="admin/approvals" element={<AdminApprovals />} />
+          <Route path="admin/users" element={<AdminUsers />} />
+          <Route path="debug/ledger" element={<LedgerDebug />} />
+        </Route>
+      </Routes>
+    );
+  }
 
-  return <Login onLogin={setCredentials} />;
+  return <Login />;
 }
 
 

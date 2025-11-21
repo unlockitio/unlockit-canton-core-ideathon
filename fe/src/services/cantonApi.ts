@@ -93,6 +93,7 @@ class CantonApiService {
     return response.json()
   }
 
+  // FIXME: simplified!!
   async getToken(userId: string): Promise<string> {
     const secret = new TextEncoder().encode('mydevsecretkeythatshouldbelongenough123')
     const jwt = await new SignJWT({})
@@ -313,6 +314,242 @@ async query<T>(
         ]
       })
     })
+  }
+
+  /**
+   * Lists all parties on the ledger
+   */
+  async listAllParties(): Promise<{ parties: Array<{ party: string; displayName: string; isLocal: boolean }> }> {
+    const response = await this.requestUnauth<{ partyDetails: Array<{ party: string; isLocal: boolean }> }>('/v2/parties')
+
+    // Transform to expected format with displayName extracted from party ID
+    const parties = response.partyDetails.map(p => {
+      // Extract display name from party ID (format: "name-hash::...")
+      const displayName = p.party.split('::')[0] || p.party
+      return {
+        party: p.party,
+        displayName: displayName,
+        isLocal: p.isLocal
+      }
+    })
+
+    return { parties }
+  }
+
+  /**
+   * Lists all users from Canton user management
+   */
+  async listAllUsers(): Promise<{ users: Array<{ id: string; primaryParty?: string; isDeactivated: boolean }> }> {
+    const response = await this.requestUnauth<{ users: Array<{ id: string; primaryParty?: string; isDeactivated: boolean }> }>('/v2/users')
+    return response
+  }
+
+  /**
+   * Get all UserAccount contracts from the backend API
+   * Backend queries as operator party, so it can see all UserAccounts
+   */
+  async getAllUserAccounts(): Promise<Array<Contract<{
+    operator: string
+    user: string
+    role: string
+    verificationWeight: number
+    credentialPresentations: string[]
+    registeredAt: string
+    status: string
+  }>>> {
+    // Get a token for making the request (backend just validates format)
+    const token = await this.getToken('temp')
+
+    const response = await fetch(`${config.backendUrl}/api/user-accounts`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Backend API Error: ${response.status} - ${error}`)
+    }
+
+    return response.json()
+  }
+
+  // ===== DEVELOPMENT / ADMIN METHODS =====
+
+  // Unauthenticated request for debug/admin purposes
+  private async requestUnauth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options.headers as Record<string, string>) || {})
+    }
+
+    const response = await fetch(`${config.apiUrl}${endpoint}`, {
+      ...options,
+      headers
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`API Error: ${response.status} - ${error}`)
+    }
+
+    return response.json()
+  }
+
+  /**
+   * Query contracts for a specific party (bypasses current authenticated party)
+   * Useful for development to see the full ledger state
+   */
+  async queryAsParty<T>(
+    party: string,
+    templateId: string,
+    activeAtOffset?: string
+  ): Promise<Contract<T>[]> {
+    // Fetch the real package ID and construct the full template ID
+    const packageId = await this.fetchPackageId()
+    const moduleAndName = templateId.replace('#unlockit-canton-core-ideathon:', '')
+    const fullTemplateId = `${packageId}:${moduleAndName}`
+
+    // Fetch the current ledger offset if not provided
+    let offset = activeAtOffset
+    if (!offset) {
+      try {
+        const ledgerEndResponse = await this.request<{ offset: string }>('/v2/state/ledger-end')
+        offset = ledgerEndResponse.offset
+      } catch (err) {
+        console.warn('[CantonAPI] Failed to fetch ledger-end, using "0":', err)
+        offset = '0'
+      }
+    }
+
+    const requestPayload = {
+      filter: {
+        filtersByParty: {
+          [party]: {
+            cumulative: [
+              {
+                identifierFilter: {
+                  TemplateFilter: {
+                    value: {
+                      templateId: fullTemplateId,
+                      includeCreatedEventBlob: true
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      verbose: true,
+      activeAtOffset: offset
+    }
+
+    const response = await this.requestUnauth<any>('/v2/state/active-contracts', {
+      method: 'POST',
+      body: JSON.stringify(requestPayload)
+    })
+
+    let contracts: Contract<T>[] = []
+
+    if (Array.isArray(response)) {
+      contracts = response.map((item: any) => {
+        if (item.createdEvent) {
+          return {
+            contractId: item.createdEvent.contractId,
+            payload: item.createdEvent.payload,
+            templateId: item.createdEvent.templateId,
+            signatories: item.createdEvent.signatories,
+            observers: item.createdEvent.observers
+          }
+        }
+        return item
+      })
+    } else if (response && typeof response === 'object') {
+      if (response.result && Array.isArray(response.result)) {
+        contracts = response.result.map((item: any) => {
+          if (item.createdEvent) {
+            return {
+              contractId: item.createdEvent.contractId,
+              payload: item.createdEvent.payload,
+              templateId: item.createdEvent.templateId,
+              signatories: item.createdEvent.signatories,
+              observers: item.createdEvent.observers
+            }
+          }
+          return item
+        })
+      } else if (response.contracts && Array.isArray(response.contracts)) {
+        contracts = response.contracts
+      } else if (response.activeContracts && Array.isArray(response.activeContracts)) {
+        contracts = response.activeContracts
+      }
+    }
+
+    return contracts
+  }
+
+  /**
+   * Query all contracts across all parties for a given template
+   * WARNING: This can be expensive on large ledgers. Use for development only.
+   */
+  async queryAllParties<T>(templateId: string): Promise<{
+    byParty: Record<string, Contract<T>[]>
+    allContracts: Array<Contract<T> & { ownerParty: string }>
+  }> {
+    console.log('[CantonAPI.queryAllParties] Starting for template:', templateId)
+    const partiesResponse = await this.listAllParties()
+    console.log('[CantonAPI.queryAllParties] Got parties:', partiesResponse.parties.length)
+
+    const byParty: Record<string, Contract<T>[]> = {}
+    const allContracts: Array<Contract<T> & { ownerParty: string }> = []
+
+    for (const partyInfo of partiesResponse.parties) {
+      try {
+        console.log('[CantonAPI.queryAllParties] Querying party:', partyInfo.party)
+        const contracts = await this.queryAsParty<T>(partyInfo.party, templateId)
+        console.log('[CantonAPI.queryAllParties] Got', contracts.length, 'contracts for party:', partyInfo.displayName)
+
+        byParty[partyInfo.party] = contracts
+
+        // Add to allContracts with party info
+        contracts.forEach(contract => {
+          allContracts.push({
+            ...contract,
+            ownerParty: partyInfo.party
+          })
+        })
+      } catch (err) {
+        console.warn(`[CantonAPI] Failed to query contracts for party ${partyInfo.party}:`, err)
+        byParty[partyInfo.party] = []
+      }
+    }
+
+    console.log('[CantonAPI.queryAllParties] Total contracts found:', allContracts.length)
+    return { byParty, allContracts }
+  }
+
+  /**
+   * Get the complete ledger state for all known templates
+   * Returns all contracts grouped by template and party
+   */
+  async getFullLedgerState(): Promise<{
+    parties: Array<{ party: string; displayName: string; isLocal: boolean }>
+    packages: string[]
+    contractsByTemplate: Record<string, {
+      byParty: Record<string, Contract<any>[]>
+      total: number
+    }>
+  }> {
+    const partiesResponse = await this.listAllParties()
+    const packagesResponse = await this.request<{ packageIds: string[] }>('/v2/packages')
+
+    return {
+      parties: partiesResponse.parties,
+      packages: packagesResponse.packageIds,
+      contractsByTemplate: {}
+    }
   }
 }
 

@@ -60,6 +60,7 @@ export default function SubmitTransaction() {
 
     try {
       if (!party || !userRole) {
+        console.log('User not authenticated or role missing: party=', party, ', userRole=', userRole);
         throw new Error('User not authenticated or account not found');
       }
 
