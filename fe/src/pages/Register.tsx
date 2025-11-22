@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Auth.css';
 import { cantonApi } from '../services/cantonApi';
-import type { Contract } from '../types/canton';
 
 // Import DAML codegen types from installed package
 import * as W3C_VC from '@daml.js/unlockit-canton-core-ideathon-0.0.1/lib/W3C/VC';
@@ -23,62 +22,18 @@ interface CredentialDisplay {
   required: boolean;
 }
 
-// Mock W3C VCs with realistic structure - will be replaced by ledger queries
-const MOCK_W3C_CREDENTIALS: CredentialDisplay[] = [
-  {
-    contractId: 'mock-contract-gov-id',
-    credentialId: 'urn:uuid:ca-dmv-dl-d1234567',
-    type: ['VerifiableCredential', 'GovernmentIDCredential'],
-    title: 'California Driver\'s License',
-    icon: '🪪',
-    issuer: 'CA_DMV',
-    issuedTo: 'did:example:holder',
-    claims: {
-      licenseNumber: 'D1234567',
-      licenseClass: 'C',
-      state: 'California',
-      issueDate: '2020-12-15'
-    },
-    expirationDate: '2026-12-15',
-    status: 'Active',
-    required: true,
-  },
-  {
-    contractId: 'mock-contract-re-license',
-    credentialId: 'urn:uuid:ca-dre-agent-02056789',
-    type: ['VerifiableCredential', 'RealEstateLicenseCredential'],
-    title: 'Real Estate Agent License',
-    icon: '🏠',
-    issuer: 'CA_DRE',
-    issuedTo: 'did:example:holder',
-    claims: {
-      licenseNumber: '02056789',
-      licenseType: 'Real Estate Agent',
-      state: 'California',
-      issueDate: '2023-01-15'
-    },
-    expirationDate: '2025-06-30',
-    status: 'Active',
-    required: false,
-  },
-  {
-    contractId: 'mock-contract-brokerage',
-    credentialId: 'urn:uuid:kw-affiliation-12345',
-    type: ['VerifiableCredential', 'BrokerageAffiliationCredential'],
-    title: 'Keller Williams Affiliation',
-    icon: '🏢',
-    issuer: 'KELLER_WILLIAMS',
-    issuedTo: 'did:example:holder',
-    claims: {
-      affiliationId: 'KW-CA-12345',
-      agentLicense: '02056789',
-      brokerageName: 'Keller Williams Realty',
-      office: 'San Francisco'
-    },
-    status: 'Active',
-    required: false,
-  },
-];
+// Utility function to format party ID for display
+// Converts "caDmv-1df42503::122002..." to "CA_DMV"
+const formatPartyForDisplay = (partyId: string): string => {
+  // Extract the hint part before '::' or full party if no '::'
+  const hintPart = partyId.split('::')[0];
+  // Remove the random suffix (everything after '-')
+  const baseName = hintPart.split('-')[0];
+  // Convert to uppercase with underscores (e.g., "caDmv" -> "CA_DMV")
+  return baseName
+    .replace(/([a-z])([A-Z])/g, '$1_$2') // Insert underscore between lowercase and uppercase
+    .toUpperCase();
+};
 
 type WalletType = 'dfns' | 'bron' | null;
 
@@ -91,8 +46,8 @@ export default function Register() {
   const [partyId, setPartyId] = useState<string>(''); // Store the actual party ID
   const [operatorPartyId, setOperatorPartyId] = useState<string>(''); // Store the operator party ID
   const [existingUsers, setExistingUsers] = useState<string[]>([]);
-  const [selectedCredentials, setSelectedCredentials] = useState<string[]>(['mock-contract-gov-id']);
-  const [credentials, setCredentials] = useState<CredentialDisplay[]>(MOCK_W3C_CREDENTIALS);
+  const [selectedCredentials, setSelectedCredentials] = useState<string[]>([]);
+  const [credentials, setCredentials] = useState<CredentialDisplay[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -148,12 +103,9 @@ export default function Register() {
         W3C_VC.VerifiableCredential.templateId
       );
 
-      console.log('[Register] Received VCs:', JSON.stringify(vcs, null, 2));
-
       if (vcs && vcs.length > 0) {
         // Convert VerifiableCredential contracts to CredentialDisplay format
         const realCredentials: CredentialDisplay[] = vcs.map((vc, index) => {
-          console.log(`[Register] Processing VC ${index}:`, JSON.stringify(vc, null, 2));
 
           // Defensive checks for nested properties
           if (!vc.payload) {
@@ -202,7 +154,7 @@ export default function Register() {
             type: vc.payload.credentialType,
             title,
             icon,
-            issuer: vc.payload.issuer,
+            issuer: formatPartyForDisplay(vc.payload.issuer),
             issuedTo: vc.payload.subject.id,
             claims,
             expirationDate,
@@ -219,12 +171,12 @@ export default function Register() {
           .map(c => c.contractId);
         setSelectedCredentials(requiredIds);
       } else {
-        console.log('No credentials found on ledger, using mock credentials');
-        // Keep using mock credentials if none found
+        console.log('No credentials found on ledger');
+        setCredentials([]);
       }
     } catch (err) {
       console.error('Error fetching credentials from ledger:', err);
-      // Keep using mock credentials on error
+      setCredentials([]);
     }
   };
 
@@ -388,6 +340,11 @@ export default function Register() {
       const token = await cantonApi.getToken(partyId);
       cantonApi.setAuth(token, partyId);
 
+      // Ensure operator party ID is available
+      if (!operatorPartyId) {
+        throw new Error('Operator party not found. Please wait and try again.');
+      }
+
       // TODO: In production, these contractIds would come from actual VerifiableCredential contracts on the ledger
       // For now, we're using mock contractIds that will be created by the seeding script
       const selectedCredDisplays = credentials.filter(c => selectedCredentials.includes(c.contractId));
@@ -416,7 +373,7 @@ export default function Register() {
           const receiptPayload = {
             credentialId: cred.credentialId,
             holder: partyId,
-            verifier: operatorPartyId || 'operator',
+            verifier: operatorPartyId,
             presentedAt: new Date().toISOString(),
             challenge: `registration-${username}-${Date.now()}`,
             presentationProof: 'mock-proof-of-possession'
@@ -451,7 +408,7 @@ export default function Register() {
 
       // Step 3: Create RegistrationRequest contract
       const registrationPayload = {
-        operator: operatorPartyId || 'operator',
+        operator: operatorPartyId,
         user: partyId,
         requestedRole,
         credentialPresentations: presentationReceiptIds,
@@ -589,8 +546,13 @@ export default function Register() {
               <strong>Step 2:</strong> Select the credentials you want to present for verification
             </div>
 
-            <div className="credential-grid">
-              {credentials.map((credential) => {
+            {credentials.length === 0 ? (
+              <div className="alert alert-warning mb-3">
+                <strong>No credentials found.</strong> You don't have any verifiable credentials yet. Please obtain credentials from authorized issuers before registering.
+              </div>
+            ) : (
+              <div className="credential-grid">
+                {credentials.map((credential) => {
                 const claimsDisplay = Object.entries(credential.claims)
                   .slice(0, 3) // Show first 3 claims
                   .map(([key, value]) => `${key}: ${value}`);
@@ -626,7 +588,8 @@ export default function Register() {
                   </div>
                 );
               })}
-            </div>
+              </div>
+            )}
 
             {error && (
               <div className="alert alert-error">

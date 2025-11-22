@@ -190,8 +190,6 @@ async query<T>(
   });
 
   console.log('[CantonAPI] Query response:', JSON.stringify(response, null, 2))
-  console.log('[CantonAPI] Response type:', typeof response)
-  console.log('[CantonAPI] Is array?', Array.isArray(response))
 
   // Handle different response formats from Canton v2 API
   let contracts: Contract<T>[] = [];
@@ -199,30 +197,57 @@ async query<T>(
   if (Array.isArray(response)) {
     // Direct array response - each item might be a createdEvent wrapper
     contracts = response.map((item: any) => {
+      // Check for contractEntry.JsActiveContract.createdEvent structure (Canton v2)
+      if (item.contractEntry?.JsActiveContract?.createdEvent) {
+        const event = item.contractEntry.JsActiveContract.createdEvent;
+        return {
+          contractId: event.contractId,
+          payload: event.createArgument || event.payload, // Canton uses createArgument for the payload
+          templateId: event.templateId,
+          signatories: event.signatories || [],
+          observers: event.observers || [],
+          agreementText: event.agreementText || ''
+        };
+      }
       // Check if item is wrapped in a createdEvent structure
       if (item.createdEvent) {
         return {
           contractId: item.createdEvent.contractId,
-          payload: item.createdEvent.payload,
+          payload: item.createdEvent.createArgument || item.createdEvent.payload,
           templateId: item.createdEvent.templateId,
-          signatories: item.createdEvent.signatories,
-          observers: item.createdEvent.observers
+          signatories: item.createdEvent.signatories || [],
+          observers: item.createdEvent.observers || [],
+          agreementText: item.createdEvent.agreementText || ''
         };
       }
       // If it's already in the correct format, return as-is
+      console.log('[CantonAPI] Unwrapped contract item:', JSON.stringify(item, null, 2));
       return item;
     });
   } else if (response && typeof response === 'object') {
     // Check for various possible response structures
     if (response.result && Array.isArray(response.result)) {
       contracts = response.result.map((item: any) => {
+        // Check for contractEntry.JsActiveContract.createdEvent structure (Canton v2)
+        if (item.contractEntry?.JsActiveContract?.createdEvent) {
+          const event = item.contractEntry.JsActiveContract.createdEvent;
+          return {
+            contractId: event.contractId,
+            payload: event.createArgument || event.payload,
+            templateId: event.templateId,
+            signatories: event.signatories || [],
+            observers: event.observers || [],
+            agreementText: event.agreementText || ''
+          };
+        }
         if (item.createdEvent) {
           return {
             contractId: item.createdEvent.contractId,
-            payload: item.createdEvent.payload,
+            payload: item.createdEvent.createArgument || item.createdEvent.payload,
             templateId: item.createdEvent.templateId,
-            signatories: item.createdEvent.signatories,
-            observers: item.createdEvent.observers
+            signatories: item.createdEvent.signatories || [],
+            observers: item.createdEvent.observers || [],
+            agreementText: item.createdEvent.agreementText || ''
           };
         }
         return item;
@@ -259,23 +284,59 @@ async query<T>(
 
     const commandId = `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
 
-    const response = await this.request<CreateResult<T>>('/v2/commands/submit-and-wait', {
-      method: 'POST',
-      body: JSON.stringify({
-        commandId,
-        actAs: [this.party],
+    // Extract userId from party (format: "alice-9b3970be::122002...")
+    // Use the first part before '::' or '-' as userId
+    const userId = this.party.split('::')[0].split('-')[0] || this.party
+
+    // Canton v3 API format - note the nested 'commands' structure
+    const requestBody = {
+      commands: {
         commands: [
           {
-            create: {
+            CreateCommand: {
               templateId: fullTemplateId,
-              payload
+              createArguments: payload
             }
           }
-        ]
-      })
+        ],
+        userId: `${userId}-user`,
+        commandId,
+        actAs: [this.party]
+      }
+    }
+
+    console.log('[CantonAPI.create] Request body:', JSON.stringify(requestBody, null, 2))
+
+    const response = await this.request<any>('/v2/commands/submit-and-wait-for-transaction', {
+      method: 'POST',
+      body: JSON.stringify(requestBody)
     })
 
-    return response.result
+    console.log('[CantonAPI.create] Response:', JSON.stringify(response, null, 2))
+
+    // Extract the created contract from the transaction response
+    // Canton v3 returns transaction with events array
+    if (response.transaction?.events) {
+      const createdEvent = response.transaction.events.find((e: any) => e.CreatedEvent || e.created)
+      if (createdEvent) {
+        const event = createdEvent.CreatedEvent || createdEvent.created
+        return {
+          contractId: event.contractId,
+          payload: event.createArgument || event.payload,
+          templateId: event.templateId,
+          signatories: event.signatories || [],
+          observers: event.observers || [],
+          agreementText: event.agreementText || ''
+        }
+      }
+    }
+
+    // Fallback for different response structure
+    if (response.result) {
+      return response.result
+    }
+
+    throw new Error('Unexpected response structure from create command')
   }
 
   async exercise<TChoice, TResult>(
@@ -297,23 +358,51 @@ async query<T>(
 
     const commandId = `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
 
-    return this.request('/v2/commands/submit-and-wait', {
-      method: 'POST',
-      body: JSON.stringify({
-        commandId,
-        actAs: [this.party],
+    // Extract userId from party (format: "alice-9b3970be::122002...")
+    const userId = this.party.split('::')[0].split('-')[0] || this.party
+
+    // Canton v3 API format
+    const requestBody = {
+      commands: {
         commands: [
           {
-            exercise: {
+            ExerciseCommand: {
               templateId: fullTemplateId,
               contractId,
               choice,
-              argument
+              choiceArgument: argument
             }
           }
-        ]
-      })
+        ],
+        userId: `${userId}-user`,
+        commandId,
+        actAs: [this.party]
+      }
+    }
+
+    console.log('[CantonAPI.exercise] Request body:', JSON.stringify(requestBody, null, 2))
+
+    const response = await this.request<any>('/v2/commands/submit-and-wait-for-transaction', {
+      method: 'POST',
+      body: JSON.stringify(requestBody)
     })
+
+    console.log('[CantonAPI.exercise] Response:', JSON.stringify(response, null, 2))
+
+    // Extract exercise result from transaction response
+    // Canton v3 returns transaction with events array
+    if (response.transaction) {
+      return {
+        status: 200,
+        result: {
+          exerciseResult: response.transaction.exerciseResult || response.transaction,
+          events: response.transaction.events || []
+        }
+      }
+    }
+
+    // Fallback
+    return response as ExerciseResult<TResult>
   }
 
   /**
@@ -455,13 +544,26 @@ async query<T>(
 
     if (Array.isArray(response)) {
       contracts = response.map((item: any) => {
+        // Check for contractEntry.JsActiveContract.createdEvent structure (Canton v2)
+        if (item.contractEntry?.JsActiveContract?.createdEvent) {
+          const event = item.contractEntry.JsActiveContract.createdEvent;
+          return {
+            contractId: event.contractId,
+            payload: event.createArgument || event.payload,
+            templateId: event.templateId,
+            signatories: event.signatories || [],
+            observers: event.observers || [],
+            agreementText: event.agreementText || ''
+          }
+        }
         if (item.createdEvent) {
           return {
             contractId: item.createdEvent.contractId,
-            payload: item.createdEvent.payload,
+            payload: item.createdEvent.createArgument || item.createdEvent.payload,
             templateId: item.createdEvent.templateId,
-            signatories: item.createdEvent.signatories,
-            observers: item.createdEvent.observers
+            signatories: item.createdEvent.signatories || [],
+            observers: item.createdEvent.observers || [],
+            agreementText: item.createdEvent.agreementText || ''
           }
         }
         return item
@@ -469,13 +571,26 @@ async query<T>(
     } else if (response && typeof response === 'object') {
       if (response.result && Array.isArray(response.result)) {
         contracts = response.result.map((item: any) => {
+          // Check for contractEntry.JsActiveContract.createdEvent structure (Canton v2)
+          if (item.contractEntry?.JsActiveContract?.createdEvent) {
+            const event = item.contractEntry.JsActiveContract.createdEvent;
+            return {
+              contractId: event.contractId,
+              payload: event.createArgument || event.payload,
+              templateId: event.templateId,
+              signatories: event.signatories || [],
+              observers: event.observers || [],
+              agreementText: event.agreementText || ''
+            }
+          }
           if (item.createdEvent) {
             return {
               contractId: item.createdEvent.contractId,
-              payload: item.createdEvent.payload,
+              payload: item.createdEvent.createArgument || item.createdEvent.payload,
               templateId: item.createdEvent.templateId,
-              signatories: item.createdEvent.signatories,
-              observers: item.createdEvent.observers
+              signatories: item.createdEvent.signatories || [],
+              observers: item.createdEvent.observers || [],
+              agreementText: item.createdEvent.agreementText || ''
             }
           }
           return item
