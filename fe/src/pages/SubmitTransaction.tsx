@@ -93,15 +93,24 @@ export default function SubmitTransaction() {
         );
 
         // Extract the created TransactionSubmissionRight contract ID
-        const submissionRightEvent = requestResult.result.events.find(
-          (event: any) => event.templateId === TemplateIds.TransactionSubmissionRight
+        // The templateId in the response includes the full package ID, so we match by module:template name
+        const submissionRightEvent = requestResult.result?.events?.find(
+          (event: any) => {
+            const eventTemplateId = event.templateId || event.CreatedEvent?.templateId || '';
+            return eventTemplateId.includes('RETVN.Role:TransactionSubmissionRight');
+          }
         );
 
-        if (!submissionRightEvent || !('contractId' in submissionRightEvent)) {
-          throw new Error('Failed to create submission right');
+        // Also check for CreatedEvent structure from Canton v3
+        const eventAny = submissionRightEvent as any;
+        const contractId = eventAny?.contractId || eventAny?.CreatedEvent?.contractId;
+
+        if (!contractId) {
+          console.error('RequestSubmissionRight response:', JSON.stringify(requestResult, null, 2));
+          throw new Error('Failed to create submission right - no contract ID in response');
         }
 
-        submissionRightId = (submissionRightEvent as any).contractId;
+        submissionRightId = contractId;
       } else {
         submissionRightId = submissionRights[0].contractId;
       }
@@ -127,7 +136,7 @@ export default function SubmitTransaction() {
         bedroomsTotal: toOptionalInt(formData.bedroomsTotal),
         bathroomsTotal: toOptionalInt(formData.bathroomsTotal),
         yearBuilt: toOptionalInt(formData.yearBuilt),
-        salePrice: formData.salePrice,
+        salePrice: formData.salePrice || '0',
         transactionDate: isoStringToDamlTime(transactionDate.toISOString()),
         closingDate: formData.closingDate ? isoStringToDamlTime(formData.closingDate) : null,
         financingType: toOptional(formData.financingType),

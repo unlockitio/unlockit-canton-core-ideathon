@@ -10,20 +10,20 @@ export function generateTransactionId(): string {
 }
 
 /**
- * Convert JavaScript Date to Daml Time (microseconds since epoch)
+ * Convert JavaScript Date to Daml Time (ISO 8601 format for Canton JSON API)
  */
 export function dateToDamlTime(date: Date): string {
-  // Daml Time is microseconds since Unix epoch
-  const microseconds = date.getTime() * 1000;
-  return microseconds.toString();
+  // Canton JSON API expects ISO 8601 format
+  return date.toISOString();
 }
 
 /**
- * Convert ISO date string to Daml Time
+ * Convert ISO date string to Daml Time (ensures proper ISO 8601 format)
  */
 export function isoStringToDamlTime(isoString: string): string {
   const date = new Date(isoString);
-  return dateToDamlTime(date);
+  // Return ISO 8601 format that Canton expects
+  return date.toISOString();
 }
 
 /**
