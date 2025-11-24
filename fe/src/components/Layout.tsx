@@ -1,5 +1,6 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './Layout.css';
 
 type LayoutProps = {
@@ -7,6 +8,8 @@ type LayoutProps = {
 };
 
 export default function Layout({ onLogout }: LayoutProps) {
+  const { isOperator } = useAuth();
+
   const handleLogout = () => {
     onLogout();
   };
@@ -20,12 +23,17 @@ export default function Layout({ onLogout }: LayoutProps) {
           </Link>
 
           <ul className="navbar-nav">
-            <li><Link to="/">Dashboard</Link></li>
-            <li><Link to="/submit">Submit Transaction</Link></li>
-            <li><Link to="/verify">Verify Transactions</Link></li>
-            <li><Link to="/market-data">Market Data</Link></li>
-            <li><Link to="/admin/approvals">Admin</Link></li>
-            <li><Link to="/debug/ledger" style={{ color: '#e53e3e' }}>Debug</Link></li>
+            {isOperator ? (
+              <li><Link to="/admin/approvals">Admin</Link></li>
+            ) : (
+              <>
+              <li><Link to="/">Dashboard</Link></li>
+              <li><Link to="/submit">Submit Transaction</Link></li>
+              <li><Link to="/verify">Verify Transactions</Link></li>
+              <li><Link to="/market-data">Market Data</Link></li>
+              <li><Link to="/debug/ledger" style={{ color: '#e53e3e' }}>Debug</Link></li>
+              </>
+            )}
           </ul>
 
           <div className="navbar-user">

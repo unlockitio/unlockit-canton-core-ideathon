@@ -12,6 +12,28 @@ import LedgerDebug from './pages/LedgerDebug';
 import Layout from './components/Layout';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
+// Wrapper component to protect admin routes
+function AdminRoute({ children }: { children: React.ReactElement }) {
+  const { isOperator } = useAuth();
+
+  if (!isOperator) {
+    return (
+      <div className="container">
+        <div className="card">
+          <div className="empty-state">
+            <div className="empty-state-icon">🚫</div>
+            <h2>Access Denied</h2>
+            <p>You do not have permission to access this page.</p>
+            <p className="text-muted">Only operators can access the admin panel.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
+}
+
 function AppContent() {
   const { isAuthenticated, isLoading, logout } = useAuth();
 
@@ -27,8 +49,8 @@ function AppContent() {
           <Route path="submit" element={<SubmitTransaction />} />
           <Route path="verify" element={<VerifyTransactions />} />
           <Route path="market-data" element={<MarketData />} />
-          <Route path="admin/approvals" element={<AdminApprovals />} />
-          <Route path="admin/users" element={<AdminUsers />} />
+          <Route path="admin/approvals" element={<AdminRoute><AdminApprovals /></AdminRoute>} />
+          <Route path="admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="debug/ledger" element={<LedgerDebug />} />
         </Route>
       </Routes>

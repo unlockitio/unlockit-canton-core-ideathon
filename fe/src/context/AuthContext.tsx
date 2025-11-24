@@ -17,6 +17,7 @@ interface AuthContextType {
   userId: string | null;
   token: string | null;
   isAuthenticated: boolean;
+  isOperator: boolean;
   userAccount: UserAccount | null;
   userRole: string | null;
   verificationWeight: number;
@@ -129,6 +130,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [party, token, isLoading]);
 
+  // Check if current party is the operator
+  const isOperator = party
+    ? party.toLowerCase().startsWith('operator-') || party.toLowerCase().startsWith('operator::')
+    : false;
+
   return (
     <AuthContext.Provider
       value={{
@@ -136,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userId,
         token,
         isAuthenticated: !!party && !!token,
+        isOperator,
         userAccount,
         userRole: userAccount?.role || "user-role-null", // FIXME: should be null, but we havent't add user roles yet
         verificationWeight: userAccount?.verificationWeight || 0,

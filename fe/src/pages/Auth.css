@@ -235,3 +235,33 @@
   background: #f7fafc;
   border-color: #5850ec;
 }
+
+.auth-divider {
+  margin: 20px 0;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.btn-admin {
+  background: #4b5563;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 20px;
+  transition: background 0.2s;
+}
+
+.btn-admin:hover {
+  background: #374151;
+}
+
+.btn-admin:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

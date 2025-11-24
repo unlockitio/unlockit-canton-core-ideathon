@@ -18,11 +18,73 @@ export default function Login() {
   const [selectedUser, setSelectedUser] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [operatorParty, setOperatorParty] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUserAccounts = async () => {
       try {
-        // Fetch users from Canton JSON API /v2/users
+        // Step 1: Find operator party
+        const partiesResponse = await fetch('http://localhost:8080/v2/parties')
+        if (!partiesResponse.ok) {
+          throw new Error('Failed to fetch parties')
+        }
+        const partiesData = await partiesResponse.json()
+        const operatorPartyDetails = partiesData.partyDetails?.find((p: any) => {
+          const partyId = p.party.toLowerCase()
+          return partyId.startsWith('operator-') || partyId.startsWith('operator::')
+        })
+
+        if (!operatorPartyDetails) {
+          throw new Error('Operator party not found')
+        }
+
+        const operatorPartyId = operatorPartyDetails.party
+        console.log('Using operator party:', operatorPartyId)
+
+        // Step 2: Get operator token and query UserAccount contracts from operator's perspective
+        const operatorToken = await cantonApi.getToken(operatorPartyId)
+        cantonApi.setAuth(operatorToken, operatorPartyId)
+
+        console.log('Querying UserAccount contracts from operator perspective...')
+        const userAccountContracts = await cantonApi.query<{
+          operator: string
+          user: string
+          role: { tag: string } | string
+          verificationWeight: number
+          credentialPresentations: string[]
+          registeredAt: string
+          status: { tag: string } | string
+        }>('RETVN.Role:UserAccount')
+
+        console.log('UserAccount contracts:', userAccountContracts)
+
+        // Extract unique user parties from UserAccount contracts
+        const userPartiesWithAccounts = new Set<string>()
+        const userAccountDataMap = new Map<string, any>()
+
+        userAccountContracts.forEach(contract => {
+          const userParty = contract.payload.user
+          userPartiesWithAccounts.add(userParty)
+
+          // Extract role - handle both object format {tag: "RealtorAgent"} and string format
+          let role = 'User'
+          if (contract.payload.role) {
+            if (typeof contract.payload.role === 'object' && 'tag' in contract.payload.role) {
+              role = contract.payload.role.tag
+            } else if (typeof contract.payload.role === 'string') {
+              role = contract.payload.role
+            }
+          }
+
+          userAccountDataMap.set(userParty, {
+            role,
+            status: typeof contract.payload.status === 'object' ? contract.payload.status.tag : contract.payload.status
+          })
+        })
+
+        console.log('User parties with accounts:', Array.from(userPartiesWithAccounts))
+
+        // Step 3: Fetch all users from Canton /v2/users
         const response = await fetch('http://localhost:8080/v2/users', {
           headers: {
             'Content-Type': 'application/json'
@@ -36,18 +98,34 @@ export default function Login() {
         const data = await response.json()
         console.log('Fetched users from /v2/users:', data)
 
-        // Transform /v2/users response to display format
-        // /v2/users returns: { users: [{ id, primaryParty, actAs, readAs, isDeactivated, ... }] }
+        // Step 4: Filter to only show users that have Active UserAccount contracts
         const displayAccounts: UserAccountDisplay[] = data.users
-          .filter((user: any) => !user.isDeactivated)
-          .map((user: any) => ({
-            user: user.primaryParty,
-            displayName: user.id || user.primaryParty.split('::')[0] || user.primaryParty,
-            role: 'User', // Default role, /v2/users doesn't have role info
-            status: user.isDeactivated ? 'Inactive' : 'Active'
-          }))
+          .filter((user: any) => {
+            if (user.isDeactivated) return false
+            if (!userPartiesWithAccounts.has(user.primaryParty)) return false
 
+            const accountData = userAccountDataMap.get(user.primaryParty)
+            // Only show AccountActive accounts (not AccountSuspended or AccountPendingReview)
+            return accountData?.status === 'AccountActive'
+          })
+          .map((user: any) => {
+            const accountData = userAccountDataMap.get(user.primaryParty)
+            return {
+              user: user.primaryParty,
+              displayName: user.id || user.primaryParty.split('::')[0] || user.primaryParty,
+              role: accountData?.role || 'User',
+              status: accountData?.status || 'AccountActive'
+            }
+          })
+
+        console.log('Filtered display accounts:', displayAccounts)
         setUserAccounts(displayAccounts)
+
+        // Store operator party for admin login
+        setOperatorParty(operatorPartyId)
+
+        // Clear operator auth so it doesn't interfere with actual login
+        cantonApi.clearAuth()
       } catch (err) {
         console.error('Error fetching user accounts:', err)
         setError('Failed to load user accounts. Is Canton running on port 8080?')
@@ -86,6 +164,33 @@ export default function Login() {
     [selectedUser, authLogin, navigate]
   )
 
+  const handleAdminLogin = useCallback(
+    async () => {
+      if (!operatorParty) {
+        setError('Operator party not found')
+        return
+      }
+
+      setIsLoading(true)
+      setError('')
+
+      try {
+        // Login as operator
+        await authLogin(operatorParty)
+
+        // Navigate to admin approvals page
+        navigate('/admin/approvals')
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Admin login failed'
+        setError(msg)
+        console.error('Admin login error:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [operatorParty, authLogin, navigate]
+  )
+
   return (
     <div className="auth-container">
       <div className="auth-card">
@@ -117,16 +222,32 @@ export default function Login() {
           <button type="submit" className="btn btn-primary btn-block" disabled={isLoading}>
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
-
-          <div className="auth-footer">
-            <p>
-              Do not have an account{' '}
-              <Link to="/register" className="auth-link">
-                Register
-              </Link>
-            </p>
-          </div>
         </form>
+
+        {operatorParty && (
+          <>
+            <div className="auth-divider">
+              <span>or</span>
+            </div>
+            <button
+              type="button"
+              className="btn-admin"
+              onClick={handleAdminLogin}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Logging in...' : 'Admin Login'}
+            </button>
+          </>
+        )}
+
+        <div className="auth-footer">
+          <p>
+            Do not have an account{' '}
+            <Link to="/register" className="auth-link">
+              Register
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

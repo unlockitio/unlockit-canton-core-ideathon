@@ -130,7 +130,10 @@ export default function Register() {
 
           // Determine icon based on credential type
           let icon = '📜';
-          let title = vc.payload.credentialType.join(', ');
+          // Filter out "VerifiableCredential" as it's always present and not informative
+          let title = vc.payload.credentialType
+            .filter(t => t !== 'VerifiableCredential')
+            .join(', ') || 'Credential';
 
           if (vc.payload.credentialType.includes('GovernmentIDCredential')) {
             icon = '🪪';
@@ -138,9 +141,18 @@ export default function Register() {
           } else if (vc.payload.credentialType.includes('RealEstateLicenseCredential')) {
             icon = '🏠';
             title = 'Real Estate License';
+          } else if (vc.payload.credentialType.includes('RealEstateBrokerLicenseCredential')) {
+            icon = '🏠';
+            title = 'Real Estate Broker License';
           } else if (vc.payload.credentialType.includes('BrokerageAffiliationCredential')) {
             icon = '🏢';
             title = claims.brokerageName || 'Brokerage Affiliation';
+          } else if (vc.payload.credentialType.includes('BrokerageOwnershipCredential')) {
+            icon = '🏢';
+            title = claims.brokerageName || 'Brokerage Ownership';
+          } else if (vc.payload.credentialType.includes('MortgageLenderLicenseCredential')) {
+            icon = '🏦';
+            title = 'Mortgage Lender License';
           }
 
           // Convert DAML Optional ([] or [value]) to string | undefined
@@ -204,19 +216,24 @@ export default function Register() {
     try {
       const userExists = existingUsers.includes(username);
 
-      // First, try to find an existing party for this username
-      let foundPartyId = await findPartyByHint(username);
-
       if (userExists) {
-        // User exists, use the found party or username as fallback
-        setPartyId(foundPartyId || username);
-        setStep(2);
-      } else {
-        // Create new party and user, or use existing party if found
-        const createdPartyId = await createPartyAndUser(username, foundPartyId);
-        setPartyId(createdPartyId);
-        setStep(2);
+        setError('User already exists. Please login instead.');
+        setIsLoading(false);
+        return;
       }
+
+      // Find existing party for this username (party must exist with VCs already)
+      const foundPartyId = await findPartyByHint(username);
+
+      if (!foundPartyId) {
+        setError('No party found with credentials for this username. Please contact your credential issuer.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Store party ID and username for later user creation in Step 3
+      setPartyId(foundPartyId);
+      setStep(2);
     } catch (err: any) {
       setError(err.message || 'Failed to process registration');
       console.error(err);
@@ -255,33 +272,11 @@ export default function Register() {
     }
   };
 
-  const createPartyAndUser = async (userId: string, existingPartyId: string | null): Promise<string> => {
+  const createUser = async (userId: string, partyId: string): Promise<void> => {
     try {
-      let partyId: string = existingPartyId || '';
+      console.log(`Creating Canton user for ${userId} with party ${partyId}`);
 
-      // Step 2: If party doesn't exist, create it
-      if (!partyId) {
-        const partyResponse = await fetch(`${apiUrl}/v2/parties`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            partyIdHint: userId,
-            displayName: userId
-          })
-        });
-
-        if (!partyResponse.ok) {
-          const errorText = await partyResponse.text();
-          throw new Error(`Failed to create party: ${partyResponse.statusText} - ${errorText}`);
-        }
-
-        const partyData = await partyResponse.json();
-        partyId = partyData.partyDetails.party;
-      } else {
-        console.log(`Using existing party for ${userId}: ${partyId}`);
-      }
-
-      // Step 3: Create user with the party (new or existing)
+      // Create Canton user with the existing party
       const userResponse = await fetch(`${apiUrl}/v2/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -306,8 +301,8 @@ export default function Register() {
         throw new Error(`Failed to create user: ${userResponse.statusText} - ${errorText}`);
       }
 
+      console.log(`Successfully created Canton user ${userId}`);
       await fetchExistingUsers();
-      return partyId;
     } catch (err) {
       throw err;
     }
@@ -336,6 +331,11 @@ export default function Register() {
     setError('');
 
     try {
+      // STEP 0: Create Canton user NOW (after VC submission, before creating contracts)
+      console.log('Creating Canton user after VC selection...');
+      await createUser(username, partyId);
+      console.log('Canton user created successfully');
+
       // Get JWT token with the actual party ID (not username)
       const token = await cantonApi.getToken(partyId);
       cantonApi.setAuth(token, partyId);
@@ -393,18 +393,52 @@ export default function Register() {
 
       // Step 2: Determine requested role based on credentials
       let requestedRole: RETVN_Role.UserRole = 'PrivateCitizen';
-      const hasRELicense = selectedCredDisplays.some(c =>
+
+      // Check for various license types
+      const hasAgentLicense = selectedCredDisplays.some(c =>
         c.type.includes('RealEstateLicenseCredential')
+      );
+      const hasBrokerLicense = selectedCredDisplays.some(c =>
+        c.type.includes('RealEstateBrokerLicenseCredential') ||
+        c.type.includes('RealEstateBrokerLicense')
       );
       const hasBrokerageAffiliation = selectedCredDisplays.some(c =>
         c.type.includes('BrokerageAffiliationCredential')
       );
+      const hasBrokerageOwnership = selectedCredDisplays.some(c =>
+        c.type.includes('BrokerageOwnershipCredential')
+      );
+      const hasNotaryCommission = selectedCredDisplays.some(c =>
+        c.type.includes('NotaryCommissionCredential')
+      );
+      const hasTaxAuthorityCredential = selectedCredDisplays.some(c =>
+        c.type.includes('TaxAuthorityCredential') ||
+        c.type.includes('GovernmentAgencyCredential')
+      );
 
-      if (hasRELicense && hasBrokerageAffiliation) {
+      // Determine role based on credential combinations
+      if (hasTaxAuthorityCredential) {
+        requestedRole = 'TaxAuthority';
+      } else if (hasNotaryCommission) {
+        requestedRole = 'NotaryPublic';
+      } else if (hasBrokerLicense && hasBrokerageOwnership) {
+        requestedRole = 'RealtorBroker';
+      } else if ((hasAgentLicense || hasBrokerLicense) && hasBrokerageAffiliation) {
         requestedRole = 'RealtorAgent';
-      } else if (hasRELicense) {
+      } else if (hasAgentLicense || hasBrokerLicense) {
         requestedRole = 'PrivateCitizen'; // Has license but no affiliation
       }
+
+      console.log('[Register] Role determination:', {
+        hasAgentLicense,
+        hasBrokerLicense,
+        hasBrokerageAffiliation,
+        hasBrokerageOwnership,
+        hasNotaryCommission,
+        hasTaxAuthorityCredential,
+        requestedRole,
+        selectedCredentials: selectedCredDisplays.map(c => ({ title: c.title, type: c.type }))
+      });
 
       // Step 3: Create RegistrationRequest contract
       const registrationPayload = {
