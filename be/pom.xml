@@ -9,7 +9,7 @@
 
     <properties>
         <compiler-plugin.version>3.13.0</compiler-plugin.version>
-        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
@@ -17,7 +17,18 @@
         <quarkus.platform.version>3.17.4</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
+        <daml.version>3.4.0-snapshot.20251022.14344.0.v4acf13f9</daml.version>
+        <daml-codegen-java.output>${project.build.directory}/generated-sources/daml</daml-codegen-java.output>
+        <daml.dar.path>${project.basedir}/../.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar</daml.dar.path>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>digitalasset-releases</id>
+            <name>Digital Asset SDK releases</name>
+            <url>https://digitalassetsdk.jfrog.io/artifactory/assembly-releases</url>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -51,6 +62,35 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-vertx</artifactId>
+        </dependency>
+        <!-- Daml Java bindings for gRPC ledger API -->
+        <dependency>
+            <groupId>com.daml</groupId>
+            <artifactId>bindings-java</artifactId>
+            <version>${daml.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-lite</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- gRPC dependencies (let versions be managed transitively by bindings-java) -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
         </dependency>
     </dependencies>
 
@@ -87,6 +127,51 @@
                         <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
                 </configuration>
+            </plugin>
+            <!-- Daml Codegen - Generate Java classes from DAR -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>daml-codegen</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>daml</executable>
+                            <arguments>
+                                <argument>codegen</argument>
+                                <argument>java</argument>
+                                <argument>${daml.dar.path}</argument>
+                                <argument>-o</argument>
+                                <argument>${daml-codegen-java.output}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Add generated sources to build path -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${daml-codegen-java.output}</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -1,6 +1,6 @@
 # Multi-stage build for size optimization and security
 # Stage 1: Builder - for building and installing DAML SDK
-FROM eclipse-temurin:21-jdk AS builder
+FROM eclipse-temurin:21-jdk-jammy AS builder
 
 # Version variables (must be provided via build args)
 ARG DAML_SDK_VERSION_SHORT
@@ -24,7 +24,7 @@ RUN set -eux; \
     cd "$SDK_DIR"; bash ./install.sh
 
 # Stage 2: Runtime - optimized final image
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-jammy
 
 # Configure environment variables
 ENV DAML_SDK_VERSION_SHORT=${DAML_SDK_VERSION_SHORT}

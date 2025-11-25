@@ -104,6 +104,33 @@ services:
     networks:
       - retvn-sandbox-network
 
+  # Backend API with Canton automation
+  backend:
+    build:
+      context: .
+      dockerfile: be/Dockerfile
+      args:
+        DAML_SDK_VERSION_SHORT: 3.4.0-rc2
+        DAML_SDK_VERSION_FULL: 3.4.0-snapshot.20251022.14344.0.v4acf13f9
+    image: retvn-backend:latest
+    container_name: retvn-backend
+    ports:
+      - "9090:9090"
+    environment:
+      - CANTON_GRPC_HOST=canton-sandbox
+      - CANTON_GRPC_PORT=6865
+      - CANTON_JSON_API_URL=http://nginx-cors:8080
+      - QUARKUS_HTTP_HOST=0.0.0.0
+    depends_on:
+      canton-sandbox:
+        condition: service_healthy
+      nginx-cors:
+        condition: service_started
+    networks:
+      - retvn-sandbox-network
+    stdin_open: true
+    tty: true
+
 networks:
   retvn-sandbox-network:
     driver: bridge

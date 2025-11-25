@@ -1,5 +1,5 @@
 # Canton Dockerfile
-FROM eclipse-temurin:17-jdk-jammy
+FROM eclipse-temurin:21-jdk-jammy
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
