@@ -2,11 +2,13 @@ import { config } from '../config'
 import { SignJWT } from 'jose'
 import type { Contract, QueryResult, ExerciseResult, CreateResult } from '../types/canton'
 
+// Package ID from codegen - see src/codegen/unlockit-canton-core-ideathon-0.0.1/lib/index.d.ts
+const DAML_PACKAGE_ID = '8039f5428ce3345a9bcb81de925786f48d44a658f48af78c1075a7647a138f71'
+
 class CantonApiService {
   private token: string | null = null
   private party: string | null = null
   private packageId: string | null = null
-  private packageIdPromise: Promise<string> | null = null
 
   setAuth(token: string, party: string) {
     this.token = token
@@ -23,51 +25,12 @@ class CantonApiService {
   }
 
   private async fetchPackageId(): Promise<string> {
-    // If we already have the package ID, return it
-    if (this.packageId) {
-      return this.packageId
+    // Use the package ID from codegen (generated from the deployed DAR file)
+    if (!this.packageId) {
+      this.packageId = DAML_PACKAGE_ID
+      console.log('[CantonAPI] Using package ID from codegen:', this.packageId)
     }
-
-    // If a fetch is already in progress, wait for it
-    if (this.packageIdPromise) {
-      return this.packageIdPromise
-    }
-
-    // Start fetching the package ID
-    this.packageIdPromise = (async () => {
-      try {
-        const response = await this.request<{ packageIds: string[] }>('/v2/packages')
-
-        // Find the package ID for our application by checking package details
-        // We look for packages that contain "RETVN" or "W3C" module references
-        for (const pkgId of response.packageIds) {
-          try {
-            // Fetch package details as text to search for identifying strings
-            const pkgResponse = await fetch(`${config.apiUrl}/v2/packages/${pkgId}`)
-            if (pkgResponse.ok) {
-              const pkgText = await pkgResponse.text()
-              // Check if this package contains our application modules
-              if (pkgText.includes('RETVN') && pkgText.includes('VerifiableCredential')) {
-                console.log('[CantonAPI] Found package ID:', pkgId)
-                this.packageId = pkgId
-                return pkgId
-              }
-            }
-          } catch (err) {
-            // Skip packages we can't read
-            continue
-          }
-        }
-
-        throw new Error('Could not find RETVN application package ID')
-      } catch (error) {
-        // Reset the promise so we can retry
-        this.packageIdPromise = null
-        throw error
-      }
-    })()
-
-    return this.packageIdPromise
+    return this.packageId
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -446,8 +409,11 @@ async query<T>(
     registeredAt: string
     status: string
   }>>> {
-    // Get a token for making the request (backend just validates format)
-    const token = await this.getToken('temp')
+    if (!this.party) {
+      throw new Error('Not authenticated. Call setAuth() first.')
+    }
+
+    const token = await this.getToken(this.party)
 
     const response = await fetch(`${config.backendUrl}/api/user-accounts`, {
       headers: {

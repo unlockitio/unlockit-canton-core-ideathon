@@ -96,15 +96,16 @@ export function getVerificationWeight(role: keyof typeof UserRoleMap): number {
 
 /**
  * Template IDs for Canton API calls
+ * Using placeholder prefix that matches codegen (gets replaced with actual package ID at runtime)
  */
 export const TemplateIds = {
-  UserAccount: 'RETVN.Role:UserAccount',
-  RegistrationRequest: 'RETVN.Role:RegistrationRequest',
-  TransactionSubmissionRight: 'RETVN.Role:TransactionSubmissionRight',
-  TransactionSubmissionProposal: 'RETVN.Transaction:TransactionSubmissionProposal',
-  TransactionData: 'RETVN.Transaction:TransactionData',
-  TransactionVerificationRight: 'RETVN.Role:TransactionVerificationRight',
-  TransactionVerificationDelegation: 'RETVN.Role:TransactionVerificationDelegation',
-  PresentationReceipt: 'W3C.VC:PresentationReceipt',
-  VerifiableCredential: 'W3C.VC:VerifiableCredential',
+  UserAccount: '#unlockit-canton-core-ideathon:RETVN.Role:UserAccount',
+  RegistrationRequest: '#unlockit-canton-core-ideathon:RETVN.Role:RegistrationRequest',
+  TransactionSubmissionRight: '#unlockit-canton-core-ideathon:RETVN.Role:TransactionSubmissionRight',
+  TransactionSubmissionProposal: '#unlockit-canton-core-ideathon:RETVN.Transaction:TransactionSubmissionProposal',
+  TransactionData: '#unlockit-canton-core-ideathon:RETVN.Transaction:TransactionData',
+  TransactionVerificationRight: '#unlockit-canton-core-ideathon:RETVN.Role:TransactionVerificationRight',
+  TransactionVerificationDelegation: '#unlockit-canton-core-ideathon:RETVN.Role:TransactionVerificationDelegation',
+  PresentationReceipt: '#unlockit-canton-core-ideathon:W3C.VC:PresentationReceipt',
+  VerifiableCredential: '#unlockit-canton-core-ideathon:W3C.VC:VerifiableCredential',
 } as const;

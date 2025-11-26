@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
+import TransactionDetail from './pages/TransactionDetail';
 import SubmitTransaction from './pages/SubmitTransaction';
 import VerifyTransactions from './pages/VerifyTransactions';
 import Insights from './pages/Insights';
@@ -48,6 +49,7 @@ function AppContent() {
         <Route path="/" element={<Layout onLogout={logout} />}>
           <Route index element={<Dashboard />} />
           <Route path="transactions" element={<Transactions />} />
+          <Route path="transactions/:id" element={<TransactionDetail />} />
           <Route path="insights" element={<Insights />} />
           <Route path="submit" element={<SubmitTransaction />} />
           <Route path="verify" element={<VerifyTransactions />} />

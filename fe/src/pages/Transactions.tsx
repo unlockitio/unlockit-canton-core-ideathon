@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { cantonApi } from '../services/cantonApi';
 import { TemplateIds } from '../utils/daml';
@@ -24,6 +25,7 @@ interface UserAccount {
 }
 
 export default function Transactions() {
+  const navigate = useNavigate();
   const { party } = useAuth();
   const [transactions, setTransactions] = useState<Contract<TransactionData>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,6 +36,11 @@ export default function Transactions() {
   const [usersByRole, setUsersByRole] = useState<Map<UserRole, Contract<UserAccount>[]>>(new Map());
   const [isAssigningVerifier, setIsAssigningVerifier] = useState(false);
   const [assigningForTransaction, setAssigningForTransaction] = useState<string | null>(null);
+  const [assignDropdownState, setAssignDropdownState] = useState<Record<string, {
+    show: boolean;
+    selectedRole: UserRole | '';
+    selectedVerifier: string;
+  }>>({});
 
   const loadTransactions = async () => {
     if (!party) return;
@@ -62,6 +69,10 @@ export default function Transactions() {
       // Group users by role
       const byRole = new Map<UserRole, Contract<UserAccount>[]>();
       accounts.forEach((account) => {
+        if (!account.payload || !account.payload.role) {
+          console.warn('Account missing payload or role:', account);
+          return;
+        }
         const role = account.payload.role as UserRole;
         const typedAccount: Contract<UserAccount> = {
           ...account,
@@ -210,9 +221,19 @@ export default function Transactions() {
             {transactions.map((transaction) => {
               const verification = getVerificationStatus(transaction);
               const unassignedRoles = getUnassignedRoles(transaction);
-              const [showAssignDropdown, setShowAssignDropdown] = React.useState(false);
-              const [selectedRole, setSelectedRole] = React.useState<UserRole | ''>('');
-              const [selectedVerifier, setSelectedVerifier] = React.useState('');
+
+              const dropdownState = assignDropdownState[transaction.contractId] || {
+                show: false,
+                selectedRole: '',
+                selectedVerifier: ''
+              };
+
+              const setDropdownState = (updates: Partial<typeof dropdownState>) => {
+                setAssignDropdownState(prev => ({
+                  ...prev,
+                  [transaction.contractId]: { ...dropdownState, ...updates }
+                }));
+              };
 
               const canVerify = transaction.payload.assignedVerifiers.includes(party || '');
               const hasVerified = verification.verifications.some((v) => v.verifier === party);
@@ -229,7 +250,10 @@ export default function Transactions() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                    <div style={{ flex: 1 }}>
+                    <div
+                      style={{ flex: 1, cursor: 'pointer' }}
+                      onClick={() => navigate(`/transactions/${transaction.contractId}`)}
+                    >
                       <div className="font-semibold" style={{ fontSize: '1.1rem' }}>
                         {transaction.payload.propertyAddress}
                       </div>
@@ -332,7 +356,7 @@ export default function Transactions() {
                         {unassignedRoles.length > 0 && (
                           <button
                             className="btn btn-sm btn-secondary"
-                            onClick={() => setShowAssignDropdown(!showAssignDropdown)}
+                            onClick={() => setDropdownState({ show: !dropdownState.show })}
                             disabled={isAssigningVerifier && assigningForTransaction === transaction.contractId}
                             style={{ minWidth: '120px' }}
                           >
@@ -345,7 +369,7 @@ export default function Transactions() {
                     </div>
                   </div>
 
-                  {showAssignDropdown && unassignedRoles.length > 0 && (
+                  {dropdownState.show && unassignedRoles.length > 0 && (
                     <div
                       style={{
                         marginTop: '1rem',
@@ -359,10 +383,12 @@ export default function Transactions() {
                         <label className="form-label">Select Role</label>
                         <select
                           className="form-select"
-                          value={selectedRole}
+                          value={dropdownState.selectedRole}
                           onChange={(e) => {
-                            setSelectedRole(e.target.value as UserRole);
-                            setSelectedVerifier('');
+                            setDropdownState({
+                              selectedRole: e.target.value as UserRole,
+                              selectedVerifier: ''
+                            });
                           }}
                         >
                           <option value="">-- Select a role --</option>
@@ -374,16 +400,16 @@ export default function Transactions() {
                         </select>
                       </div>
 
-                      {selectedRole && (
+                      {dropdownState.selectedRole && (
                         <div className="form-group">
                           <label className="form-label">Select Verifier</label>
                           <select
                             className="form-select"
-                            value={selectedVerifier}
-                            onChange={(e) => setSelectedVerifier(e.target.value)}
+                            value={dropdownState.selectedVerifier}
+                            onChange={(e) => setDropdownState({ selectedVerifier: e.target.value })}
                           >
                             <option value="">-- Select a verifier --</option>
-                            {(usersByRole.get(selectedRole as UserRole) || []).map((user) => (
+                            {(usersByRole.get(dropdownState.selectedRole as UserRole) || []).map((user) => (
                               <option key={user.contractId} value={user.payload.user}>
                                 {user.payload.user} (Weight: {user.payload.verificationWeight})
                               </option>
@@ -392,18 +418,16 @@ export default function Transactions() {
                         </div>
                       )}
 
-                      {selectedVerifier && (
+                      {dropdownState.selectedVerifier && (
                         <button
                           className="btn btn-sm btn-success"
                           onClick={() =>
                             handleAssignVerifier(
                               transaction.contractId,
-                              selectedRole as UserRole,
-                              selectedVerifier
+                              dropdownState.selectedRole as UserRole,
+                              dropdownState.selectedVerifier
                             ).then(() => {
-                              setShowAssignDropdown(false);
-                              setSelectedRole('');
-                              setSelectedVerifier('');
+                              setDropdownState({ show: false, selectedRole: '', selectedVerifier: '' });
                             })
                           }
                           disabled={isAssigningVerifier}

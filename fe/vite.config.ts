@@ -5,7 +5,10 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {}
+    alias: {
+      '@daml.js': path.resolve(__dirname, './src/codegen')
+    },
+    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
   },
   server: {
     port: 3000,
@@ -35,7 +38,11 @@ export default defineConfig({
       'react',
       'react-dom',
       '@mojotech/json-type-validation',
-      '@daml/types'
+      '@daml/types',
+      '@daml.js/unlockit-canton-core-ideathon-0.0.1',
+      '@daml.js/unlockit-canton-core-ideathon-0.0.1/lib/W3C/VC',
+      '@daml.js/unlockit-canton-core-ideathon-0.0.1/lib/RETVN/Role',
+      '@daml.js/unlockit-canton-core-ideathon-0.0.1/lib/RETVN/Transaction'
     ],
     esbuildOptions: {
       // Node.js global to browser globalThis
@@ -46,6 +53,6 @@ export default defineConfig({
   },
   define: {
     'process.env': {},
-    global: 'globalThis',
+    global: 'globalThis'
   }
 })

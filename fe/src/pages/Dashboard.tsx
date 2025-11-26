@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { cantonApi } from '../services/cantonApi'
 import type { Contract } from '../types/canton'
+import { TemplateIds } from '../utils/daml'
+import type { TransactionData } from '../codegen/unlockit-canton-core-ideathon-0.0.1/lib/RETVN/Transaction/module'
 
 interface Transaction {
   contractId: string
@@ -21,10 +23,10 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        // Query both submitted transactions and verifications
-        const result: Contract<Transaction>[] = await cantonApi.query('TransactionTemplate', {
-          owner: userId
-        })
+        // Query TransactionData contracts
+        const result: Contract<TransactionData>[] = await cantonApi.query(
+          TemplateIds.TransactionData
+        )
         if (!result) {
           setTransactions([])
           setLoading(false)
@@ -32,11 +34,13 @@ export default function Dashboard() {
         }
         const mapped: Transaction[] = result.map(c => ({
           contractId: c.contractId,
-          type: c.payload.type,
-          title: c.payload.title,
-          status: c.payload.status,
-          trustScore: c.payload.trustScore,
-          date: c.payload.date
+          type: 'submission', // All TransactionData are submissions
+          title: c.payload.propertyAddress,
+          status: c.payload.status === 'FullyVerified' ? 'Verified'
+                : c.payload.status === 'PartiallyVerified' ? 'Partially Verified'
+                : 'Pending',
+          trustScore: parseInt(c.payload.trustScore, 10),
+          date: c.payload.transactionDate
         }))
 
         // Sort by date descending for recent activity

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { cantonApi } from '../services/cantonApi';
@@ -9,6 +9,18 @@ import {
   toOptional,
   TemplateIds
 } from '../utils/daml';
+import type { Contract } from '../types/canton';
+import type { UserRole } from '../codegen/unlockit-canton-core-ideathon-0.0.1/lib/RETVN/Role/module';
+
+interface UserAccount {
+  operator: string;
+  user: string;
+  role: UserRole;
+  verificationWeight: number;
+  credentialPresentations: string[];
+  registeredAt: string;
+  status: string;
+}
 
 interface TransactionForm {
   propertyAddress: string;
@@ -31,6 +43,8 @@ export default function SubmitTransaction() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usersByRole, setUsersByRole] = useState<Map<UserRole, Contract<UserAccount>[]>>(new Map());
+  const [selectedVerifiers, setSelectedVerifiers] = useState<Map<UserRole, string>>(new Map());
   const [formData, setFormData] = useState<TransactionForm>({
     propertyAddress: '',
     postalCode: '',
@@ -45,6 +59,51 @@ export default function SubmitTransaction() {
     financingType: 'Conventional',
     daysOnMarket: '',
   });
+
+  useEffect(() => {
+    fetchAvailableUsers();
+  }, []);
+
+  const fetchAvailableUsers = async () => {
+    try {
+      const accounts = await cantonApi.getAllUserAccounts();
+
+      const byRole = new Map<UserRole, Contract<UserAccount>[]>();
+      accounts.forEach((account) => {
+        if (!account.payload || !account.payload.role) {
+          return;
+        }
+        const role = account.payload.role as UserRole;
+        const typedAccount: Contract<UserAccount> = {
+          ...account,
+          payload: {
+            ...account.payload,
+            role: role,
+          },
+        };
+        if (!byRole.has(role)) {
+          byRole.set(role, []);
+        }
+        byRole.get(role)!.push(typedAccount);
+      });
+
+      setUsersByRole(byRole);
+    } catch (err) {
+      console.error('Failed to fetch available users:', err);
+    }
+  };
+
+  const handleVerifierSelect = (role: UserRole, party: string) => {
+    setSelectedVerifiers(prev => {
+      const newMap = new Map(prev);
+      if (party === '') {
+        newMap.delete(role);
+      } else {
+        newMap.set(role, party);
+      }
+      return newMap;
+    });
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -141,7 +200,7 @@ export default function SubmitTransaction() {
         closingDate: formData.closingDate ? isoStringToDamlTime(formData.closingDate) : null,
         financingType: toOptional(formData.financingType),
         daysOnMarket: toOptionalInt(formData.daysOnMarket),
-        proposedVerifiers: [],  // TODO: Allow user to select verifiers
+        proposedVerifiers: Array.from(selectedVerifiers.values()),
         submittedAt: isoStringToDamlTime(now.toISOString()),
       };
 
@@ -183,8 +242,12 @@ export default function SubmitTransaction() {
             <div className="step-number">{step > 2 ? '✓' : '2'}</div>
             <div className="step-label">Transaction Details</div>
           </div>
-          <div className={`step ${step >= 3 ? 'active' : ''}`}>
-            <div className="step-number">3</div>
+          <div className={`step ${step >= 3 ? 'active' : ''} ${step > 3 ? 'completed' : ''}`}>
+            <div className="step-number">{step > 3 ? '✓' : '3'}</div>
+            <div className="step-label">Assign Verifiers</div>
+          </div>
+          <div className={`step ${step >= 4 ? 'active' : ''}`}>
+            <div className="step-number">4</div>
             <div className="step-label">Review & Submit</div>
           </div>
         </div>
@@ -373,13 +436,59 @@ export default function SubmitTransaction() {
                   Back
                 </button>
                 <button type="button" className="btn btn-primary" onClick={() => setStep(3)}>
-                  Next: Review
+                  Next: Assign Verifiers
                 </button>
               </div>
             </>
           )}
 
           {step === 3 && (
+            <>
+              <h3 className="mb-3 font-bold">Assign Verifiers</h3>
+
+              <div className="mb-4" style={{ background: '#f7fafc', padding: '1.5rem', borderRadius: '8px' }}>
+                <h4 className="font-semibold mb-2">Select Verifiers (Optional)</h4>
+                <p className="text-sm text-muted mb-3">
+                  Select one user per role to verify this transaction. You will be automatically assigned as a verifier.
+                </p>
+
+                {Array.from(usersByRole.entries()).map(([role, users]) => (
+                  <div key={role} className="form-group">
+                    <label className="form-label">{role}</label>
+                    <select
+                      className="form-select"
+                      value={selectedVerifiers.get(role) || ''}
+                      onChange={(e) => handleVerifierSelect(role, e.target.value)}
+                    >
+                      <option value="">-- No verifier selected --</option>
+                      {users.map((user) => (
+                        <option key={user.contractId} value={user.payload.user}>
+                          {user.payload.user} (Weight: {user.payload.verificationWeight})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+
+                {selectedVerifiers.size > 0 && (
+                  <div className="alert alert-info mt-3" style={{ fontSize: '0.875rem' }}>
+                    <strong>Selected Verifiers:</strong> {selectedVerifiers.size} + You (submitter)
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-2" style={{ gap: '1rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>
+                  Back
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => setStep(4)}>
+                  Next: Review
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 4 && (
             <>
               <h3 className="mb-3 font-bold">Review Your Submission</h3>
 
@@ -403,6 +512,19 @@ export default function SubmitTransaction() {
                   <div><strong>Financing:</strong> {formData.financingType}</div>
                   <div><strong>Days on Market:</strong> {formData.daysOnMarket || 'N/A'}</div>
                 </div>
+
+                <h4 className="font-semibold mb-2 mt-3">Assigned Verifiers</h4>
+                <div style={{ fontSize: '0.9rem' }}>
+                  {selectedVerifiers.size > 0 ? (
+                    <div>
+                      {Array.from(selectedVerifiers.entries()).map(([role, verifier]) => (
+                        <div key={role}><strong>{role}:</strong> {verifier}</div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-muted">No additional verifiers selected</div>
+                  )}
+                </div>
               </div>
 
               <div className="alert alert-info mb-4">
@@ -410,7 +532,7 @@ export default function SubmitTransaction() {
               </div>
 
               <div className="grid grid-2" style={{ gap: '1rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setStep(2)} disabled={isLoading}>
+                <button type="button" className="btn btn-secondary" onClick={() => setStep(3)} disabled={isLoading}>
                   Back
                 </button>
                 <button type="submit" className="btn btn-success" disabled={isLoading}>

@@ -75,11 +75,19 @@ export default function SubmitTransactionModal({ isOpen, onClose, onSuccess }: S
   const fetchAvailableUsers = async () => {
     try {
       const accounts = await cantonApi.getAllUserAccounts();
+      console.log('[SubmitTransaction] Raw accounts from API:', accounts);
+      console.log('[SubmitTransaction] Number of accounts:', accounts.length);
 
       // Group users by role (one per role constraint)
       const byRole = new Map<UserRole, Contract<UserAccount>[]>();
       accounts.forEach((account) => {
+        console.log('[SubmitTransaction] Processing account:', account);
+        if (!account.payload || !account.payload.role) {
+          console.warn('Account missing payload or role:', account);
+          return;
+        }
         const role = account.payload.role as UserRole;
+        console.log('[SubmitTransaction] Account role:', role);
         const typedAccount: Contract<UserAccount> = {
           ...account,
           payload: {
@@ -94,6 +102,11 @@ export default function SubmitTransactionModal({ isOpen, onClose, onSuccess }: S
       });
 
       setUsersByRole(byRole);
+      console.log('[SubmitTransaction] Fetched users by role:', byRole);
+      console.log('[SubmitTransaction] Total roles:', byRole.size);
+      byRole.forEach((users, role) => {
+        console.log(`[SubmitTransaction] Role ${role}: ${users.length} users`);
+      });
     } catch (err) {
       console.error('Failed to fetch available users:', err);
     }
@@ -201,6 +214,9 @@ export default function SubmitTransactionModal({ isOpen, onClose, onSuccess }: S
       // Convert selected verifiers Map to array of party strings
       const proposedVerifiers = Array.from(selectedVerifiers.values());
 
+      console.log('[SubmitTransaction] Selected verifiers:', selectedVerifiers);
+      console.log('[SubmitTransaction] Proposed verifiers array:', proposedVerifiers);
+
       const proposal = {
         operator: userAccount?.operator || 'operator::122...',
         submitter: party,
@@ -223,6 +239,8 @@ export default function SubmitTransactionModal({ isOpen, onClose, onSuccess }: S
         proposedVerifiers: proposedVerifiers,
         submittedAt: isoStringToDamlTime(now.toISOString()),
       };
+
+      console.log('[SubmitTransaction] Proposal payload:', proposal);
 
       await cantonApi.create(TemplateIds.TransactionSubmissionProposal, proposal);
 
@@ -255,8 +273,12 @@ export default function SubmitTransactionModal({ isOpen, onClose, onSuccess }: S
           <div className="step-number">{step > 2 ? '✓' : '2'}</div>
           <div className="step-label">Transaction Details</div>
         </div>
-        <div className={`step ${step >= 3 ? 'active' : ''}`}>
-          <div className="step-number">3</div>
+        <div className={`step ${step >= 3 ? 'active' : ''} ${step > 3 ? 'completed' : ''}`}>
+          <div className="step-number">{step > 3 ? '✓' : '3'}</div>
+          <div className="step-label">Assign Verifiers</div>
+        </div>
+        <div className={`step ${step >= 4 ? 'active' : ''}`}>
+          <div className="step-number">4</div>
           <div className="step-label">Review & Submit</div>
         </div>
       </div>
@@ -445,7 +467,7 @@ export default function SubmitTransactionModal({ isOpen, onClose, onSuccess }: S
                 Back
               </button>
               <button type="button" className="btn btn-primary" onClick={() => setStep(3)}>
-                Next: Review
+                Next: Assign Verifiers
               </button>
             </div>
           </>
@@ -453,32 +475,10 @@ export default function SubmitTransactionModal({ isOpen, onClose, onSuccess }: S
 
         {step === 3 && (
           <>
-            <h3 className="mb-3 font-bold">Review Your Submission</h3>
+            <h3 className="mb-3 font-bold">Assign Verifiers</h3>
 
             <div className="mb-4" style={{ background: '#f7fafc', padding: '1.5rem', borderRadius: '8px' }}>
-              <h4 className="font-semibold mb-2">Property Information</h4>
-              <div className="grid grid-2" style={{ gap: '0.5rem', fontSize: '0.9rem' }}>
-                <div><strong>Address:</strong> {formData.propertyAddress}</div>
-                <div><strong>Postal Code:</strong> {formData.postalCode}</div>
-                <div><strong>Type:</strong> {formData.propertyType}</div>
-                <div><strong>Living Area:</strong> {formData.livingAreaSqft || 'N/A'} sqft</div>
-                <div><strong>Lot Size:</strong> {formData.lotSizeSqft || 'N/A'} sqft</div>
-                <div><strong>Bedrooms:</strong> {formData.bedroomsTotal || 'N/A'}</div>
-                <div><strong>Bathrooms:</strong> {formData.bathroomsTotal || 'N/A'}</div>
-                <div><strong>Year Built:</strong> {formData.yearBuilt || 'N/A'}</div>
-              </div>
-
-              <h4 className="font-semibold mb-2 mt-3">Transaction Details</h4>
-              <div className="grid grid-2" style={{ gap: '0.5rem', fontSize: '0.9rem' }}>
-                <div><strong>Sale Price:</strong> ${Number(formData.salePrice).toLocaleString()}</div>
-                <div><strong>Closing Date:</strong> {formData.closingDate}</div>
-                <div><strong>Financing:</strong> {formData.financingType}</div>
-                <div><strong>Days on Market:</strong> {formData.daysOnMarket || 'N/A'}</div>
-              </div>
-            </div>
-
-            <div className="mb-4" style={{ background: '#f7fafc', padding: '1.5rem', borderRadius: '8px' }}>
-              <h4 className="font-semibold mb-2">Assign Verifiers (Optional)</h4>
+              <h4 className="font-semibold mb-2">Select Verifiers (Optional)</h4>
               <p className="text-sm text-muted mb-3">
                 Select one user per role to verify this transaction. You will be automatically assigned as a verifier.
               </p>
@@ -508,12 +508,62 @@ export default function SubmitTransactionModal({ isOpen, onClose, onSuccess }: S
               )}
             </div>
 
+            <div className="grid grid-2" style={{ gap: '1rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>
+                Back
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => setStep(4)}>
+                Next: Review
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <h3 className="mb-3 font-bold">Review Your Submission</h3>
+
+            <div className="mb-4" style={{ background: '#f7fafc', padding: '1.5rem', borderRadius: '8px' }}>
+              <h4 className="font-semibold mb-2">Property Information</h4>
+              <div className="grid grid-2" style={{ gap: '0.5rem', fontSize: '0.9rem' }}>
+                <div><strong>Address:</strong> {formData.propertyAddress}</div>
+                <div><strong>Postal Code:</strong> {formData.postalCode}</div>
+                <div><strong>Type:</strong> {formData.propertyType}</div>
+                <div><strong>Living Area:</strong> {formData.livingAreaSqft || 'N/A'} sqft</div>
+                <div><strong>Lot Size:</strong> {formData.lotSizeSqft || 'N/A'} sqft</div>
+                <div><strong>Bedrooms:</strong> {formData.bedroomsTotal || 'N/A'}</div>
+                <div><strong>Bathrooms:</strong> {formData.bathroomsTotal || 'N/A'}</div>
+                <div><strong>Year Built:</strong> {formData.yearBuilt || 'N/A'}</div>
+              </div>
+
+              <h4 className="font-semibold mb-2 mt-3">Transaction Details</h4>
+              <div className="grid grid-2" style={{ gap: '0.5rem', fontSize: '0.9rem' }}>
+                <div><strong>Sale Price:</strong> ${Number(formData.salePrice).toLocaleString()}</div>
+                <div><strong>Closing Date:</strong> {formData.closingDate}</div>
+                <div><strong>Financing:</strong> {formData.financingType}</div>
+                <div><strong>Days on Market:</strong> {formData.daysOnMarket || 'N/A'}</div>
+              </div>
+
+              <h4 className="font-semibold mb-2 mt-3">Assigned Verifiers</h4>
+              <div style={{ fontSize: '0.9rem' }}>
+                {selectedVerifiers.size > 0 ? (
+                  <div>
+                    {Array.from(selectedVerifiers.entries()).map(([role, verifier]) => (
+                      <div key={role}><strong>{role}:</strong> {verifier}</div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-muted">No additional verifiers selected</div>
+                )}
+              </div>
+            </div>
+
             <div className="alert alert-info mb-4">
               By submitting this transaction, you confirm that all information provided is accurate to the best of your knowledge. This transaction will be assigned to verifiers for review.
             </div>
 
             <div className="grid grid-2" style={{ gap: '1rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setStep(2)} disabled={isLoading}>
+              <button type="button" className="btn btn-secondary" onClick={() => setStep(3)} disabled={isLoading}>
                 Back
               </button>
               <button type="submit" className="btn btn-success" disabled={isLoading}>
