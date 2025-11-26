@@ -19,6 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isOperator: boolean;
   userAccount: UserAccount | null;
+  userAccountContractId: string | null;
   userRole: string | null;
   verificationWeight: number;
   login: (userId: string) => Promise<void>;
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
+  const [userAccountContractId, setUserAccountContractId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load auth state from localStorage on mount
@@ -63,7 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (accounts.length > 0) {
         setUserAccount(accounts[0].payload);
+        setUserAccountContractId(accounts[0].contractId);
         localStorage.setItem('userAccount', JSON.stringify(accounts[0].payload));
+        localStorage.setItem('userAccountContractId', accounts[0].contractId);
       }
     } catch (error) {
       console.error('Failed to fetch user account:', error);
@@ -102,11 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserId(null);
     setToken(null);
     setUserAccount(null);
+    setUserAccountContractId(null);
 
     localStorage.removeItem('party');
     localStorage.removeItem('userId');
     localStorage.removeItem('token');
     localStorage.removeItem('userAccount');
+    localStorage.removeItem('userAccountContractId');
 
     cantonApi.clearAuth();
   };
@@ -114,12 +120,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load user account from localStorage on mount
   useEffect(() => {
     const storedUserAccount = localStorage.getItem('userAccount');
+    const storedUserAccountContractId = localStorage.getItem('userAccountContractId');
+
     if (storedUserAccount) {
       try {
         setUserAccount(JSON.parse(storedUserAccount));
       } catch (error) {
         console.error('Failed to parse stored user account:', error);
       }
+    }
+
+    if (storedUserAccountContractId) {
+      setUserAccountContractId(storedUserAccountContractId);
     }
   }, []);
 
@@ -144,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!party && !!token,
         isOperator,
         userAccount,
+        userAccountContractId,
         userRole: userAccount?.role || "user-role-null", // FIXME: should be null, but we havent't add user roles yet
         verificationWeight: userAccount?.verificationWeight || 0,
         login,

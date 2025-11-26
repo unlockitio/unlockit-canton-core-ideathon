@@ -3,9 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Transactions from './pages/Transactions';
 import SubmitTransaction from './pages/SubmitTransaction';
 import VerifyTransactions from './pages/VerifyTransactions';
-import MarketData from './pages/MarketData';
+import Insights from './pages/Insights';
 import AdminApprovals from './pages/AdminApprovals';
 import AdminUsers from './pages/AdminUsers';
 import LedgerDebug from './pages/LedgerDebug';
@@ -46,9 +47,10 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Layout onLogout={logout} />}>
           <Route index element={<Dashboard />} />
+          <Route path="transactions" element={<Transactions />} />
+          <Route path="insights" element={<Insights />} />
           <Route path="submit" element={<SubmitTransaction />} />
           <Route path="verify" element={<VerifyTransactions />} />
-          <Route path="market-data" element={<MarketData />} />
           <Route path="admin/approvals" element={<AdminRoute><AdminApprovals /></AdminRoute>} />
           <Route path="admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="debug/ledger" element={<LedgerDebug />} />

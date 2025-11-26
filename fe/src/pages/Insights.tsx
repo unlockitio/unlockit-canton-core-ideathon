@@ -81,7 +81,7 @@ const MOCK_MARKET_DATA = {
   ],
 };
 
-export default function MarketData() {
+export default function Insights() {
   const [postalCode, setPostalCode] = useState('94102');
   const [showPricing, setShowPricing] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);

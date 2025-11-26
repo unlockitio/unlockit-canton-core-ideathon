@@ -22,14 +22,6 @@
         <daml.dar.path>${project.basedir}/../.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar</daml.dar.path>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>digitalasset-releases</id>
-            <name>Digital Asset SDK releases</name>
-            <url>https://digitalassetsdk.jfrog.io/artifactory/assembly-releases</url>
-        </repository>
-    </repositories>
-
     <dependencyManagement>
         <dependencies>
             <dependency>

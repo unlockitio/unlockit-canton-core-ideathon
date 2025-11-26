@@ -28,9 +28,8 @@ export default function Layout({ onLogout }: LayoutProps) {
             ) : (
               <>
               <li><Link to="/">Dashboard</Link></li>
-              <li><Link to="/submit">Submit Transaction</Link></li>
-              <li><Link to="/verify">Verify Transactions</Link></li>
-              <li><Link to="/market-data">Market Data</Link></li>
+              <li><Link to="/transactions">Transactions</Link></li>
+              <li><Link to="/insights">Insights</Link></li>
               <li><Link to="/debug/ledger" style={{ color: '#e53e3e' }}>Debug</Link></li>
               </>
             )}

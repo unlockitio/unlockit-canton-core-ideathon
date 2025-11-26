@@ -170,7 +170,8 @@ export declare const QueryTransaction:
 
 
 export declare type SubmitVerification = {
-  verificationDelegation: damlTypes.ContractId<RETVN_Role.TransactionVerificationDelegation>;
+  verifier: damlTypes.Party;
+  verifierAccount: damlTypes.ContractId<RETVN_Role.UserAccount>;
   decision: VerificationDecision;
   notes: damlTypes.Optional<string>;
   verifiedAt: damlTypes.Time;

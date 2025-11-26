@@ -70,7 +70,7 @@ exports.MarketDataAggregate = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketDataAggregate, ['aa074e7a318cf5931ea9ab5e1d911485a05423774731e91b6e4b0da749925eec', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketDataAggregate, ['8039f5428ce3345a9bcb81de925786f48d44a658f48af78c1075a7647a138f71', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -157,7 +157,7 @@ exports.TransactionSubmissionProposal = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionSubmissionProposal, ['aa074e7a318cf5931ea9ab5e1d911485a05423774731e91b6e4b0da749925eec', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionSubmissionProposal, ['8039f5428ce3345a9bcb81de925786f48d44a658f48af78c1075a7647a138f71', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -230,10 +230,11 @@ exports.QueryTransaction = {
 
 
 exports.SubmitVerification = {
-  decoder: damlTypes.lazyMemo(function () { return jtv.object({verificationDelegation: damlTypes.ContractId(RETVN_Role.TransactionVerificationDelegation).decoder, decision: exports.VerificationDecision.decoder, notes: jtv.Decoder.withDefault(null, damlTypes.Optional(damlTypes.Text).decoder), verifiedAt: damlTypes.Time.decoder, }); }),
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({verifier: damlTypes.Party.decoder, verifierAccount: damlTypes.ContractId(RETVN_Role.UserAccount).decoder, decision: exports.VerificationDecision.decoder, notes: jtv.Decoder.withDefault(null, damlTypes.Optional(damlTypes.Text).decoder), verifiedAt: damlTypes.Time.decoder, }); }),
   encode: function (__typed__) {
   return {
-    verificationDelegation: damlTypes.ContractId(RETVN_Role.TransactionVerificationDelegation).encode(__typed__.verificationDelegation),
+    verifier: damlTypes.Party.encode(__typed__.verifier),
+    verifierAccount: damlTypes.ContractId(RETVN_Role.UserAccount).encode(__typed__.verifierAccount),
     decision: exports.VerificationDecision.encode(__typed__.decision),
     notes: damlTypes.Optional(damlTypes.Text).encode(__typed__.notes),
     verifiedAt: damlTypes.Time.encode(__typed__.verifiedAt),
@@ -326,7 +327,7 @@ exports.TransactionData = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionData, ['aa074e7a318cf5931ea9ab5e1d911485a05423774731e91b6e4b0da749925eec', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionData, ['8039f5428ce3345a9bcb81de925786f48d44a658f48af78c1075a7647a138f71', '#unlockit-canton-core-ideathon']);
 
 
 

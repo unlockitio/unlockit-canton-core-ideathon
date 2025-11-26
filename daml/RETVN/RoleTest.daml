@@ -248,9 +248,6 @@ testCompleteRetvnFlow = script do
   johnAccount <- submit operator do
     exerciseCmd johnRegRequest ApproveRegistration
 
-  johnVerificationRight <- submit john do
-    exerciseCmd johnAccount RequestVerificationRight
-
   -- ========================================
   -- STEP 7: Sarah (private citizen) registers
   -- ========================================
@@ -338,14 +335,11 @@ testCompleteRetvnFlow = script do
   -- STEP 9: John verifies the transaction
   -- ========================================
 
-  -- John delegates his verification right to this specific transaction
-  johnDelegation <- submit john do
-    exerciseCmd johnVerificationRight DelegateVerification with
-      transactionId = "TXN-2024-001"
-
-  transactionAfterJohn <- submit operator do
+  -- John submits his verification directly
+  transactionAfterJohn <- submit john do
     exerciseCmd transaction SubmitVerification with
-      verificationDelegation = johnDelegation
+      verifier = john
+      verifierAccount = johnAccount
       decision = Confirmed
       notes = Some "I represented the buyer in this transaction. All details are accurate."
       verifiedAt = now

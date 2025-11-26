@@ -65,40 +65,38 @@ template TransactionData
         create this with
           assignedVerifiers = verifier :: assignedVerifiers
 
-    -- | Submit verification (requires TransactionVerificationDelegation)
+    -- | Submit verification (verifier controls their own verification)
     choice SubmitVerification : ContractId TransactionData
       with
-        verificationDelegation : ContractId TransactionVerificationDelegation
+        verifier : Party
+        verifierAccount : ContractId UserAccount
         decision : VerificationDecision
         notes : Optional Text
         verifiedAt : Time
-      controller operator  -- Operator mediates verification
+      controller verifier
       do
-        -- Fetch and verify the delegation
-        delegation <- fetch verificationDelegation
-        assertMsg "Delegation is for this transaction" (delegation.transactionId == transactionId)
-        assertMsg "Verifier is assigned to this transaction" (delegation.user `elem` assignedVerifiers)
+        -- Fetch user account to get role and verification weight
+        account <- fetch verifierAccount
+        assertMsg "Verifier matches account" (account.user == verifier)
+        assertMsg "Verifier is assigned to this transaction" (verifier `elem` assignedVerifiers)
 
         -- Check verifier hasn't already verified
         let existingVerifiers = map (\v -> v.verifier) verifications
-        assertMsg "Verifier hasn't already verified" (delegation.user `notElem` existingVerifiers)
+        assertMsg "Verifier hasn't already verified" (verifier `notElem` existingVerifiers)
 
         -- Create verification record
         let verification = Verification with
-              verifier = delegation.user
-              verifierRole = delegation.role
-              verificationWeight = delegation.verificationWeight
+              verifier = verifier
+              verifierRole = account.role
+              verificationWeight = getVerificationWeight account.role
               decision = decision
               notes = notes
               verifiedAt = verifiedAt
 
-        -- Calculate new trust score
+        -- Calculate new trust score and status
         let newVerifications = verification :: verifications
         let newTrustScore = calculateTrustScore newVerifications
         let newStatus = determineStatus newVerifications
-
-        -- Archive the delegation (single use)
-        archive verificationDelegation
 
         create this with
           verifications = newVerifications
@@ -225,7 +223,23 @@ template TransactionSubmissionProposal
         right <- fetch submissionRight
         assertMsg "Submitter matches submission right" (right.user == submitter)
 
-        -- Create the transaction data with initial trust score from submitter
+        -- Submitter is automatically a verifier by submitting the data
+        let allVerifiers = dedup (submitter :: proposedVerifiers)
+
+        -- Create initial verification from submitter (implicitly confirmed by submission)
+        let submitterVerification = Verification with
+              verifier = submitter
+              verifierRole = submitterRole
+              verificationWeight = getVerificationWeight submitterRole
+              decision = Confirmed
+              notes = None
+              verifiedAt = submittedAt
+
+        let initialVerifications = [submitterVerification]
+        let initialTrustScore = calculateTrustScore initialVerifications
+        let initialStatus = determineStatus initialVerifications
+
+        -- Create the transaction data with submitter's verification
         create TransactionData with
           operator = operator
           submitter = submitter
@@ -244,10 +258,10 @@ template TransactionSubmissionProposal
           closingDate = closingDate
           financingType = financingType
           daysOnMarket = daysOnMarket
-          assignedVerifiers = proposedVerifiers
-          verifications = []
-          trustScore = getVerificationWeight submitterRole  -- Initial score from submitter
-          status = Unverified
+          assignedVerifiers = allVerifiers
+          verifications = initialVerifications
+          trustScore = initialTrustScore
+          status = initialStatus
           submittedAt = submittedAt
 
     -- | Operator rejects submission

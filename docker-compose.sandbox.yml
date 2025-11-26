@@ -65,6 +65,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_CANTON_API_URL: http://localhost:8080/
+    image: retvn-frontend:latest
     container_name: retvn-frontend
     ports:
       - "3000:80"
@@ -73,6 +74,12 @@ services:
       - VITE_CANTON_WS_URL=ws://localhost:8080/
     depends_on:
       - nginx-cors
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     networks:
       - retvn-sandbox-network
 

@@ -33,7 +33,7 @@ COPY be/mvnw ./
 
 # Copy pom.xml and download dependencies (cached layer)
 COPY be/pom.xml .
-RUN mvn dependency:go-offline -B
+RUN mvn dependency:resolve -B
 
 # Copy source code
 COPY be/src ./src
@@ -43,6 +43,9 @@ COPY .daml/dist/*.dar /build/dar/
 
 # Generate sources and compile
 RUN mvn clean compile -DskipTests -Ddaml.dar.path=/build/dar/unlockit-canton-core-ideathon-0.0.1.dar
+
+# Pre-warm Maven cache with dev mode dependencies
+RUN timeout 60 mvn quarkus:dev -Dquarkus.http.host=0.0.0.0 || true
 
 # Stage 2: Runtime image (using JDK for Quarkus dev mode compilation)
 FROM eclipse-temurin:21-jdk-jammy
