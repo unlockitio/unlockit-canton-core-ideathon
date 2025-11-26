@@ -2,7 +2,6 @@
 -- Users present verifiable credentials to gain role-specific capabilities
 module RETVN.Role where
 
-import DA.Time
 import W3C.VC
 
 -- | User role enumeration based on presented credentials

@@ -1,8 +1,7 @@
 -- | Real Estate Transaction data submission and verification
 module RETVN.Transaction where
 
-import DA.Time
-import DA.List (sortOn, dedup)
+import DA.List (dedup)
 import RETVN.Role
 
 -- | Property type enumeration (RESO Standard aligned)
@@ -60,7 +59,7 @@ template TransactionData
     choice AssignVerifier : ContractId TransactionData
       with
         verifier : Party
-      controller operator
+      controller submitter
       do
         create this with
           assignedVerifiers = verifier :: assignedVerifiers

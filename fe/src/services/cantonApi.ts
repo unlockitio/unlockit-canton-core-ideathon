@@ -2,8 +2,10 @@ import { config } from '../config'
 import { SignJWT } from 'jose'
 import type { Contract, QueryResult, ExerciseResult, CreateResult } from '../types/canton'
 
-// Package ID from codegen - see src/codegen/unlockit-canton-core-ideathon-0.0.1/lib/index.d.ts
-const DAML_PACKAGE_ID = '8039f5428ce3345a9bcb81de925786f48d44a658f48af78c1075a7647a138f71'
+// Package ID from codegen
+// When you regenerate codegen after changing DAML code, update this value from:
+// src/codegen/unlockit-canton-core-ideathon-0.0.1/lib/index.js (exports.packageId)
+const DAML_PACKAGE_ID = 'b99b02a20eca2e71b6ebc1a25af89b4cf0cb8d7c78bbc6673c580874d8ffbdaf'
 
 class CantonApiService {
   private token: string | null = null
@@ -427,7 +429,25 @@ async query<T>(
       throw new Error(`Backend API Error: ${response.status} - ${error}`)
     }
 
-    return response.json()
+    const rawData = await response.json()
+
+    // Transform the Canton API response format to our Contract format
+    return rawData.map((item: any) => {
+      const createdEvent = item.contractEntry?.JsActiveContract?.createdEvent
+      if (!createdEvent) {
+        console.warn('Unexpected contract structure:', item)
+        return null
+      }
+
+      return {
+        contractId: createdEvent.contractId,
+        payload: createdEvent.createArgument,
+        templateId: createdEvent.templateId,
+        signatories: createdEvent.signatories || [],
+        observers: createdEvent.observers || [],
+        agreementText: ''
+      }
+    }).filter((contract: any) => contract !== null)
   }
 
   // ===== DEVELOPMENT / ADMIN METHODS =====
