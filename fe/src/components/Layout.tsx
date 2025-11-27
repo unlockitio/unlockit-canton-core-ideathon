@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Layout.css';
@@ -9,6 +9,7 @@ type LayoutProps = {
 
 export default function Layout({ onLogout }: LayoutProps) {
   const { isOperator } = useAuth();
+  const [walletDropdownOpen, setWalletDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     onLogout();
@@ -30,6 +31,20 @@ export default function Layout({ onLogout }: LayoutProps) {
               <li><Link to="/">Dashboard</Link></li>
               <li><Link to="/transactions">Transactions</Link></li>
               <li><Link to="/insights">Insights</Link></li>
+              <li
+                className="navbar-dropdown"
+                onMouseEnter={() => setWalletDropdownOpen(true)}
+                onMouseLeave={() => setWalletDropdownOpen(false)}
+              >
+                <span className="navbar-dropdown-trigger">Wallet</span>
+                {walletDropdownOpen && (
+                  <ul className="navbar-dropdown-menu">
+                    <li><Link to="/wallet/rewards">Rewards</Link></li>
+                    <li><Link to="/wallet/payments">Payments</Link></li>
+                    <li><Link to="/wallet/credentials">Credentials</Link></li>
+                  </ul>
+                )}
+              </li>
               <li><Link to="/debug/ledger" style={{ color: '#e53e3e' }}>Debug</Link></li>
               </>
             )}

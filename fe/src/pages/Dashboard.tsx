@@ -16,9 +16,12 @@ interface Transaction {
 }
 
 export default function Dashboard() {
-  const { userId } = useAuth()
+  const { userId, party } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [verificationsAsSubmitter, setVerificationsAsSubmitter] = useState(0)
+  const [verificationsAsVerifier, setVerificationsAsVerifier] = useState(0)
+  const [pendingVerificationsCount, setPendingVerificationsCount] = useState(0)
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -32,6 +35,33 @@ export default function Dashboard() {
           setLoading(false)
           return
         }
+
+        // Count verifications given by the current user and pending verifications
+        let asSubmitterCount = 0
+        let asVerifierCount = 0
+        let pendingCount = 0
+        if (party) {
+          result.forEach(c => {
+            const hasVerified = c.payload.verifications.some(v => v.verifier === party)
+            const isAssignedVerifier = c.payload.assignedVerifiers.includes(party)
+
+            if (hasVerified) {
+              // Check if user was the submitter of this transaction
+              if (c.payload.submitter === party) {
+                asSubmitterCount++
+              } else {
+                asVerifierCount++
+              }
+            } else if (isAssignedVerifier) {
+              // User is assigned but hasn't verified yet
+              pendingCount++
+            }
+          })
+        }
+        setVerificationsAsSubmitter(asSubmitterCount)
+        setVerificationsAsVerifier(asVerifierCount)
+        setPendingVerificationsCount(pendingCount)
+
         const mapped: Transaction[] = result.map(c => ({
           contractId: c.contractId,
           type: 'submission', // All TransactionData are submissions
@@ -53,13 +83,13 @@ export default function Dashboard() {
       }
     }
     fetchTransactions()
-  }, [userId])
+  }, [userId, party])
 
   if (loading) return <div>Loading dashboard...</div>
 
   // Compute aggregated stats
   const transactionsSubmitted = transactions.filter(t => t.type === 'submission').length
-  const verificationsGiven = transactions.filter(t => t.type === 'verification').length
+  const verificationsGiven = verificationsAsSubmitter + verificationsAsVerifier
   const trustScore =
     transactionsSubmitted > 0
       ? Math.round(
@@ -69,7 +99,7 @@ export default function Dashboard() {
             transactionsSubmitted
         )
       : 0
-  const pendingVerifications = transactions.filter(t => t.status === 'Pending').length
+  const pendingVerifications = pendingVerificationsCount
 
   return (
     <div className="container">
@@ -89,8 +119,8 @@ export default function Dashboard() {
         <div className="card">
           <div className="text-muted text-sm font-semibold mb-1">Verifications Given</div>
           <div className="text-xl font-bold mb-1">{verificationsGiven}</div>
-          <div className="text-sm text-success">
-            {verificationsGiven > 0 ? `+${verificationsGiven} this month` : 'No verifications yet'}
+          <div className="text-sm text-muted">
+            {verificationsAsSubmitter} as submitter, {verificationsAsVerifier} as verifier
           </div>
         </div>
         <div className="card">

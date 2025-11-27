@@ -8,6 +8,10 @@ import TransactionDetail from './pages/TransactionDetail';
 import SubmitTransaction from './pages/SubmitTransaction';
 import VerifyTransactions from './pages/VerifyTransactions';
 import Insights from './pages/Insights';
+import InsightDetail from './pages/InsightDetail';
+import WalletRewards from './pages/WalletRewards';
+import WalletPayments from './pages/WalletPayments';
+import WalletCredentials from './pages/WalletCredentials';
 import AdminApprovals from './pages/AdminApprovals';
 import AdminUsers from './pages/AdminUsers';
 import LedgerDebug from './pages/LedgerDebug';
@@ -51,6 +55,10 @@ function AppContent() {
           <Route path="transactions" element={<Transactions />} />
           <Route path="transactions/:id" element={<TransactionDetail />} />
           <Route path="insights" element={<Insights />} />
+          <Route path="insights/:id" element={<InsightDetail />} />
+          <Route path="wallet/rewards" element={<WalletRewards />} />
+          <Route path="wallet/payments" element={<WalletPayments />} />
+          <Route path="wallet/credentials" element={<WalletCredentials />} />
           <Route path="submit" element={<SubmitTransaction />} />
           <Route path="verify" element={<VerifyTransactions />} />
           <Route path="admin/approvals" element={<AdminRoute><AdminApprovals /></AdminRoute>} />
