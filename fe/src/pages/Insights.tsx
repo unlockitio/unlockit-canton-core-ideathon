@@ -11,13 +11,11 @@ interface Insight {
   price: number;
   purchaseDate: string;
   status: 'completed' | 'pending' | 'processing';
-  filters: {
-    bedroomsMin?: number;
-    bedroomsMax?: number;
-    livingAreaMin?: number;
-    livingAreaMax?: number;
-    salePriceMin?: number;
-    salePriceMax?: number;
+  segment: {
+    bedrooms: string[];
+    livingArea: string[];
+    yearBuilt: string[];
+    propertyType: string[];
   };
 }
 
@@ -31,9 +29,11 @@ const MOCK_INSIGHTS: Insight[] = [
     price: 131.25,
     purchaseDate: '2024-11-20T10:30:00.000Z',
     status: 'completed',
-    filters: {
-      bedroomsMin: 2,
-      bedroomsMax: 4,
+    segment: {
+      bedrooms: ['2', '3', '4'],
+      livingArea: ['1200-1600', '1600-2000'],
+      yearBuilt: ['2000s-2010s', '2020+'],
+      propertyType: ['Condo'],
     },
   },
   {
@@ -45,9 +45,11 @@ const MOCK_INSIGHTS: Insight[] = [
     price: 22.5,
     purchaseDate: '2024-11-18T14:15:00.000Z',
     status: 'completed',
-    filters: {
-      salePriceMin: 500000,
-      salePriceMax: 1000000,
+    segment: {
+      bedrooms: ['3'],
+      livingArea: ['1600-2000', '2000-2500'],
+      yearBuilt: [],
+      propertyType: ['Single Family'],
     },
   },
   {
@@ -59,7 +61,12 @@ const MOCK_INSIGHTS: Insight[] = [
     price: 12.5,
     purchaseDate: '2024-11-15T09:00:00.000Z',
     status: 'completed',
-    filters: {},
+    segment: {
+      bedrooms: [],
+      livingArea: [],
+      yearBuilt: [],
+      propertyType: [],
+    },
   },
 ];
 
@@ -70,7 +77,24 @@ export default function Insights() {
   useEffect(() => {
     const stored = localStorage.getItem('insights');
     if (stored) {
-      setInsights(JSON.parse(stored));
+      const parsed = JSON.parse(stored);
+      // Migrate old filter structure to new segment structure
+      const migrated = parsed.map((insight: any) => {
+        if (insight.filters && !insight.segment) {
+          return {
+            ...insight,
+            segment: {
+              bedrooms: [],
+              livingArea: [],
+              yearBuilt: [],
+              propertyType: [],
+            },
+          };
+        }
+        return insight;
+      });
+      setInsights(migrated);
+      localStorage.setItem('insights', JSON.stringify(migrated));
     } else {
       setInsights(MOCK_INSIGHTS);
       localStorage.setItem('insights', JSON.stringify(MOCK_INSIGHTS));
@@ -170,24 +194,30 @@ export default function Insights() {
                       </div>
                     </div>
 
-                    {(insight.filters.bedroomsMin || insight.filters.bedroomsMax ||
-                      insight.filters.livingAreaMin || insight.filters.livingAreaMax ||
-                      insight.filters.salePriceMin || insight.filters.salePriceMax) && (
+                    {(insight.segment.bedrooms.length > 0 ||
+                      insight.segment.livingArea.length > 0 ||
+                      insight.segment.yearBuilt.length > 0 ||
+                      insight.segment.propertyType.length > 0) && (
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span className="text-muted text-sm">Filters:</span>
-                        {(insight.filters.bedroomsMin || insight.filters.bedroomsMax) && (
+                        <span className="text-muted text-sm">Segment:</span>
+                        {insight.segment.bedrooms.length > 0 && (
                           <span className="badge badge-secondary text-sm">
-                            Bedrooms: {insight.filters.bedroomsMin || 'Any'} - {insight.filters.bedroomsMax || 'Any'}
+                            Bedrooms: {insight.segment.bedrooms.join(', ')}
                           </span>
                         )}
-                        {(insight.filters.livingAreaMin || insight.filters.livingAreaMax) && (
+                        {insight.segment.livingArea.length > 0 && (
                           <span className="badge badge-secondary text-sm">
-                            Area: {insight.filters.livingAreaMin || 'Any'} - {insight.filters.livingAreaMax || 'Any'} sqft
+                            Area: {insight.segment.livingArea.join(', ')} sqft
                           </span>
                         )}
-                        {(insight.filters.salePriceMin || insight.filters.salePriceMax) && (
+                        {insight.segment.yearBuilt.length > 0 && (
                           <span className="badge badge-secondary text-sm">
-                            Price: ${insight.filters.salePriceMin?.toLocaleString() || 'Any'} - ${insight.filters.salePriceMax?.toLocaleString() || 'Any'}
+                            Built: {insight.segment.yearBuilt.join(', ')}
+                          </span>
+                        )}
+                        {insight.segment.propertyType.length > 0 && (
+                          <span className="badge badge-secondary text-sm">
+                            Type: {insight.segment.propertyType.join(', ')}
                           </span>
                         )}
                       </div>

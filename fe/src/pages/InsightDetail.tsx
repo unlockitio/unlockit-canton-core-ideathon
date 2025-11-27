@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
-interface ReportResult {
+interface SegmentCombination {
+  bedroom?: string;
+  livingArea?: string;
+  yearBuilt?: string;
+  propertyType?: string;
   minPrice: number;
   avgPrice: number;
   maxPrice: number;
@@ -9,7 +13,6 @@ interface ReportResult {
   avgDaysOnMarket?: number;
   maxDaysOnMarket?: number;
   transactionCount: number;
-  propertyTypeDistribution?: Array<{ type: string; count: number; percentage: number }>;
   transactions?: Array<{
     address: string;
     price: number;
@@ -18,6 +21,11 @@ interface ReportResult {
     trustScore: number;
     date: string;
   }>;
+}
+
+interface ReportResult {
+  combinations: SegmentCombination[];
+  totalTransactionCount: number;
 }
 
 interface Insight {
@@ -29,7 +37,12 @@ interface Insight {
   price: number;
   purchaseDate: string;
   status: string;
-  filters: any;
+  segment: {
+    bedrooms: string[];
+    livingArea: string[];
+    yearBuilt: string[];
+    propertyType: string[];
+  };
 }
 
 export default function InsightDetail() {
@@ -45,36 +58,62 @@ export default function InsightDetail() {
     if (found) {
       setInsight(found);
 
-      const mockResult: ReportResult = {
-        minPrice: 650000,
-        avgPrice: 875000,
-        maxPrice: 1250000,
-        transactionCount: 42,
-      };
+      // Generate all combinations
+      const bedrooms = found.segment.bedrooms.length > 0 ? found.segment.bedrooms : [undefined];
+      const livingAreas = found.segment.livingArea.length > 0 ? found.segment.livingArea : [undefined];
+      const yearBuilts = found.segment.yearBuilt.length > 0 ? found.segment.yearBuilt : [undefined];
+      const propertyTypes = found.segment.propertyType.length > 0 ? found.segment.propertyType : [undefined];
 
-      if (found.dataScope !== 'Basic Data') {
-        mockResult.minDaysOnMarket = 12;
-        mockResult.avgDaysOnMarket = 28;
-        mockResult.maxDaysOnMarket = 67;
-        mockResult.propertyTypeDistribution = [
-          { type: 'Single Family', count: 18, percentage: 43 },
-          { type: 'Condo', count: 16, percentage: 38 },
-          { type: 'Townhouse', count: 6, percentage: 14 },
-          { type: 'Multi-Family', count: 2, percentage: 5 },
-        ];
+      const combinations: SegmentCombination[] = [];
+      let totalCount = 0;
+
+      for (const bedroom of bedrooms) {
+        for (const livingArea of livingAreas) {
+          for (const yearBuilt of yearBuilts) {
+            for (const propertyType of propertyTypes) {
+              const basePrice = 650000 + Math.random() * 400000;
+              const variance = 0.15;
+              const count = Math.floor(5 + Math.random() * 15);
+
+              const combination: SegmentCombination = {
+                bedroom,
+                livingArea,
+                yearBuilt,
+                propertyType,
+                minPrice: Math.floor(basePrice * (1 - variance)),
+                avgPrice: Math.floor(basePrice),
+                maxPrice: Math.floor(basePrice * (1 + variance)),
+                transactionCount: count,
+              };
+
+              if (found.dataScope !== 'Basic Data') {
+                combination.minDaysOnMarket = Math.floor(10 + Math.random() * 10);
+                combination.avgDaysOnMarket = Math.floor(20 + Math.random() * 20);
+                combination.maxDaysOnMarket = Math.floor(50 + Math.random() * 30);
+              }
+
+              if (found.dataScope === 'Detailed Data') {
+                combination.transactions = Array.from({ length: Math.min(count, 5) }, (_, i) => ({
+                  address: `${1000 + i * 111} ${propertyType || 'Main'} St`,
+                  price: Math.floor(combination.minPrice + Math.random() * (combination.maxPrice - combination.minPrice)),
+                  bedrooms: bedroom ? (bedroom === '5+' ? 5 : parseInt(bedroom) || 2) : 3,
+                  sqft: livingArea ? parseInt(livingArea.split('-')[0].replace('<', '').replace('+', '')) || 1500 : 1500,
+                  trustScore: Math.floor(75 + Math.random() * 25),
+                  date: `2024-${String(Math.floor(1 + Math.random() * 11)).padStart(2, '0')}-${String(Math.floor(1 + Math.random() * 28)).padStart(2, '0')}`,
+                }));
+              }
+
+              combinations.push(combination);
+              totalCount += count;
+            }
+          }
+        }
       }
 
-      if (found.dataScope === 'Detailed Data') {
-        mockResult.transactions = [
-          { address: '1234 Market St', price: 925000, bedrooms: 3, sqft: 1800, trustScore: 92, date: '2024-11-15' },
-          { address: '5678 Oak Ave', price: 1150000, bedrooms: 4, sqft: 2200, trustScore: 88, date: '2024-11-10' },
-          { address: '910 Pine St', price: 750000, bedrooms: 2, sqft: 1200, trustScore: 95, date: '2024-11-05' },
-          { address: '234 Elm Rd', price: 890000, bedrooms: 3, sqft: 1650, trustScore: 85, date: '2024-10-28' },
-          { address: '567 Cedar Ln', price: 1050000, bedrooms: 3, sqft: 1900, trustScore: 90, date: '2024-10-20' },
-        ];
-      }
-
-      setReportResult(mockResult);
+      setReportResult({
+        combinations,
+        totalTransactionCount: totalCount,
+      });
     }
 
     setLoading(false);
@@ -122,24 +161,29 @@ export default function InsightDetail() {
             </div>
           </div>
 
-          {(insight.filters.bedroomsMin || insight.filters.bedroomsMax || insight.filters.livingAreaMin ||
-            insight.filters.livingAreaMax || insight.filters.salePriceMin || insight.filters.salePriceMax) && (
+          {(insight.segment.bedrooms.length > 0 || insight.segment.livingArea.length > 0 ||
+            insight.segment.yearBuilt.length > 0 || insight.segment.propertyType.length > 0) && (
             <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-              <div className="text-muted text-sm mb-2">Applied Filters</div>
+              <div className="text-muted text-sm mb-2">Market Segment</div>
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.875rem' }}>
-                {(insight.filters.bedroomsMin || insight.filters.bedroomsMax) && (
+                {insight.segment.bedrooms.length > 0 && (
                   <span className="badge badge-secondary">
-                    Bedrooms: {insight.filters.bedroomsMin || 'Any'} - {insight.filters.bedroomsMax || 'Any'}
+                    Bedrooms: {insight.segment.bedrooms.join(', ')}
                   </span>
                 )}
-                {(insight.filters.livingAreaMin || insight.filters.livingAreaMax) && (
+                {insight.segment.livingArea.length > 0 && (
                   <span className="badge badge-secondary">
-                    Living Area: {insight.filters.livingAreaMin || 'Any'} - {insight.filters.livingAreaMax || 'Any'} sqft
+                    Living Area: {insight.segment.livingArea.join(', ')} sqft
                   </span>
                 )}
-                {(insight.filters.salePriceMin || insight.filters.salePriceMax) && (
+                {insight.segment.yearBuilt.length > 0 && (
                   <span className="badge badge-secondary">
-                    Price: ${insight.filters.salePriceMin?.toLocaleString() || 'Any'} - ${insight.filters.salePriceMax?.toLocaleString() || 'Any'}
+                    Year Built: {insight.segment.yearBuilt.join(', ')}
+                  </span>
+                )}
+                {insight.segment.propertyType.length > 0 && (
+                  <span className="badge badge-secondary">
+                    Property Type: {insight.segment.propertyType.join(', ')}
                   </span>
                 )}
               </div>
@@ -147,106 +191,124 @@ export default function InsightDetail() {
           )}
         </div>
 
-        <h2 className="font-semibold mb-3">Price Statistics</h2>
-        <div className="grid grid-3" style={{ gap: '1.5rem', marginBottom: '2rem' }}>
-          <div>
-            <div className="text-muted text-sm font-semibold mb-1">Min Price</div>
-            <div className="text-xl font-bold">${reportResult.minPrice.toLocaleString()}</div>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h2 className="font-semibold mb-2">Overview</h2>
+          <div className="text-muted text-sm">
+            Total Transactions: <span className="font-bold text-lg">{reportResult.totalTransactionCount}</span>
           </div>
-          <div>
-            <div className="text-muted text-sm font-semibold mb-1">Average Price</div>
-            <div className="text-xl font-bold text-primary">${reportResult.avgPrice.toLocaleString()}</div>
-          </div>
-          <div>
-            <div className="text-muted text-sm font-semibold mb-1">Max Price</div>
-            <div className="text-xl font-bold">${reportResult.maxPrice.toLocaleString()}</div>
+          <div className="text-muted text-sm">
+            Segment Combinations: <span className="font-bold">{reportResult.combinations.length}</span>
           </div>
         </div>
 
-        <div className="mb-3">
-          <div className="text-muted text-sm font-semibold mb-1">Total Transactions</div>
-          <div className="text-lg font-bold">{reportResult.transactionCount}</div>
-        </div>
+        <h2 className="font-semibold mb-3">Market Segment Analysis</h2>
+        {reportResult.combinations.map((combo, index) => {
+          const segmentParts = [];
+          if (combo.bedroom) segmentParts.push(`${combo.bedroom} BR`);
+          if (combo.propertyType) segmentParts.push(combo.propertyType);
+          if (combo.livingArea) segmentParts.push(`${combo.livingArea} sqft`);
+          if (combo.yearBuilt) segmentParts.push(`Built ${combo.yearBuilt}`);
 
-        {reportResult.avgDaysOnMarket && (
-          <>
-            <h3 className="font-semibold mb-3 mt-4">Days on Market</h3>
-            <div className="grid grid-3" style={{ gap: '1.5rem', marginBottom: '2rem' }}>
-              <div>
-                <div className="text-muted text-sm mb-1">Min</div>
-                <div className="font-bold">{reportResult.minDaysOnMarket} days</div>
-              </div>
-              <div>
-                <div className="text-muted text-sm mb-1">Average</div>
-                <div className="font-bold text-primary">{reportResult.avgDaysOnMarket} days</div>
-              </div>
-              <div>
-                <div className="text-muted text-sm mb-1">Max</div>
-                <div className="font-bold">{reportResult.maxDaysOnMarket} days</div>
-              </div>
-            </div>
-          </>
-        )}
+          const segmentTitle = segmentParts.length > 0
+            ? segmentParts.join(' | ')
+            : 'All Properties';
 
-        {reportResult.propertyTypeDistribution && (
-          <>
-            <h3 className="font-semibold mb-3 mt-4">Property Type Distribution</h3>
-            {reportResult.propertyTypeDistribution.map((item) => (
-              <div key={item.type} style={{ marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span className="font-semibold">{item.type}</span>
-                  <span className="text-muted">{item.count} transactions ({item.percentage}%)</span>
+          return (
+            <div
+              key={index}
+              style={{
+                background: '#f7fafc',
+                padding: '1.5rem',
+                borderRadius: '8px',
+                marginBottom: '1.5rem',
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <h3 className="font-bold mb-3" style={{ color: '#5850ec' }}>
+                {segmentTitle}
+              </h3>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div className="text-muted text-sm font-semibold mb-2">Price Statistics</div>
+                <div className="grid grid-3" style={{ gap: '1rem' }}>
+                  <div>
+                    <div className="text-muted text-sm mb-1">Min Price</div>
+                    <div className="font-bold">${combo.minPrice.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted text-sm mb-1">Average Price</div>
+                    <div className="font-bold text-primary">${combo.avgPrice.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted text-sm mb-1">Max Price</div>
+                    <div className="font-bold">${combo.maxPrice.toLocaleString()}</div>
+                  </div>
                 </div>
-                <div style={{ background: '#e2e8f0', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      background: '#5850ec',
-                      height: '100%',
-                      width: `${item.percentage}%`,
-                      transition: 'width 0.3s',
-                    }}
-                  />
-                </div>
               </div>
-            ))}
-          </>
-        )}
 
-        {reportResult.transactions && (
-          <>
-            <h3 className="font-semibold mb-3 mt-4">Individual Transactions</h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>Address</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>Price</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'center' }}>Bedrooms</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>Sqft</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'center' }}>Trust Score</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportResult.transactions.map((tx, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '0.75rem' }}>{tx.address}</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>${tx.price.toLocaleString()}</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>{tx.bedrooms}</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>{tx.sqft.toLocaleString()}</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <span className={`badge ${tx.trustScore >= 90 ? 'badge-success' : tx.trustScore >= 80 ? 'badge-info' : 'badge-warning'}`}>
-                          {tx.trustScore}%
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem' }}>{tx.date}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div style={{ marginBottom: '1rem' }}>
+                <div className="text-muted text-sm">Transaction Count</div>
+                <div className="font-bold">{combo.transactionCount}</div>
+              </div>
+
+              {combo.avgDaysOnMarket && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div className="text-muted text-sm font-semibold mb-2">Days on Market</div>
+                  <div className="grid grid-3" style={{ gap: '1rem' }}>
+                    <div>
+                      <div className="text-muted text-sm mb-1">Min</div>
+                      <div className="font-bold">{combo.minDaysOnMarket} days</div>
+                    </div>
+                    <div>
+                      <div className="text-muted text-sm mb-1">Average</div>
+                      <div className="font-bold text-primary">{combo.avgDaysOnMarket} days</div>
+                    </div>
+                    <div>
+                      <div className="text-muted text-sm mb-1">Max</div>
+                      <div className="font-bold">{combo.maxDaysOnMarket} days</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {combo.transactions && combo.transactions.length > 0 && (
+                <div>
+                  <div className="text-muted text-sm font-semibold mb-2">Sample Transactions</div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          <th style={{ padding: '0.5rem', textAlign: 'left' }}>Address</th>
+                          <th style={{ padding: '0.5rem', textAlign: 'right' }}>Price</th>
+                          <th style={{ padding: '0.5rem', textAlign: 'center' }}>BR</th>
+                          <th style={{ padding: '0.5rem', textAlign: 'right' }}>Sqft</th>
+                          <th style={{ padding: '0.5rem', textAlign: 'center' }}>Trust</th>
+                          <th style={{ padding: '0.5rem', textAlign: 'left' }}>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {combo.transactions.map((tx, txIndex) => (
+                          <tr key={txIndex} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                            <td style={{ padding: '0.5rem' }}>{tx.address}</td>
+                            <td style={{ padding: '0.5rem', textAlign: 'right' }}>${tx.price.toLocaleString()}</td>
+                            <td style={{ padding: '0.5rem', textAlign: 'center' }}>{tx.bedrooms}</td>
+                            <td style={{ padding: '0.5rem', textAlign: 'right' }}>{tx.sqft.toLocaleString()}</td>
+                            <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                              <span className={`badge ${tx.trustScore >= 90 ? 'badge-success' : tx.trustScore >= 80 ? 'badge-info' : 'badge-warning'}`}>
+                                {tx.trustScore}%
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.5rem' }}>{tx.date}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
-          </>
-        )}
+          );
+        })}
       </div>
     </div>
   );

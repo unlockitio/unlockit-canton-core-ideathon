@@ -26,16 +26,19 @@ interface TimeRange {
 
 interface MarketDataRequest {
   postalCode: string;
-  bedroomsMin?: number;
-  bedroomsMax?: number;
-  livingAreaMin?: number;
-  livingAreaMax?: number;
-  salePriceMin?: number;
-  salePriceMax?: number;
+  bedrooms: string[];
+  livingArea: string[];
+  yearBuilt: string[];
+  propertyType: string[];
   qualityLevel: string;
   dataScope: string;
   timeRange: string;
 }
+
+const BEDROOM_OPTIONS = ['Studio', '1', '2', '3', '4', '5+'];
+const LIVING_AREA_OPTIONS = ['<800', '800-1200', '1200-1600', '1600-2000', '2000-2500', '2500+'];
+const YEAR_BUILT_OPTIONS = ['Pre-1950', '1950s-1970s', '1980s-1990s', '2000s-2010s', '2020+'];
+const PROPERTY_TYPE_OPTIONS = ['Single Family', 'Condo', 'Townhouse', 'Multi-Family'];
 
 const QUALITY_LEVELS: DataQualityLevel[] = [
   {
@@ -127,6 +130,10 @@ export default function RequestInsightModal({
   const [step, setStep] = useState(1);
   const [request, setRequest] = useState<MarketDataRequest>({
     postalCode: '',
+    bedrooms: [],
+    livingArea: [],
+    yearBuilt: [],
+    propertyType: [],
     qualityLevel: '',
     dataScope: '',
     timeRange: '',
@@ -148,9 +155,17 @@ export default function RequestInsightModal({
     }
   };
 
-  const handleFiltersSubmit = (e: React.FormEvent) => {
+  const handleSegmentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStep(3);
+  };
+
+  const toggleSelection = (category: keyof Pick<MarketDataRequest, 'bedrooms' | 'livingArea' | 'yearBuilt' | 'propertyType'>, value: string) => {
+    const current = request[category];
+    const updated = current.includes(value)
+      ? current.filter(v => v !== value)
+      : [...current, value];
+    setRequest({ ...request, [category]: updated });
   };
 
   const handleQualitySelect = (qualityId: string) => {
@@ -202,7 +217,15 @@ export default function RequestInsightModal({
     const timeRange = TIME_RANGES.find(t => t.id === timeRangeId);
 
     if (quality && scope && timeRange) {
-      const price = scope.basePrice * quality.multiplier * timeRange.multiplier;
+      const segmentSelections =
+        request.bedrooms.length +
+        request.livingArea.length +
+        request.yearBuilt.length +
+        request.propertyType.length;
+
+      const segmentComplexity = 1.0 + (0.05 * segmentSelections);
+
+      const price = scope.basePrice * quality.multiplier * timeRange.multiplier * segmentComplexity;
       setCalculatedPrice(Math.round(price * 100) / 100);
     }
   };
@@ -229,13 +252,11 @@ export default function RequestInsightModal({
         price: calculatedPrice,
         purchaseDate: new Date().toISOString(),
         status: 'completed',
-        filters: {
-          bedroomsMin: request.bedroomsMin,
-          bedroomsMax: request.bedroomsMax,
-          livingAreaMin: request.livingAreaMin,
-          livingAreaMax: request.livingAreaMax,
-          salePriceMin: request.salePriceMin,
-          salePriceMax: request.salePriceMax,
+        segment: {
+          bedrooms: request.bedrooms,
+          livingArea: request.livingArea,
+          yearBuilt: request.yearBuilt,
+          propertyType: request.propertyType,
         },
       };
 
@@ -250,6 +271,10 @@ export default function RequestInsightModal({
     setStep(1);
     setRequest({
       postalCode: '',
+      bedrooms: [],
+      livingArea: [],
+      yearBuilt: [],
+      propertyType: [],
       qualityLevel: '',
       dataScope: '',
       timeRange: '',
@@ -283,7 +308,7 @@ export default function RequestInsightModal({
             </div>
             <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
               <div className="step-number">{step > 2 ? '✓' : '2'}</div>
-              <div className="step-label">Filters</div>
+              <div className="step-label">Segment</div>
             </div>
             <div className={`step ${step >= 3 ? 'active' : ''} ${step > 3 ? 'completed' : ''}`}>
               <div className="step-number">{step > 3 ? '✓' : '3'}</div>
@@ -330,76 +355,124 @@ export default function RequestInsightModal({
           )}
 
           {step === 2 && (
-            <form onSubmit={handleFiltersSubmit}>
-              <h3 className="mb-3 font-bold">Filter Transactions (Optional)</h3>
-              <div className="grid grid-2" style={{ gap: '1rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Bedrooms (Min)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={request.bedroomsMin || ''}
-                    onChange={(e) => setRequest({ ...request, bedroomsMin: e.target.value ? parseInt(e.target.value) : undefined })}
-                    placeholder="Any"
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Bedrooms (Max)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={request.bedroomsMax || ''}
-                    onChange={(e) => setRequest({ ...request, bedroomsMax: e.target.value ? parseInt(e.target.value) : undefined })}
-                    placeholder="Any"
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Living Area Min (sqft)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={request.livingAreaMin || ''}
-                    onChange={(e) => setRequest({ ...request, livingAreaMin: e.target.value ? parseInt(e.target.value) : undefined })}
-                    placeholder="Any"
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Living Area Max (sqft)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={request.livingAreaMax || ''}
-                    onChange={(e) => setRequest({ ...request, livingAreaMax: e.target.value ? parseInt(e.target.value) : undefined })}
-                    placeholder="Any"
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Sale Price Min ($)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={request.salePriceMin || ''}
-                    onChange={(e) => setRequest({ ...request, salePriceMin: e.target.value ? parseInt(e.target.value) : undefined })}
-                    placeholder="Any"
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Sale Price Max ($)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={request.salePriceMax || ''}
-                    onChange={(e) => setRequest({ ...request, salePriceMax: e.target.value ? parseInt(e.target.value) : undefined })}
-                    placeholder="Any"
-                    min="0"
-                  />
+            <form onSubmit={handleSegmentSubmit}>
+              <h3 className="mb-3 font-bold">Define Market Segment</h3>
+              <p className="text-muted mb-3">
+                Select the property characteristics you want to analyze. More specific segments may increase cost.
+              </p>
+
+              <div className="form-group mb-4">
+                <label className="form-label font-semibold">Bedrooms</label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {BEDROOM_OPTIONS.map((option) => (
+                    <label
+                      key={option}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        border: '2px solid',
+                        borderColor: request.bedrooms.includes(option) ? '#5850ec' : '#e2e8f0',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: request.bedrooms.includes(option) ? '#f0f0ff' : 'transparent',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={request.bedrooms.includes(option)}
+                        onChange={() => toggleSelection('bedrooms', option)}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      {option}
+                    </label>
+                  ))}
                 </div>
               </div>
+
+              <div className="form-group mb-4">
+                <label className="form-label font-semibold">Living Area (sqft)</label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {LIVING_AREA_OPTIONS.map((option) => (
+                    <label
+                      key={option}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        border: '2px solid',
+                        borderColor: request.livingArea.includes(option) ? '#5850ec' : '#e2e8f0',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: request.livingArea.includes(option) ? '#f0f0ff' : 'transparent',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={request.livingArea.includes(option)}
+                        onChange={() => toggleSelection('livingArea', option)}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group mb-4">
+                <label className="form-label font-semibold">Year Built</label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {YEAR_BUILT_OPTIONS.map((option) => (
+                    <label
+                      key={option}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        border: '2px solid',
+                        borderColor: request.yearBuilt.includes(option) ? '#5850ec' : '#e2e8f0',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: request.yearBuilt.includes(option) ? '#f0f0ff' : 'transparent',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={request.yearBuilt.includes(option)}
+                        onChange={() => toggleSelection('yearBuilt', option)}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group mb-4">
+                <label className="form-label font-semibold">Property Type</label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {PROPERTY_TYPE_OPTIONS.map((option) => (
+                    <label
+                      key={option}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        border: '2px solid',
+                        borderColor: request.propertyType.includes(option) ? '#5850ec' : '#e2e8f0',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: request.propertyType.includes(option) ? '#f0f0ff' : 'transparent',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={request.propertyType.includes(option)}
+                        onChange={() => toggleSelection('propertyType', option)}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-2" style={{ gap: '1rem', marginTop: '1rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
                   Back
@@ -531,19 +604,46 @@ export default function RequestInsightModal({
                     <h4 className="font-semibold mb-3">Your Selection</h4>
                     <div style={{ display: 'grid', gap: '0.75rem', fontSize: '0.9rem' }}>
                       <div><strong>Postal Code:</strong> {request.postalCode}</div>
-                      {(request.bedroomsMin || request.bedroomsMax) && (
-                        <div><strong>Bedrooms:</strong> {request.bedroomsMin || 'Any'} - {request.bedroomsMax || 'Any'}</div>
+
+                      {request.bedrooms.length > 0 && (
+                        <div><strong>Bedrooms:</strong> {request.bedrooms.join(', ')}</div>
                       )}
-                      {(request.livingAreaMin || request.livingAreaMax) && (
-                        <div><strong>Living Area:</strong> {request.livingAreaMin || 'Any'} - {request.livingAreaMax || 'Any'} sqft</div>
+                      {request.livingArea.length > 0 && (
+                        <div><strong>Living Area:</strong> {request.livingArea.join(', ')} sqft</div>
                       )}
-                      {(request.salePriceMin || request.salePriceMax) && (
-                        <div><strong>Sale Price:</strong> ${request.salePriceMin?.toLocaleString() || 'Any'} - ${request.salePriceMax?.toLocaleString() || 'Any'}</div>
+                      {request.yearBuilt.length > 0 && (
+                        <div><strong>Year Built:</strong> {request.yearBuilt.join(', ')}</div>
                       )}
+                      {request.propertyType.length > 0 && (
+                        <div><strong>Property Type:</strong> {request.propertyType.join(', ')}</div>
+                      )}
+
                       <div><strong>Quality Level:</strong> {QUALITY_LEVELS.find(q => q.id === request.qualityLevel)?.name}</div>
                       <div><strong>Data Scope:</strong> {DATA_SCOPES.find(s => s.id === request.dataScope)?.name}</div>
                       <div><strong>Time Range:</strong> {TIME_RANGES.find(t => t.id === request.timeRange)?.name}</div>
                     </div>
+
+                    {(() => {
+                      const combinations =
+                        (request.bedrooms.length || 1) *
+                        (request.livingArea.length || 1) *
+                        (request.yearBuilt.length || 1) *
+                        (request.propertyType.length || 1);
+
+                      if (combinations > 1) {
+                        return (
+                          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                            <div className="text-primary font-semibold">
+                              Analyzing {combinations} segment combinations
+                            </div>
+                            <div className="text-sm text-muted">
+                              You will receive separate statistics for each market segment combination
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   <div className="alert alert-success mb-4" style={{ fontSize: '1.5rem', textAlign: 'center', padding: '2rem' }}>

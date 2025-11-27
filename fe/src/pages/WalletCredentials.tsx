@@ -5,7 +5,7 @@ import type { Contract } from '../types/canton';
 
 interface CredentialSubject {
   id: string;
-  claims: Array<{ fst: string; snd: string }>;
+  claims: Array<{ _1: string; _2: string }>;
 }
 
 interface Proof {
@@ -30,8 +30,28 @@ interface VerifiableCredential {
   credentialContext: string[];
 }
 
+interface CredentialDisplay {
+  contractId: string;
+  credentialId: string;
+  type: string[];
+  title: string;
+  icon: string;
+  issuer: string;
+  claims: Record<string, string>;
+  expirationDate?: string;
+  status: string;
+}
+
+const formatPartyForDisplay = (partyId: string): string => {
+  const hintPart = partyId.split('::')[0];
+  const baseName = hintPart.split('-')[0];
+  return baseName
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .toUpperCase();
+};
+
 export default function WalletCredentials() {
-  const [credentials, setCredentials] = useState<Contract<VerifiableCredential>[]>([]);
+  const [credentials, setCredentials] = useState<CredentialDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +61,63 @@ export default function WalletCredentials() {
         const result = await cantonApi.query<VerifiableCredential>(
           TemplateIds.VerifiableCredential
         );
-        setCredentials(result || []);
+
+        if (result && result.length > 0) {
+          const displayCredentials: CredentialDisplay[] = result.map((vc) => {
+            const claims: Record<string, string> = {};
+
+            if (vc.payload.subject.claims && Array.isArray(vc.payload.subject.claims)) {
+              vc.payload.subject.claims.forEach((tuple: any) => {
+                claims[tuple._1] = tuple._2;
+              });
+            }
+
+            let icon = '📜';
+            let title = vc.payload.credentialType
+              .filter(t => t !== 'VerifiableCredential')
+              .join(', ') || 'Credential';
+
+            if (vc.payload.credentialType.includes('GovernmentIDCredential')) {
+              icon = '🪪';
+              title = claims.state ? `${claims.state} Driver's License` : 'Government ID';
+            } else if (vc.payload.credentialType.includes('RealEstateLicenseCredential')) {
+              icon = '🏠';
+              title = 'Real Estate License';
+            } else if (vc.payload.credentialType.includes('RealEstateBrokerLicenseCredential')) {
+              icon = '🏠';
+              title = 'Real Estate Broker License';
+            } else if (vc.payload.credentialType.includes('BrokerageAffiliationCredential')) {
+              icon = '🏢';
+              title = claims.brokerageName || 'Brokerage Affiliation';
+            } else if (vc.payload.credentialType.includes('BrokerageOwnershipCredential')) {
+              icon = '🏢';
+              title = claims.brokerageName || 'Brokerage Ownership';
+            } else if (vc.payload.credentialType.includes('MortgageLenderLicenseCredential')) {
+              icon = '🏦';
+              title = 'Mortgage Lender License';
+            }
+
+            const expirationDate = Array.isArray(vc.payload.expirationDate) && vc.payload.expirationDate.length > 0
+              ? vc.payload.expirationDate[0]
+              : undefined;
+
+            return {
+              contractId: vc.contractId,
+              credentialId: vc.payload.credentialId,
+              type: vc.payload.credentialType,
+              title,
+              icon,
+              issuer: formatPartyForDisplay(vc.payload.issuer),
+              claims,
+              expirationDate,
+              status: vc.payload.status,
+            };
+          });
+
+          setCredentials(displayCredentials);
+        } else {
+          setCredentials([]);
+        }
       } catch (err) {
         console.error('Failed to fetch credentials:', err);
         setError('Failed to load credentials');
@@ -86,7 +162,7 @@ export default function WalletCredentials() {
         <div className="text-muted text-sm font-semibold mb-1">Total Credentials</div>
         <div className="text-xl font-bold">{credentials.length}</div>
         <div className="text-sm text-muted">
-          {credentials.filter(c => c.payload.status === 'Active').length} active
+          {credentials.filter(c => c.status === 'Active').length} active
         </div>
       </div>
 
@@ -98,109 +174,72 @@ export default function WalletCredentials() {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {credentials.map((credential) => (
-            <div key={credential.contractId} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                    <h3 className="font-bold">
-                      {credential.payload.credentialType.join(', ')}
-                    </h3>
-                    <span className={`badge ${getStatusBadgeClass(credential.payload.status)}`}>
-                      {credential.payload.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-muted mb-2">
-                    ID: {credential.payload.credentialId}
-                  </div>
-                </div>
-              </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+          {credentials.map((credential) => {
+            const claimsDisplay = Object.entries(credential.claims)
+              .slice(0, 3)
+              .map(([key, value]) => `${key}: ${value}`);
 
-              <div style={{ background: '#f7fafc', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.875rem' }}>
-                  <div>
-                    <div className="text-muted text-sm">Issuer</div>
-                    <div className="font-semibold">{credential.payload.issuer}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted text-sm">Issued</div>
-                    <div className="font-semibold">
-                      {new Date(credential.payload.issuanceDate).toLocaleDateString()}
-                    </div>
-                  </div>
-                  {credential.payload.expirationDate && (
-                    <div>
-                      <div className="text-muted text-sm">Expires</div>
-                      <div className="font-semibold">
-                        {new Date(credential.payload.expirationDate).toLocaleDateString()}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-muted text-sm">Verifiers</div>
-                    <div className="font-semibold">
-                      {credential.payload.verifiers.length || 'None'}
-                    </div>
-                  </div>
+            return (
+              <div
+                key={credential.contractId}
+                className="card"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  position: 'relative',
+                }}
+              >
+                <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+                  <span className={`badge ${getStatusBadgeClass(credential.status)}`}>
+                    {credential.status}
+                  </span>
                 </div>
-              </div>
 
-              <div>
-                <h4 className="font-semibold mb-2">Claims</h4>
-                {credential.payload.subject.claims.length === 0 ? (
-                  <p className="text-muted text-sm">No claims</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {credential.payload.subject.claims.map((claim, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          padding: '0.75rem',
-                          background: '#ffffff',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span className="font-semibold text-sm">{claim.fst}:</span>
-                          <span className="text-sm">{claim.snd}</span>
-                        </div>
-                      </div>
-                    ))}
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                  {credential.icon}
+                </div>
+
+                <h3 className="font-bold mb-2">{credential.title}</h3>
+
+                <div className="text-sm text-muted mb-2">
+                  Issuer: {credential.issuer}
+                </div>
+
+                {claimsDisplay.map((claim, i) => (
+                  <div key={i} className="text-sm text-muted">
+                    {claim}
+                  </div>
+                ))}
+
+                {credential.expirationDate && (
+                  <div className="text-sm text-muted mt-2">
+                    Expires: {new Date(credential.expirationDate).toLocaleDateString()}
                   </div>
                 )}
-              </div>
 
-              <details style={{ marginTop: '1rem' }}>
-                <summary className="cursor-pointer text-sm text-primary font-semibold">
-                  Show Proof Details
-                </summary>
-                <div style={{ marginTop: '0.75rem', padding: '1rem', background: '#f7fafc', borderRadius: '6px' }}>
-                  <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.875rem' }}>
-                    <div>
-                      <span className="text-muted">Type: </span>
-                      <span>{credential.payload.proof.proofType}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted">Method: </span>
-                      <span>{credential.payload.proof.verificationMethod}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted">Created: </span>
-                      <span>{new Date(credential.payload.proof.created).toLocaleString()}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted">Value: </span>
-                      <span className="font-mono text-xs break-all">
-                        {credential.payload.proof.proofValue.slice(0, 64)}...
-                      </span>
-                    </div>
+                <details style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+                  <summary className="cursor-pointer text-sm text-primary font-semibold">
+                    View Details
+                  </summary>
+                  <div style={{ marginTop: '0.75rem', fontSize: '0.875rem' }}>
+                    <div className="text-muted text-sm mb-1">ID: {credential.credentialId}</div>
+
+                    {Object.keys(credential.claims).length > 3 && (
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <div className="font-semibold mb-1">All Claims:</div>
+                        {Object.entries(credential.claims).map(([key, value], idx) => (
+                          <div key={idx} className="text-sm" style={{ marginBottom: '0.25rem' }}>
+                            <span className="font-semibold">{key}:</span> {value}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </details>
-            </div>
-          ))}
+                </details>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
