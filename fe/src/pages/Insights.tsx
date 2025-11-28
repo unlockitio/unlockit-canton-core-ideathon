@@ -19,56 +19,7 @@ interface Insight {
   };
 }
 
-const MOCK_INSIGHTS: Insight[] = [
-  {
-    id: 'insight-1',
-    postalCode: '94102',
-    qualityLevel: 'Premium Quality',
-    dataScope: 'Detailed Data',
-    timeRange: 'Last Year',
-    price: 131.25,
-    purchaseDate: '2024-11-20T10:30:00.000Z',
-    status: 'completed',
-    segment: {
-      bedrooms: ['2', '3', '4'],
-      livingArea: ['1200-1600', '1600-2000'],
-      yearBuilt: ['2000s-2010s', '2020+'],
-      propertyType: ['Condo'],
-    },
-  },
-  {
-    id: 'insight-2',
-    postalCode: '94103',
-    qualityLevel: 'Verified Only',
-    dataScope: 'Standard Data',
-    timeRange: 'Most Recent',
-    price: 22.5,
-    purchaseDate: '2024-11-18T14:15:00.000Z',
-    status: 'completed',
-    segment: {
-      bedrooms: ['3'],
-      livingArea: ['1600-2000', '2000-2500'],
-      yearBuilt: [],
-      propertyType: ['Single Family'],
-    },
-  },
-  {
-    id: 'insight-3',
-    postalCode: '94110',
-    qualityLevel: 'Basic Quality',
-    dataScope: 'Basic Data',
-    timeRange: 'Historic Data',
-    price: 12.5,
-    purchaseDate: '2024-11-15T09:00:00.000Z',
-    status: 'completed',
-    segment: {
-      bedrooms: [],
-      livingArea: [],
-      yearBuilt: [],
-      propertyType: [],
-    },
-  },
-];
+// Mock insights removed - all insights now use real Canton data
 
 export default function Insights() {
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -78,26 +29,14 @@ export default function Insights() {
     const stored = localStorage.getItem('insights');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Migrate old filter structure to new segment structure
-      const migrated = parsed.map((insight: any) => {
-        if (insight.filters && !insight.segment) {
-          return {
-            ...insight,
-            segment: {
-              bedrooms: [],
-              livingArea: [],
-              yearBuilt: [],
-              propertyType: [],
-            },
-          };
-        }
-        return insight;
-      });
-      setInsights(migrated);
-      localStorage.setItem('insights', JSON.stringify(migrated));
+      // Filter out any insights without reportData (old mock insights)
+      const validInsights = parsed.filter((insight: any) => insight.reportData);
+      setInsights(validInsights);
+      // Update localStorage to remove invalid insights
+      localStorage.setItem('insights', JSON.stringify(validInsights));
     } else {
-      setInsights(MOCK_INSIGHTS);
-      localStorage.setItem('insights', JSON.stringify(MOCK_INSIGHTS));
+      // Start with empty list - user must purchase insights
+      setInsights([]);
     }
   }, []);
 

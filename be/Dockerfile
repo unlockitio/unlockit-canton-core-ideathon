@@ -90,4 +90,4 @@ RUN chmod +x /app/scripts/configureApplicationProps.sh
 EXPOSE 9090
 
 # Entry point: configure then run
-CMD ["sh", "-c", "/app/scripts/configureApplicationProps.sh && ./mvnw quarkus:dev -Dquarkus.http.host=0.0.0.0"]
+CMD ["sh", "-c", "/app/scripts/configureApplicationProps.sh && ./mvnw quarkus:dev -Dquarkus.http.host=0.0.0.0 -Dquarkus.analytics.disabled=true"]

@@ -238,11 +238,38 @@ export default function RequestInsightModal({
     e.preventDefault();
     setIsProcessing(true);
 
-    setTimeout(() => {
+    try {
       const quality = QUALITY_LEVELS.find(q => q.id === request.qualityLevel);
       const scope = DATA_SCOPES.find(s => s.id === request.dataScope);
       const timeRange = TIME_RANGES.find(t => t.id === request.timeRange);
 
+      // Fetch the actual data snapshot from backend at purchase time
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.backendUrl}/api/market-insights`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postalCode: request.postalCode,
+          qualityLevel: request.qualityLevel,
+          dataScope: request.dataScope,
+          timeRange: request.timeRange,
+          bedrooms: request.bedrooms,
+          livingArea: request.livingArea,
+          yearBuilt: request.yearBuilt,
+          propertyType: request.propertyType,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch market data');
+      }
+
+      const reportData = await response.json();
+
+      // Store the insight with the data snapshot
       const newInsight = {
         id: `insight-${Date.now()}`,
         postalCode: request.postalCode,
@@ -258,13 +285,19 @@ export default function RequestInsightModal({
           yearBuilt: request.yearBuilt,
           propertyType: request.propertyType,
         },
+        // Store the actual data snapshot
+        reportData: reportData,
       };
 
       setIsProcessing(false);
       onSuccess?.(newInsight);
       handleReset();
       onClose();
-    }, 2000);
+    } catch (error) {
+      console.error('Payment failed:', error);
+      alert('Failed to purchase insight. Please try again.');
+      setIsProcessing(false);
+    }
   };
 
   const handleReset = () => {

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@daml.js/unlockit-canton-core-ideathon-0.0.1": "file:./src/codegen/unlockit-canton-core-ideathon-0.0.1",
+    "@daml.js/unlockit-canton-core-ideathon-0.0.1": "file:src/codegen/unlockit-canton-core-ideathon-0.0.1",
     "@daml/types": "^2.10.2",
     "jose": "^6.1.2",
     "jwt-decode": "^4.0.0",
@@ -23,6 +23,6 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "codegen": "daml codegen js -o codegen ../.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar"
+    "codegen": "daml codegen js -o src/codegen ../.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar"
   }
 }

@@ -2,4 +2,4 @@ import * as RETVN from './RETVN';
 export { RETVN } ;
 import * as W3C from './W3C';
 export { W3C } ;
-export declare const packageId = 'b99b02a20eca2e71b6ebc1a25af89b4cf0cb8d7c78bbc6673c580874d8ffbdaf';
+export declare const packageId = '56ebda255298c25414de57445429af1187c8b88718bfcf0e2937159cd37ab29c';

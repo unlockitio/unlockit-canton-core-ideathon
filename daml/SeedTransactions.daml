@@ -1,0 +1,256 @@
+-- | Seed many transactions for testing
+-- This script creates numerous realistic transaction proposals to populate the system
+module SeedTransactions where
+
+import Daml.Script
+import DA.Time
+import DA.Date (date, Month(..), addDays)
+import DA.List
+import qualified DA.Text
+import RETVN.Transaction
+import RETVN.Role
+
+-- | Main seeding script - creates many realistic transactions
+-- Note: Requires that SeedCredentials has been run first to create parties
+seedTransactions : Script ()
+seedTransactions = seedTransactionsWithCount 200
+
+-- | Seeding script with configurable transaction count
+seedTransactionsWithCount : Int -> Script ()
+seedTransactionsWithCount count = do
+  -- Get all known parties and find the ones we need by party ID string
+  allParties <- listKnownParties
+
+  let findParty name = case filter (\details -> show details.party == name || DA.Text.isInfixOf name (show details.party)) allParties of
+        details::_ -> details.party
+        [] -> error ("Party not found containing: " <> name <> ". Please run SeedCredentials script first!")
+
+  -- Get all required parties
+  let operator = findParty "operator"
+  let alice = findParty "alice"
+  let bob = findParty "bob"
+
+  -- Get current time
+  now <- getTime
+
+  -- Create submission rights
+  aliceSubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = alice
+    role = RealtorAgent
+    verificationWeight = 8
+
+  bobSubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = bob
+    role = PrivateCitizen
+    verificationWeight = 5
+
+  -- Create verification rights (only for RealtorAgent role)
+  aliceVerificationRight <- submit operator $ createCmd TransactionVerificationRight with
+    operator = operator
+    user = alice
+    role = RealtorAgent
+    verificationWeight = 8
+
+  -- ===== DATA CONFIGURATION =====
+  -- Arrays and ranges for generating realistic transaction data
+
+  let postalCodes =
+        [ -- San Francisco (20 codes)
+          "94102", "94103", "94104", "94105", "94107", "94108", "94109", "94110", "94111", "94112"
+        , "94114", "94115", "94116", "94117", "94118", "94121", "94122", "94123", "94124", "94127"
+          -- Los Angeles (20 codes)
+        , "90001", "90002", "90003", "90004", "90005", "90006", "90007", "90008", "90012", "90013"
+        , "90014", "90015", "90016", "90017", "90018", "90019", "90020", "90021", "90028", "90036"
+          -- San Diego (20 codes)
+        , "92101", "92102", "92103", "92104", "92105", "92106", "92107", "92108", "92109", "92110"
+        , "92111", "92113", "92114", "92115", "92116", "92117", "92120", "92121", "92122", "92123"
+          -- San Jose (20 codes)
+        , "95110", "95111", "95112", "95113", "95116", "95117", "95118", "95119", "95120", "95121"
+        , "95122", "95123", "95124", "95125", "95126", "95127", "95128", "95129", "95130", "95131"
+          -- Oakland/Berkeley (20 codes)
+        , "94501", "94502", "94536", "94541", "94542", "94577", "94578", "94601", "94602", "94603"
+        , "94604", "94605", "94606", "94607", "94608", "94609", "94610", "94611", "94618", "94619"
+        ]
+
+  let propertyTypes = [SingleFamily, Condo, Townhouse, MultiFamily, Land]
+
+  -- Price ranges by property type (min, max)
+  let getPriceRange propertyType : (Decimal, Decimal) = case propertyType of
+        SingleFamily -> (500000.0, 1200000.0)
+        Condo -> (350000.0, 800000.0)
+        Townhouse -> (450000.0, 950000.0)
+        MultiFamily -> (800000.0, 2000000.0)
+        Land -> (200000.0, 600000.0)
+
+  let bedroomOptions = [1, 2, 3, 4, 5, 6]
+  let bathroomOptions = [1, 2, 3, 4, 5]
+
+  -- Living area ranges (sqft)
+  let livingAreaRanges = [(600, 1200), (1200, 1800), (1800, 2500), (2500, 3500), (3500, 5000)]
+
+  -- Lot size ranges (sqft) - only for SingleFamily, Townhouse, MultiFamily, Land
+  let lotSizeRanges = [(2000, 4000), (4000, 6000), (6000, 8000), (8000, 12000), (12000, 20000)]
+
+  -- Year built ranges
+  let yearBuiltRanges = [(1950, 1970), (1970, 1990), (1990, 2000), (2000, 2010), (2010, 2024)]
+
+  -- Days on market range
+  let daysOnMarketMin = 5
+  let daysOnMarketMax = 90
+
+  -- Financing types
+  let financingTypes = ["Conventional", "FHA", "VA", "Cash", "USDA"]
+
+  -- Street names and numbers for addresses
+  let streetNumbers = ["123", "456", "789", "1011", "1234", "567", "890", "2345", "678", "901"
+                      , "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "1001"]
+  let streetNames =
+        [ "Main St", "Oak Ave", "Maple Dr", "Pine Ct", "Cedar Ln"
+        , "Elm St", "Birch Way", "Willow Rd", "Sunset Blvd", "Park Ave"
+        , "Ocean View Dr", "Mountain Way", "Valley Rd", "Hill St", "Lake Dr"
+        , "Beach Blvd", "Bay St", "River Rd", "Forest Ln", "Garden Ave"
+        , "Market St", "Broadway", "First Ave", "Second St", "Third Ave"
+        , "Park Pl", "Grove St", "Highland Ave", "Mission Blvd", "Castro St"
+        ]
+
+  -- Submitters (who will create transactions)
+  let submitters = [(alice, RealtorAgent), (bob, PrivateCitizen)]
+
+  -- ===== HELPER FUNCTIONS =====
+
+  -- Generate a value within a range using index as seed
+  let valueInRange idx (minVal, maxVal) =
+        let range = maxVal - minVal
+        in minVal + (idx % range)
+
+      decimalInRange idx (minVal, maxVal) =
+        let range = maxVal - minVal
+            steps = 10000
+            step = intToDecimal (idx % steps)
+        in minVal + (step / intToDecimal steps * range)
+
+
+  -- ===== TRANSACTION GENERATION =====
+
+  let createTransaction idx = do
+        -- Select submitter (alternate between alice and bob)
+        let (submitter, submitterRole) = submitters !! (idx % 2)
+
+        -- Select property type (cycle through all types)
+        let propertyType = propertyTypes !! (idx % 5)
+
+        -- Select postal code (cycle through all codes)
+        let postalCode = postalCodes !! (idx % 100)
+
+        -- Generate property address
+        let streetNumber = streetNumbers !! ((idx / 5) % 20)
+        let streetName = streetNames !! ((idx / 3) % 30)
+        let propertyAddress = streetNumber <> " " <> streetName
+
+        -- Generate price within range for property type
+        let (priceMin, priceMax) = getPriceRange propertyType
+        let salePrice = decimalInRange (idx * 7) (priceMin, priceMax)
+
+        -- Generate bedrooms (property type dependent)
+        let bedrooms = case propertyType of
+              Land -> None
+              Condo -> Some (bedroomOptions !! (idx % 3))  -- 1-3 bedrooms
+              SingleFamily -> Some (bedroomOptions !! ((idx % 5) + 1))  -- 2-6 bedrooms
+              Townhouse -> Some (bedroomOptions !! ((idx % 4) + 1))  -- 2-5 bedrooms
+              MultiFamily -> Some (bedroomOptions !! ((idx % 4) + 2))  -- 3-6 bedrooms
+
+        -- Generate bathrooms
+        let bathrooms = case propertyType of
+              Land -> None
+              _ -> Some (bathroomOptions !! (idx % 5))
+
+        -- Generate living area
+        let livingArea = case propertyType of
+              Land -> None
+              _ -> let rangeIdx = idx % 5
+                       (minSqft, maxSqft) = livingAreaRanges !! rangeIdx
+                   in Some (valueInRange (idx * 3) (minSqft, maxSqft))
+
+        -- Generate lot size (not for condos)
+        let lotSize = case propertyType of
+              Condo -> None
+              _ -> let rangeIdx = idx % 5
+                       (minLot, maxLot) = lotSizeRanges !! rangeIdx
+                   in Some (valueInRange (idx * 5) (minLot, maxLot))
+
+        -- Generate year built
+        let yearBuilt = case propertyType of
+              Land -> None
+              _ -> let rangeIdx = idx % 5
+                       (minYear, maxYear) = yearBuiltRanges !! rangeIdx
+                   in Some (valueInRange (idx * 11) (minYear, maxYear))
+
+        -- Generate days on market
+        let daysOnMarket = Some (valueInRange (idx * 13) (daysOnMarketMin, daysOnMarketMax))
+
+        -- Generate financing type
+        let financingType = Some (financingTypes !! (idx % 5))
+
+        -- Generate transaction date (spread over past year)
+        let startDate = date 2024 Jan 1
+        let daysBack = 365
+        let dayOffset = (idx * 3) % daysBack
+        let txDate = addDays startDate (- dayOffset)
+        let txTime = time txDate 14 30 0
+
+        -- Generate closing date (30 days after transaction)
+        let closingDate = Some (time (addDays txDate 30) 16 0 0)
+
+        -- Assign verifiers (alice or bob, whoever didn't submit)
+        let proposedVerifiers = if submitter == alice then [bob] else [alice]
+
+        -- Transaction ID
+        let transactionId = "TX-" <> show idx <> "-2024"
+
+        -- Create initial verification from submitter
+        let submitterVerification = Verification with
+              verifier = submitter
+              verifierRole = submitterRole
+              verificationWeight = getVerificationWeight submitterRole
+              decision = Confirmed
+              notes = None
+              verifiedAt = now
+
+        let allVerifiers = dedup (submitter :: proposedVerifiers)
+        let initialVerifications = [submitterVerification]
+        let initialTrustScore = calculateTrustScore initialVerifications
+        let initialStatus = determineStatus initialVerifications
+
+        -- Create TransactionData directly
+        submitMulti [operator, submitter] [] $ createCmd TransactionData with
+          operator = operator
+          submitter = submitter
+          submitterRole = submitterRole
+          transactionId = transactionId
+          propertyAddress = propertyAddress
+          postalCode = postalCode
+          propertyType = propertyType
+          livingAreaSqft = livingArea
+          lotSizeSqft = lotSize
+          bedroomsTotal = bedrooms
+          bathroomsTotal = bathrooms
+          yearBuilt = yearBuilt
+          salePrice = salePrice
+          transactionDate = txTime
+          closingDate = closingDate
+          financingType = financingType
+          daysOnMarket = daysOnMarket
+          assignedVerifiers = allVerifiers
+          verifications = initialVerifications
+          trustScore = initialTrustScore
+          status = initialStatus
+          submittedAt = now
+
+  -- Generate transactions based on count parameter
+  _ <- forA [0..(count - 1)] createTransaction
+
+  debug ("Successfully created " <> show count <> " TransactionData contracts!")
+  debug "Operator is signatory on all contracts."
+  return ()

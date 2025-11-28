@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 interface SegmentCombination {
@@ -18,7 +18,7 @@ interface SegmentCombination {
     price: number;
     bedrooms: number;
     sqft: number;
-    trustScore: number;
+    trustScoreRange: string;
     date: string;
   }>;
 }
@@ -43,6 +43,7 @@ interface Insight {
     yearBuilt: string[];
     propertyType: string[];
   };
+  reportData?: ReportResult; // The snapshot data from when it was purchased
 }
 
 export default function InsightDetail() {
@@ -50,76 +51,36 @@ export default function InsightDetail() {
   const [insight, setInsight] = useState<Insight | null>(null);
   const [reportResult, setReportResult] = useState<ReportResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const insights = JSON.parse(localStorage.getItem('insights') || '[]');
-    const found = insights.find((i: Insight) => i.id === id);
+    const loadInsightData = () => {
+      const insights = JSON.parse(localStorage.getItem('insights') || '[]');
+      const found = insights.find((i: Insight) => i.id === id);
 
-    if (found) {
-      setInsight(found);
-
-      // Generate all combinations
-      const bedrooms = found.segment.bedrooms.length > 0 ? found.segment.bedrooms : [undefined];
-      const livingAreas = found.segment.livingArea.length > 0 ? found.segment.livingArea : [undefined];
-      const yearBuilts = found.segment.yearBuilt.length > 0 ? found.segment.yearBuilt : [undefined];
-      const propertyTypes = found.segment.propertyType.length > 0 ? found.segment.propertyType : [undefined];
-
-      const combinations: SegmentCombination[] = [];
-      let totalCount = 0;
-
-      for (const bedroom of bedrooms) {
-        for (const livingArea of livingAreas) {
-          for (const yearBuilt of yearBuilts) {
-            for (const propertyType of propertyTypes) {
-              const basePrice = 650000 + Math.random() * 400000;
-              const variance = 0.15;
-              const count = Math.floor(5 + Math.random() * 15);
-
-              const combination: SegmentCombination = {
-                bedroom,
-                livingArea,
-                yearBuilt,
-                propertyType,
-                minPrice: Math.floor(basePrice * (1 - variance)),
-                avgPrice: Math.floor(basePrice),
-                maxPrice: Math.floor(basePrice * (1 + variance)),
-                transactionCount: count,
-              };
-
-              if (found.dataScope !== 'Basic Data') {
-                combination.minDaysOnMarket = Math.floor(10 + Math.random() * 10);
-                combination.avgDaysOnMarket = Math.floor(20 + Math.random() * 20);
-                combination.maxDaysOnMarket = Math.floor(50 + Math.random() * 30);
-              }
-
-              if (found.dataScope === 'Detailed Data') {
-                combination.transactions = Array.from({ length: Math.min(count, 5) }, (_, i) => ({
-                  address: `${1000 + i * 111} ${propertyType || 'Main'} St`,
-                  price: Math.floor(combination.minPrice + Math.random() * (combination.maxPrice - combination.minPrice)),
-                  bedrooms: bedroom ? (bedroom === '5+' ? 5 : parseInt(bedroom) || 2) : 3,
-                  sqft: livingArea ? parseInt(livingArea.split('-')[0].replace('<', '').replace('+', '')) || 1500 : 1500,
-                  trustScore: Math.floor(75 + Math.random() * 25),
-                  date: `2024-${String(Math.floor(1 + Math.random() * 11)).padStart(2, '0')}-${String(Math.floor(1 + Math.random() * 28)).padStart(2, '0')}`,
-                }));
-              }
-
-              combinations.push(combination);
-              totalCount += count;
-            }
-          }
-        }
+      if (!found) {
+        setLoading(false);
+        return;
       }
 
-      setReportResult({
-        combinations,
-        totalTransactionCount: totalCount,
-      });
-    }
+      setInsight(found);
 
-    setLoading(false);
+      // Load the snapshot data that was captured at purchase time
+      if (found.reportData) {
+        setReportResult(found.reportData);
+      } else {
+        // Legacy insights without reportData - show error
+        setError('This insight was purchased before data snapshots were implemented. Please purchase a new insight.');
+      }
+
+      setLoading(false);
+    };
+
+    loadInsightData();
   }, [id]);
 
   if (loading) return <div>Loading insight...</div>;
+  if (error) return <div className="alert alert-error">{error}</div>;
   if (!insight || !reportResult) return <div>Insight not found</div>;
 
   return (
@@ -294,8 +255,8 @@ export default function InsightDetail() {
                             <td style={{ padding: '0.5rem', textAlign: 'center' }}>{tx.bedrooms}</td>
                             <td style={{ padding: '0.5rem', textAlign: 'right' }}>{tx.sqft.toLocaleString()}</td>
                             <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                              <span className={`badge ${tx.trustScore >= 90 ? 'badge-success' : tx.trustScore >= 80 ? 'badge-info' : 'badge-warning'}`}>
-                                {tx.trustScore}%
+                              <span className="badge badge-secondary">
+                                {tx.trustScoreRange}
                               </span>
                             </td>
                             <td style={{ padding: '0.5rem' }}>{tx.date}</td>

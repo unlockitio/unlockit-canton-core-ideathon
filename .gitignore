@@ -61,3 +61,6 @@ Thumbs.db
 
 # Node modules (anywhere)
 node_modules
+
+# gitignore-folder to place files to be ignored
+gitignore-folder/
