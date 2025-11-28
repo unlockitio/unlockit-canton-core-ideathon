@@ -1,0 +1,411 @@
+-- | Market Insight workflow for aggregated real estate transaction data
+-- Follows Order → Pay → Fulfill → Query pattern
+module RETVN.MarketInsight where
+
+import RETVN.Transaction
+import DA.Optional (fromOptional)
+import DA.Text as T
+import DA.Foldable (maximum, Foldable(minimum))
+
+
+-- ============================================================================
+-- DATA TYPES
+-- ============================================================================
+
+-- | Query parameters specified by the buyer
+data QueryParams = QueryParams
+  with
+    postalCode : Optional Text
+    qualityLevel : Text        -- "basic", "verified", "premium"
+    dataScope : Text           -- "basic", "standard", "detailed"
+    timeRange : Text           -- "recent", "year", "historic"
+    bedrooms : [Text]          -- ["Studio", "1", "2", "3", "4", "5+"]
+    livingArea : [Text]        -- ["<1000", "1000-2000", "2000-3000", "3000+"]
+    yearBuilt : [Text]         -- ["Pre-1950", "1950s-1970s", "1980s-1990s", "2000s-2010s", "2020+"]
+    propertyType : [Text]      -- ["SingleFamily", "Condo", "Townhouse", etc.]
+  deriving (Eq, Show)
+
+-- | Statistics for a specific market segment
+data SegmentStats = SegmentStats
+  with
+    bedroom : Optional Text
+    livingArea : Optional Text
+    yearBuilt : Optional Text
+    propertyType : Optional Text
+    minPrice : Decimal
+    avgPrice : Decimal
+    maxPrice : Decimal
+    transactionCount : Int
+    minDaysOnMarket : Optional Int
+    avgDaysOnMarket : Optional Int
+    maxDaysOnMarket : Optional Int
+    transactions : [TransactionDetail]  -- Only populated for "detailed" scope
+  deriving (Eq, Show)
+
+-- | Individual transaction detail
+data TransactionDetail = TransactionDetail
+  with
+    address : Text
+    price : Decimal
+    bedrooms : Int
+    sqft : Int
+    trustScore : Int
+    date : Text
+  deriving (Eq, Show)
+
+-- | Complete insight data with all segments
+data InsightData = InsightData
+  with
+    segments : [SegmentStats]
+    totalTransactionCount : Int
+    generatedAt : Time
+  deriving (Eq, Show)
+
+-- ============================================================================
+-- TEMPLATE 1: MARKET INSIGHT ORDER (Unpaid)
+-- ============================================================================
+
+-- | Initial order created by buyer before payment
+template MarketInsightOrder
+  with
+    operator : Party
+    buyer : Party
+    queryParams : QueryParams
+    orderedAt : Time
+  where
+    signatory buyer
+    observer operator
+
+    ensure
+      queryParams.dataScope `elem` ["basic", "standard", "detailed"] &&
+      queryParams.qualityLevel `elem` ["basic", "verified", "premium"] &&
+      queryParams.timeRange `elem` ["recent", "year", "historic"]
+
+    -- | Buyer pays for the insight (simple payment, no integration)
+    choice PayOrder : ContractId PaidMarketInsightOrder
+      with
+        paymentAmount : Decimal
+        paidAt : Time
+      controller buyer
+      do
+        -- Calculate expected price based on query parameters
+        let expectedPrice = calculateInsightPrice queryParams
+        assertMsg "Payment amount must match calculated price"
+          (paymentAmount == expectedPrice)
+
+        -- Create paid order
+        create PaidMarketInsightOrder with
+          operator = operator
+          buyer = buyer
+          queryParams = queryParams
+          orderedAt = orderedAt
+          paidAmount = paymentAmount
+          paidAt = paidAt
+
+-- ============================================================================
+-- TEMPLATE 2: PAID MARKET INSIGHT ORDER (Awaiting Fulfillment)
+-- ============================================================================
+
+-- | Paid order waiting for operator to fulfill
+template PaidMarketInsightOrder
+  with
+    operator : Party
+    buyer : Party
+    queryParams : QueryParams
+    orderedAt : Time
+    paidAmount : Decimal
+    paidAt : Time
+  where
+    signatory buyer
+    observer operator
+
+    -- | Operator fulfills order by providing filtered transaction data
+    -- Backend does filtering, DAML does aggregation
+    choice FulfillOrder : ContractId MarketInsight
+      with
+        filteredTransactions : [ContractId TransactionData]
+        fulfilledAt : Time
+      controller operator
+      do
+        -- Fetch all filtered transactions
+        transactions <- mapA fetch filteredTransactions
+
+        -- Generate all segment combinations
+        let segments = generateSegments queryParams
+
+        -- Calculate statistics for each segment
+        segmentStats <- mapA (calculateSegmentStats transactions queryParams.dataScope) segments
+
+        -- Filter out empty segments
+        let nonEmptySegments = filter (\s -> s.transactionCount > 0) segmentStats
+
+        -- Calculate total transaction count
+        let totalCount = Prelude.length transactions
+
+        -- Create insight data
+        let insightData = InsightData with
+              segments = nonEmptySegments
+              totalTransactionCount = totalCount
+              generatedAt = fulfilledAt
+
+        -- Create fulfilled insight
+        create MarketInsight with
+          operator = operator
+          buyer = buyer
+          queryParams = queryParams
+          insightData = insightData
+          fulfilledAt = fulfilledAt
+
+-- ============================================================================
+-- TEMPLATE 3: MARKET INSIGHT (Fulfilled)
+-- ============================================================================
+
+-- | Fulfilled market insight with aggregated data
+template MarketInsight
+  with
+    operator : Party
+    buyer : Party
+    queryParams : QueryParams
+    insightData : InsightData
+    fulfilledAt : Time
+  where
+    signatory buyer
+    observer operator
+
+    -- | Non-consuming query to retrieve insight data
+    nonconsuming choice QueryInsight : InsightData
+      with
+        requester : Party
+      controller requester
+      do
+        assertMsg "Only buyer can query their insight" (requester == buyer)
+        return insightData
+
+-- ============================================================================
+-- HELPER FUNCTIONS - PRICE CALCULATION
+-- ============================================================================
+
+-- | Calculate price based on query parameters
+-- Price factors: dataScope, qualityLevel, timeRange
+calculateInsightPrice : QueryParams -> Decimal
+calculateInsightPrice params =
+  let
+    -- Base price by data scope
+    scopePrice = case params.dataScope of
+      "basic" -> 5.0
+      "standard" -> 15.0
+      "detailed" -> 35.0
+      _ -> 5.0
+
+    -- Quality level multiplier
+    qualityMultiplier = case params.qualityLevel of
+      "basic" -> 1.0
+      "verified" -> 1.5
+      "premium" -> 2.0
+      _ -> 1.0
+
+    -- Time range multiplier
+    timeMultiplier = case params.timeRange of
+      "recent" -> 1.0
+      "year" -> 1.5
+      "historic" -> 2.5
+      _ -> 1.0
+
+    -- Calculate final price
+    finalPrice = scopePrice * qualityMultiplier * timeMultiplier
+  in
+    finalPrice
+
+-- ============================================================================
+-- HELPER FUNCTIONS - SEGMENT GENERATION
+-- ============================================================================
+
+-- | Generate all segment combinations from query parameters
+generateSegments : QueryParams -> [(Optional Text, Optional Text, Optional Text, Optional Text)]
+generateSegments params =
+  let
+    -- If list is empty, use [None] to ensure at least one segment
+    bedrooms = if null params.bedrooms then [None] else map Some params.bedrooms
+    livingAreas = if null params.livingArea then [None] else map Some params.livingArea
+    yearBuilts = if null params.yearBuilt then [None] else map Some params.yearBuilt
+    propertyTypes = if null params.propertyType then [None] else map Some params.propertyType
+
+    -- Generate cartesian product
+    combinations =
+      [ (b, l, y, p)
+      | b <- bedrooms
+      , l <- livingAreas
+      , y <- yearBuilts
+      , p <- propertyTypes
+      ]
+  in
+    combinations
+
+-- ============================================================================
+-- HELPER FUNCTIONS - STATISTICS CALCULATION
+-- ============================================================================
+
+-- | Calculate statistics for a specific segment
+calculateSegmentStats : [TransactionData] -> Text -> (Optional Text, Optional Text, Optional Text, Optional Text) -> Update SegmentStats
+calculateSegmentStats allTransactions dataScope (bedroom, livingArea, yearBuilt, propertyType) = do
+  -- Filter transactions matching this segment
+  let segmentTxs = filter (\tx -> matchesSegment tx (bedroom, livingArea, yearBuilt, propertyType)) allTransactions
+
+  let txCount = Prelude.length segmentTxs
+
+  if txCount == 0
+    then return SegmentStats with
+      bedroom = bedroom
+      livingArea = livingArea
+      yearBuilt = yearBuilt
+      propertyType = propertyType
+      minPrice = 0.0
+      avgPrice = 0.0
+      maxPrice = 0.0
+      transactionCount = 0
+      minDaysOnMarket = None
+      avgDaysOnMarket = None
+      maxDaysOnMarket = None
+      transactions = []
+    else do
+      -- Calculate price statistics
+      let prices = map (\tx -> tx.salePrice) segmentTxs
+      let minPrice = minimum prices
+      let maxPrice = maximum prices
+      let totalPrice = sum prices
+      let avgPrice = totalPrice / Prelude.intToDecimal txCount
+
+      -- Calculate days on market statistics (if standard or detailed scope)
+      let (minDOM, avgDOM, maxDOM) = if dataScope /= "basic"
+            then calculateDaysOnMarketStats segmentTxs
+            else (None, None, None)
+
+      -- Include individual transactions (if detailed scope)
+      let txDetails = if dataScope == "detailed"
+            then map transactionToDetail (Prelude.take 10 segmentTxs)  -- Limit to 10
+            else []
+
+      return SegmentStats with
+        bedroom = bedroom
+        livingArea = livingArea
+        yearBuilt = yearBuilt
+        propertyType = propertyType
+        minPrice = minPrice
+        avgPrice = avgPrice
+        maxPrice = maxPrice
+        transactionCount = txCount
+        minDaysOnMarket = minDOM
+        avgDaysOnMarket = avgDOM
+        maxDaysOnMarket = maxDOM
+        transactions = txDetails
+
+-- | Calculate days on market statistics
+calculateDaysOnMarketStats : [TransactionData] -> (Optional Int, Optional Int, Optional Int)
+calculateDaysOnMarketStats transactions =
+  let
+    daysOnMarket = mapOptional (\tx -> tx.daysOnMarket) transactions
+  in
+    if null daysOnMarket
+      then (None, None, None)
+      else
+        let
+          minDays = minimum daysOnMarket
+          maxDays = maximum daysOnMarket
+          totalDays = sum daysOnMarket
+          avgDays = totalDays / Prelude.length daysOnMarket
+        in
+          (Some minDays, Some avgDays, Some maxDays)
+
+-- | Extract non-None values from optional list
+mapOptional : (a -> Optional b) -> [a] -> [b]
+mapOptional f xs =
+  let maybes = map f xs
+      extractSome (Some x) = [x]
+      extractSome None = []
+  in concatMap extractSome maybes
+
+-- ============================================================================
+-- HELPER FUNCTIONS - SEGMENT MATCHING
+-- ============================================================================
+
+-- | Check if transaction matches segment criteria
+matchesSegment : TransactionData -> (Optional Text, Optional Text, Optional Text, Optional Text) -> Bool
+matchesSegment tx (bedroom, livingArea, yearBuilt, propertyType) =
+  matchesBedroom tx.bedroomsTotal bedroom &&
+  matchesLivingArea tx.livingAreaSqft livingArea &&
+  matchesYearBuilt tx.yearBuilt yearBuilt &&
+  matchesPropertyType tx.propertyType propertyType
+
+-- | Check if bedrooms match segment
+matchesBedroom : Optional Int -> Optional Text -> Bool
+matchesBedroom _ None = True  -- No filter
+matchesBedroom None _ = False  -- Transaction has no bedroom data
+matchesBedroom (Some bedrooms) (Some bedroomFilter) =
+  case bedroomFilter of
+    "Studio" -> bedrooms == 0
+    "5+" -> bedrooms >= 5
+    _ -> case T.parseInt bedroomFilter of
+      Some count -> bedrooms == count
+      None -> True
+
+-- | Check if living area matches segment
+matchesLivingArea : Optional Int -> Optional Text -> Bool
+matchesLivingArea _ None = True  -- No filter
+matchesLivingArea None _ = False  -- Transaction has no living area data
+matchesLivingArea (Some sqft) (Some areaFilter)
+    | T.isInfixOf "<" areaFilter
+    = let maxStr = T.dropPrefix "<" areaFilter
+      in
+        case T.parseInt maxStr of
+          Some maxSqft -> sqft < maxSqft
+          None -> True
+    | T.isInfixOf "+" areaFilter
+    = let minStr = T.dropSuffix "+" areaFilter
+      in
+        case T.parseInt minStr of
+          Some minSqft -> sqft >= minSqft
+          None -> True
+    | T.isInfixOf "-" areaFilter
+    = let parts = T.splitOn "-" areaFilter
+      in
+        case parts of
+          [minStr, maxStr]
+            -> case (T.parseInt minStr, T.parseInt maxStr) of
+                 (Some minSqft, Some maxSqft) -> sqft >= minSqft && sqft < maxSqft
+                 _ -> True
+          _ -> True
+    | otherwise = True
+
+-- | Check if year built matches segment
+matchesYearBuilt : Optional Int -> Optional Text -> Bool
+matchesYearBuilt _ None = True  -- No filter
+matchesYearBuilt None _ = False  -- Transaction has no year built data
+matchesYearBuilt (Some year) (Some yearFilter) =
+  case yearFilter of
+    "Pre-1950" -> year < 1950
+    "1950s-1970s" -> year >= 1950 && year < 1980
+    "1980s-1990s" -> year >= 1980 && year < 2000
+    "2000s-2010s" -> year >= 2000 && year < 2020
+    "2020+" -> year >= 2020
+    _ -> True
+
+-- | Check if property type matches segment
+matchesPropertyType : PropertyType -> Optional Text -> Bool
+matchesPropertyType _ None = True  -- No filter
+matchesPropertyType propType (Some typeFilter) =
+  show propType == typeFilter
+
+-- ============================================================================
+-- HELPER FUNCTIONS - DATA CONVERSION
+-- ============================================================================
+
+-- | Convert TransactionData to TransactionDetail
+transactionToDetail : TransactionData -> TransactionDetail
+transactionToDetail tx =
+  TransactionDetail with
+    address = tx.propertyAddress
+    price = tx.salePrice
+    bedrooms = fromOptional 0 tx.bedroomsTotal
+    sqft = fromOptional 0 tx.livingAreaSqft
+    trustScore = tx.trustScore
+    date = show tx.transactionDate  -- Convert Time to Text

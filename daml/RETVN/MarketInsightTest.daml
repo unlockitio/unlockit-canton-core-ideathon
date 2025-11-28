@@ -1,0 +1,240 @@
+-- | Test script for Market Insight workflow
+module RETVN.MarketInsightTest where
+
+import Daml.Script
+import DA.Text (intercalate)
+import RETVN.MarketInsight
+import RETVN.Role
+import DA.Foldable (forA_)
+import DA.Action (unless)
+import RETVN.Transaction
+import SeedTransactions
+
+-- | Main test script - tests the complete market insight workflow
+testMarketInsightWorkflow : Script ()
+testMarketInsightWorkflow = do
+
+
+  -- Setup parties
+  operator <- allocateParty "operator"
+  alice <- allocateParty "alice"
+  bob <- allocateParty "bob"
+
+  -- Get current time
+  now <- getTime
+
+  seedTransactionsWithCount 3
+
+  -- query the 3 transactions created by seed script
+  txs <- query @TransactionData operator
+  let txsIds = map (fst) txs
+
+  debug $ "Txs: " <> show txsIds
+
+  -- Step 1: Alice creates a market insight order
+  let queryParams = QueryParams with
+        postalCode = Some "94102"
+        qualityLevel = "verified"  -- Only transactions with trustScore >= 50
+        dataScope = "detailed"     -- Include individual transactions
+        timeRange = "recent"       -- Last 30 days
+        bedrooms = ["2", "3", "4"] -- Filter by bedrooms
+        livingArea = []            -- No living area filter
+        yearBuilt = []             -- No year built filter
+        propertyType = []          -- No property type filter
+
+  orderCid <- submit alice $ createCmd MarketInsightOrder with
+      operator = operator
+      buyer = alice
+      queryParams = queryParams
+      orderedAt = now
+
+  debug "✓ Alice created MarketInsightOrder"
+
+  -- Step 2: Alice pays for the order
+  let expectedPrice = calculateInsightPrice queryParams
+  debug ("  Expected price: $" <> show expectedPrice)
+
+  paidOrderCid <- submit alice $ exerciseCmd orderCid PayOrder with
+    paymentAmount = expectedPrice
+    paidAt = now
+
+  debug ("✓ Alice paid $" <> show expectedPrice <> " for the insight")
+
+  -- Step 3: Operator fulfills the order by providing filtered transactions
+  -- In real scenario, backend would filter transactions based on queryParams
+  -- For this test, we provide all 3 transactions (all match: postal code 94102, verified quality, recent)
+  insightCid <- submit operator $ exerciseCmd paidOrderCid FulfillOrder with
+    filteredTransactions = txsIds
+    fulfilledAt = now
+
+  debug "✓ Operator fulfilled the order with 3 transactions"
+
+  -- Step 4: Alice queries the insight data
+  insightData <- submit alice $ exerciseCmd insightCid QueryInsight with
+    requester = alice
+
+  debug "✓ Alice queried the insight data"
+  debug ""
+  debug "========== INSIGHT RESULTS =========="
+  debug ("Total transactions: " <> show insightData.totalTransactionCount)
+  debug ("Number of segments: " <> show (Prelude.length insightData.segments))
+  debug ""
+
+  -- Display segment statistics
+  forA_ insightData.segments $ \segment -> do
+    debug ("Segment: " <> showSegment segment.bedroom segment.livingArea segment.yearBuilt segment.propertyType)
+    debug ("  Transaction count: " <> show segment.transactionCount)
+    debug ("  Price range: $" <> show segment.minPrice <> " - $" <> show segment.maxPrice)
+    debug ("  Average price: $" <> show segment.avgPrice)
+    debug ("  Days on market: " <> showOptional segment.minDaysOnMarket <> " - " <> showOptional segment.maxDaysOnMarket <> " (avg: " <> showOptional segment.avgDaysOnMarket <> ")")
+
+    -- Show individual transactions (detailed scope only)
+    unless (null (DA.Internal.Record.getField @"transactions" segment)) $ do
+      debug "  Individual transactions:"
+      forA_ segment.transactions $ \tx -> do
+        debug ("    - " <> tx.address <> ": $" <> show tx.price <> " | " <> show tx.bedrooms <> " bed, " <> show tx.sqft <> " sqft | Trust: " <> show tx.trustScore)
+    debug ""
+
+  debug "========================================="
+  debug "✅ Market Insight workflow test completed successfully!"
+
+  return ()
+
+-- Helper to show segment criteria
+showSegment : Optional Text -> Optional Text -> Optional Text -> Optional Text -> Text
+showSegment bedroom livingArea yearBuilt propertyType =
+  let bedroomStr = case bedroom of
+        Some b -> "Bed: " <> b
+        None -> ""
+      livingAreaStr = case livingArea of
+        Some l -> "Area: " <> l
+        None -> ""
+      yearBuiltStr = case yearBuilt of
+        Some y -> "Year: " <> y
+        None -> ""
+      propertyTypeStr = case propertyType of
+        Some p -> "Type: " <> p
+        None -> ""
+      parts = [bedroomStr, livingAreaStr, yearBuiltStr, propertyTypeStr]
+      filtered = filter (/= "") parts
+  in if null filtered then "All properties" else intercalate ", " filtered
+
+-- Helper to show optional int
+showOptional : Optional Int -> Text
+showOptional (Some x) = show x
+showOptional None = "N/A"
+
+-- | Test price calculation with different parameters
+testPriceCalculation : Script ()
+testPriceCalculation = do
+  debug "Testing price calculation..."
+
+  -- Test 1: Basic scope, basic quality, recent time
+  let params1 = QueryParams with
+        postalCode = None
+        qualityLevel = "basic"
+        dataScope = "basic"
+        timeRange = "recent"
+        bedrooms = []
+        livingArea = []
+        yearBuilt = []
+        propertyType = []
+  let price1 = calculateInsightPrice params1
+  debug ("Basic/Basic/Recent: $" <> show price1 <> " (expected: $5.00)")
+
+  -- Test 2: Detailed scope, premium quality, historic time
+  let params2 = QueryParams with
+        postalCode = None
+        qualityLevel = "premium"
+        dataScope = "detailed"
+        timeRange = "historic"
+        bedrooms = []
+        livingArea = []
+        yearBuilt = []
+        propertyType = []
+  let price2 = calculateInsightPrice params2
+  debug ("Detailed/Premium/Historic: $" <> show price2 <> " (expected: $175.00)")
+
+  -- Test 3: Standard scope, verified quality, year time
+  let params3 = QueryParams with
+        postalCode = None
+        qualityLevel = "verified"
+        dataScope = "standard"
+        timeRange = "year"
+        bedrooms = []
+        livingArea = []
+        yearBuilt = []
+        propertyType = []
+  let price3 = calculateInsightPrice params3
+  debug ("Standard/Verified/Year: $" <> show price3 <> " (expected: $22.50)")
+
+  debug "✅ Price calculation tests completed!"
+  return ()
+
+-- | Test with empty filters (should return aggregated stats for all transactions)
+testEmptyFilters : Script ()
+testEmptyFilters = do
+  operator <- allocateParty "Operator"
+  alice <- allocateParty "Alice"
+  now <- getTime
+
+  -- Create transaction
+  tx1 <- submit operator $ createCmd TransactionData with
+    operator = operator
+    submitter = alice
+    submitterRole = RealtorAgent
+    transactionId = "TX-EMPTY-001"
+    propertyAddress = "100 Test St"
+    postalCode = "94105"
+    propertyType = Townhouse
+    livingAreaSqft = Some 1800
+    lotSizeSqft = Some 3000
+    bedroomsTotal = Some 3
+    bathroomsTotal = Some 2
+    yearBuilt = Some 2000
+    salePrice = 850000.0
+    transactionDate = now
+    closingDate = Some now
+    financingType = Some "VA"
+    daysOnMarket = Some 35
+    assignedVerifiers = [alice]
+    verifications = []
+    trustScore = 80
+    status = RETVN.Transaction.Unverified
+    submittedAt = now
+
+  -- Create order with no filters
+  let queryParams = QueryParams with
+        postalCode = Some "94105"
+        qualityLevel = "basic"
+        dataScope = "basic"
+        timeRange = "recent"
+        bedrooms = []      -- Empty = all bedrooms
+        livingArea = []    -- Empty = all living areas
+        yearBuilt = []     -- Empty = all years
+        propertyType = []  -- Empty = all types
+
+  orderCid <- submit alice $ createCmd MarketInsightOrder with
+    operator = operator
+    buyer = alice
+    queryParams = queryParams
+    orderedAt = now
+
+  let price = calculateInsightPrice queryParams
+  paidOrderCid <- submit alice $ exerciseCmd orderCid PayOrder with
+    paymentAmount = price
+    paidAt = now
+
+  insightCid <- submit operator $ exerciseCmd paidOrderCid FulfillOrder with
+    filteredTransactions = [tx1]
+    fulfilledAt = now
+
+  insightData <- submit alice $ exerciseCmd insightCid QueryInsight with
+    requester = alice
+
+  debug "Testing empty filters..."
+  debug ("Total transactions: " <> show insightData.totalTransactionCount)
+  debug ("Number of segments: " <> show (Prelude.length insightData.segments))
+  debug "✅ Empty filters test completed!"
+
+  return ()
