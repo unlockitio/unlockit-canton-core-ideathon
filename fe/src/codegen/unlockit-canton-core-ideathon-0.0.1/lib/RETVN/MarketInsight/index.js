@@ -5,9 +5,4 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-var MarketInsight = require('./MarketInsight');
-exports.MarketInsight = MarketInsight;
-var Role = require('./Role');
-exports.Role = Role;
-var Transaction = require('./Transaction');
-exports.Transaction = Transaction;
+__export(require('./module'));

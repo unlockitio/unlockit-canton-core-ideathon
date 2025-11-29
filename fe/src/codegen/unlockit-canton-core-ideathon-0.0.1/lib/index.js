@@ -9,4 +9,4 @@ var RETVN = require('./RETVN');
 exports.RETVN = RETVN;
 var W3C = require('./W3C');
 exports.W3C = W3C;
-exports.packageId = '56ebda255298c25414de57445429af1187c8b88718bfcf0e2937159cd37ab29c';
+exports.packageId = '3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699';

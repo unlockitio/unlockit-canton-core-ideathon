@@ -5,7 +5,8 @@ module RETVN.MarketInsight where
 import RETVN.Transaction
 import DA.Optional (fromOptional)
 import DA.Text as T
-import DA.Foldable (maximum, Foldable(minimum))
+import DA.Foldable (maximum, Foldable(minimum), forA_)
+import DA.Time
 
 
 -- ============================================================================
@@ -129,6 +130,13 @@ template PaidMarketInsightOrder
       do
         -- Fetch all filtered transactions
         transactions <- mapA fetch filteredTransactions
+
+        -- Verify that all transactions match the query parameters (trust score and time range)
+        forA_ transactions $ \tx -> do
+          assertMsg ("Transaction " <> tx.transactionId <> " does not meet quality level requirement. Trust score: " <> show tx.trustScore <> ", required level: " <> queryParams.qualityLevel)
+            (matchesQualityLevel tx.trustScore queryParams.qualityLevel)
+          assertMsg ("Transaction " <> tx.transactionId <> " does not fall within time range: " <> queryParams.timeRange)
+            (matchesTimeRange tx.transactionDate fulfilledAt queryParams.timeRange)
 
         -- Generate all segment combinations
         let segments = generateSegments queryParams
@@ -394,6 +402,24 @@ matchesPropertyType : PropertyType -> Optional Text -> Bool
 matchesPropertyType _ None = True  -- No filter
 matchesPropertyType propType (Some typeFilter) =
   show propType == typeFilter
+
+-- | Check if transaction matches quality level (trust score requirement)
+matchesQualityLevel : Int -> Text -> Bool
+matchesQualityLevel trustScore qualityLevel =
+  case qualityLevel of
+    "basic" -> True  -- No trust score filter
+    "verified" -> trustScore >= 50
+    "premium" -> trustScore >= 80
+    _ -> True
+
+-- | Check if transaction matches time range
+matchesTimeRange : Time -> Time -> Text -> Bool
+matchesTimeRange transactionDate currentTime timeRange =
+  case timeRange of
+    "recent" -> transactionDate >= (addRelTime currentTime (days (-31)))  -- Last 30 days + 1 day buffer
+    "year" -> transactionDate >= (addRelTime currentTime (days (-366)))    -- Last 365 days + 1 day buffer
+    "historic" -> True  -- No time filter
+    _ -> True
 
 -- ============================================================================
 -- HELPER FUNCTIONS - DATA CONVERSION

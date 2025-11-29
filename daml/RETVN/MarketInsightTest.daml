@@ -3,6 +3,7 @@ module RETVN.MarketInsightTest where
 
 import Daml.Script
 import DA.Text (intercalate)
+import DA.Time
 import RETVN.MarketInsight
 import RETVN.Role
 import DA.Foldable (forA_)
@@ -23,13 +24,14 @@ testMarketInsightWorkflow = do
   -- Get current time
   now <- getTime
 
-  seedTransactionsWithCount 3
+  -- Seed 200 transactions
+  seedTransactions
 
-  -- query the 3 transactions created by seed script
+  -- query all transactions created by seed script
   txs <- query @TransactionData operator
-  let txsIds = map (fst) txs
+  let txsData = map snd txs
 
-  debug $ "Txs: " <> show txsIds
+  debug ("Total seeded transactions: " <> show (Prelude.length txs))
 
   -- Step 1: Alice creates a market insight order
   let queryParams = QueryParams with
@@ -60,14 +62,43 @@ testMarketInsightWorkflow = do
 
   debug ("✓ Alice paid $" <> show expectedPrice <> " for the insight")
 
-  -- Step 3: Operator fulfills the order by providing filtered transactions
-  -- In real scenario, backend would filter transactions based on queryParams
-  -- For this test, we provide all 3 transactions (all match: postal code 94102, verified quality, recent)
+  -- Step 3: Simulate backend filtering based on query parameters
+  -- This simulates what the backend API would do before calling DAML
+
+  -- Filter by trust score (quality level)
+  let matchesQuality tx = case queryParams.qualityLevel of
+        "basic" -> True
+        "verified" -> tx.trustScore >= 50
+        "premium" -> tx.trustScore >= 80
+        _ -> True
+
+  -- Filter by time range
+  let matchesTime tx = case queryParams.timeRange of
+        "recent" -> tx.transactionDate >= (addRelTime now (days (-30)))
+        "year" -> tx.transactionDate >= (addRelTime now (days (-365)))
+        "historic" -> True
+        _ -> True
+
+  -- Filter by postal code
+  let matchesPostalCode tx = case queryParams.postalCode of
+        Some code -> tx.postalCode == code
+        None -> True
+
+  -- Apply all filters to simulate backend filtering
+  let filteredTxs = filter
+        (\(cid, tx) -> matchesQuality tx && matchesTime tx && matchesPostalCode tx)
+        txs
+  let filteredTxsIds = map fst filteredTxs
+
+  debug ("Backend filtered: " <> show (Prelude.length filteredTxs) <> " out of " <> show (Prelude.length txs) <> " transactions match query params")
+
+  -- Step 4: Operator fulfills the order with filtered transactions
+  -- The DAML code will verify these transactions actually match the query params
   insightCid <- submit operator $ exerciseCmd paidOrderCid FulfillOrder with
-    filteredTransactions = txsIds
+    filteredTransactions = filteredTxsIds
     fulfilledAt = now
 
-  debug "✓ Operator fulfilled the order with 3 transactions"
+  debug ("✓ Operator fulfilled the order with " <> show (Prelude.length filteredTxs) <> " transactions")
 
   -- Step 4: Alice queries the insight data
   insightData <- submit alice $ exerciseCmd insightCid QueryInsight with
