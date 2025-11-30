@@ -3,10 +3,11 @@
 module RETVN.MarketInsight where
 
 import RETVN.Transaction
-import DA.Optional (fromOptional)
+import DA.Optional (fromOptional, isSome)
 import DA.Text as T
 import DA.Foldable (maximum, Foldable(minimum), forA_)
 import DA.Time
+import qualified DA.List
 
 
 -- ============================================================================
@@ -62,6 +63,14 @@ data InsightData = InsightData
     generatedAt : Time
   deriving (Eq, Show)
 
+-- | Transaction contribution record for reward tracking
+data TransactionContribution = TransactionContribution
+  with
+    paidOrderContractId : ContractId PaidMarketInsightOrder
+    amountReceived : Decimal
+    receivedAt : Time
+  deriving (Eq, Show)
+
 -- ============================================================================
 -- TEMPLATE 1: MARKET INSIGHT ORDER (Unpaid)
 -- ============================================================================
@@ -82,29 +91,130 @@ template MarketInsightOrder
       queryParams.qualityLevel `elem` ["basic", "verified", "premium"] &&
       queryParams.timeRange `elem` ["recent", "year", "historic"]
 
-    -- | Buyer pays for the insight (simple payment, no integration)
-    choice PayOrder : ContractId PaidMarketInsightOrder
+    -- | Buyer initiates payment (creates pending payment order)
+    choice InitiatePayment : ContractId PaymentPendingOrder
       with
         paymentAmount : Decimal
-        paidAt : Time
+        paymentReference : Text
+        initiatedAt : Time
       controller buyer
       do
         -- Calculate expected price based on query parameters
         let expectedPrice = calculateInsightPrice queryParams
         assertMsg "Payment amount must match calculated price"
           (paymentAmount == expectedPrice)
+        assertMsg "Payment reference must be provided"
+          (paymentReference /= "")
 
-        -- Create paid order
+        -- Create pending payment order
+        create PaymentPendingOrder with
+          operator = operator
+          buyer = buyer
+          queryParams = queryParams
+          orderedAt = orderedAt
+          paymentAmount = paymentAmount
+          paymentInitiatedAt = initiatedAt
+          paymentReference = paymentReference
+
+-- ============================================================================
+-- TEMPLATE 2: PAYMENT PENDING ORDER (Payment Processing)
+-- ============================================================================
+
+-- | Payment pending order waiting for operator to confirm/reject payment
+template PaymentPendingOrder
+  with
+    operator : Party
+    buyer : Party
+    queryParams : QueryParams
+    orderedAt : Time
+    paymentAmount : Decimal
+    paymentInitiatedAt : Time
+    paymentReference : Text
+  where
+    signatory buyer
+    observer operator
+
+    ensure
+      paymentAmount == calculateInsightPrice queryParams &&
+      paymentReference /= ""
+
+    -- | Operator confirms payment (creates paid order)
+    choice ConfirmPayment : ContractId PaidMarketInsightOrder
+      with
+        confirmedAt : Time
+      controller operator
+      do
         create PaidMarketInsightOrder with
           operator = operator
           buyer = buyer
           queryParams = queryParams
           orderedAt = orderedAt
           paidAmount = paymentAmount
-          paidAt = paidAt
+          paidAt = confirmedAt
+          paymentReference = paymentReference
+
+    -- | Operator rejects payment (creates failed order)
+    choice RejectPayment : ContractId FailedPaymentOrder
+      with
+        rejectedAt : Time
+        failureReason : Text
+      controller operator
+      do
+        create FailedPaymentOrder with
+          operator = operator
+          buyer = buyer
+          queryParams = queryParams
+          orderedAt = orderedAt
+          paymentAmount = paymentAmount
+          paymentInitiatedAt = paymentInitiatedAt
+          paymentReference = paymentReference
+          rejectedAt = rejectedAt
+          failureReason = failureReason
 
 -- ============================================================================
--- TEMPLATE 2: PAID MARKET INSIGHT ORDER (Awaiting Fulfillment)
+-- TEMPLATE 3: FAILED PAYMENT ORDER (Payment Failed)
+-- ============================================================================
+
+-- | Failed payment order with retry/cancel options
+template FailedPaymentOrder
+  with
+    operator : Party
+    buyer : Party
+    queryParams : QueryParams
+    orderedAt : Time
+    paymentAmount : Decimal
+    paymentInitiatedAt : Time
+    paymentReference : Text
+    rejectedAt : Time
+    failureReason : Text
+  where
+    signatory buyer
+    observer operator
+
+    -- | Buyer retries payment with new reference
+    choice RetryPayment : ContractId PaymentPendingOrder
+      with
+        newPaymentReference : Text
+        retriedAt : Time
+      controller buyer
+      do
+        create PaymentPendingOrder with
+          operator = operator
+          buyer = buyer
+          queryParams = queryParams
+          orderedAt = orderedAt
+          paymentAmount = paymentAmount
+          paymentInitiatedAt = retriedAt
+          paymentReference = newPaymentReference
+
+    -- | Buyer cancels the order
+    choice CancelOrder : ()
+      controller buyer
+      do
+        return ()
+
+-- ============================================================================
+-- TEMPLATE 4: PAID MARKET INSIGHT ORDER (Awaiting Fulfillment)
 -- ============================================================================
 
 -- | Paid order waiting for operator to fulfill
@@ -116,30 +226,36 @@ template PaidMarketInsightOrder
     orderedAt : Time
     paidAmount : Decimal
     paidAt : Time
+    paymentReference : Text
   where
     signatory buyer
     observer operator
 
     -- | Operator fulfills order by providing filtered transaction data
-    -- Backend does filtering, DAML does aggregation
-    choice FulfillOrder : ContractId MarketInsight
+    -- Backend does filtering, DAML does aggregation and reward distribution
+    choice FulfillOrder : (ContractId MarketInsight, [ContractId ContributorReward])
       with
         filteredTransactions : [ContractId TransactionData]
         fulfilledAt : Time
+        paidOrderCid : ContractId PaidMarketInsightOrder
       controller operator
       do
         -- Fetch all filtered transactions
         transactions <- mapA fetch filteredTransactions
 
-        -- Verify that all transactions match the query parameters (trust score and time range)
+        -- Generate all segment combinations
+        let segments = generateSegments queryParams
+
+        -- Verify that all transactions match the query parameters (trust score, time range and segments)
         forA_ transactions $ \tx -> do
           assertMsg ("Transaction " <> tx.transactionId <> " does not meet quality level requirement. Trust score: " <> show tx.trustScore <> ", required level: " <> queryParams.qualityLevel)
             (matchesQualityLevel tx.trustScore queryParams.qualityLevel)
           assertMsg ("Transaction " <> tx.transactionId <> " does not fall within time range: " <> queryParams.timeRange)
             (matchesTimeRange tx.transactionDate fulfilledAt queryParams.timeRange)
 
-        -- Generate all segment combinations
-        let segments = generateSegments queryParams
+          let fitsInAnySegment = any (\seg -> transactionMatchesSegment tx seg) segments
+          assertMsg ("Transaction " <> tx.transactionId <> " does not fit in any requested segment")
+            fitsInAnySegment
 
         -- Calculate statistics for each segment
         segmentStats <- mapA (calculateSegmentStats transactions queryParams.dataScope) segments
@@ -157,12 +273,22 @@ template PaidMarketInsightOrder
               generatedAt = fulfilledAt
 
         -- Create fulfilled insight
-        create MarketInsight with
+        insightCid <- create MarketInsight with
           operator = operator
           buyer = buyer
           queryParams = queryParams
           insightData = insightData
           fulfilledAt = fulfilledAt
+
+        -- NEW: Calculate and distribute rewards
+        rewardCids <- calculateAndDistributeRewards
+          operator
+          transactions
+          paidAmount
+          fulfilledAt
+          paidOrderCid
+
+        return (insightCid, rewardCids)
 
 -- ============================================================================
 -- TEMPLATE 3: MARKET INSIGHT (Fulfilled)
@@ -188,6 +314,59 @@ template MarketInsight
       do
         assertMsg "Only buyer can query their insight" (requester == buyer)
         return insightData
+
+-- ============================================================================
+-- TEMPLATE 5: CONTRIBUTOR REWARD (Aggregated Rewards)
+-- ============================================================================
+
+-- | Aggregated reward contract tracking all contributions for a recipient
+template ContributorReward
+  with
+    operator : Party
+    recipient : Party
+    contributionCount : Int
+    rewardAmount : Decimal          -- Total accumulated rewards
+    redeemedAmount : Decimal        -- Total redeemed so far
+    createdAt : Time
+    -- Map: transactionId -> list of contributions from that transaction
+    contributions : [(Text, [TransactionContribution])]
+  where
+    signatory operator, recipient
+    observer operator
+
+    ensure
+      rewardAmount >= redeemedAmount &&
+      redeemedAmount >= 0.0 &&
+      contributionCount >= 0
+
+    -- | Redeem available rewards
+    choice RedeemReward : ContractId ContributorReward
+      with
+        amountToRedeem : Decimal
+        redeemedAt : Time
+      controller recipient
+      do
+        let availableAmount = rewardAmount - redeemedAmount
+        assertMsg "Cannot redeem more than available amount"
+          (amountToRedeem <= availableAmount)
+
+        create this with
+          redeemedAmount = redeemedAmount + amountToRedeem
+
+    -- | Internal choice used by FulfillOrder to add new contributions
+    choice AddContributions : ContractId ContributorReward
+      with
+        newContributions : [(Text, TransactionContribution)]
+        newRewardAmount : Decimal
+      controller operator
+      do
+        -- Merge new contributions into existing map
+        let updatedContributions = mergeContributions contributions newContributions
+
+        create this with
+          contributionCount = contributionCount + Prelude.length newContributions
+          rewardAmount = rewardAmount + newRewardAmount
+          contributions = updatedContributions
 
 -- ============================================================================
 -- HELPER FUNCTIONS - PRICE CALCULATION
@@ -435,3 +614,126 @@ transactionToDetail tx =
     sqft = fromOptional 0 tx.livingAreaSqft
     trustScore = tx.trustScore
     date = show tx.transactionDate  -- Convert Time to Text
+
+-- ============================================================================
+-- HELPER FUNCTIONS - SEGMENT VALIDATION
+-- ============================================================================
+
+-- | Check if transaction matches a segment (for validation)
+transactionMatchesSegment : TransactionData -> (Optional Text, Optional Text, Optional Text, Optional Text) -> Bool
+transactionMatchesSegment tx (bedroom, livingArea, yearBuilt, propertyType) =
+  matchesBedroom tx.bedroomsTotal bedroom &&
+  matchesLivingArea tx.livingAreaSqft livingArea &&
+  matchesYearBuilt tx.yearBuilt yearBuilt &&
+  matchesPropertyType tx.propertyType propertyType
+
+-- ============================================================================
+-- HELPER FUNCTIONS - REWARD CALCULATION
+-- ============================================================================
+
+-- | Merge contribution maps
+mergeContributions : [(Text, [TransactionContribution])] ->
+                    [(Text, TransactionContribution)] ->
+                    [(Text, [TransactionContribution])]
+mergeContributions existing newOnes =
+  let
+    -- Convert new list to map format
+    newGrouped = DA.List.groupOn fst (DA.List.sortOn fst newOnes)
+    newMap = map (\group -> (fst (DA.List.head group), map snd group)) newGrouped
+
+    -- Merge with existing
+    allKeys = DA.List.dedup $ DA.List.sort $ (map fst existing) ++ (map fst newMap)
+
+    merged = map (\key ->
+      let existingContribs = fromOptional [] (lookup key existing)
+          newContribs = fromOptional [] (lookup key newMap)
+      in (key, existingContribs ++ newContribs)
+      ) allKeys
+  in
+    merged
+
+-- | Calculate and distribute rewards
+calculateAndDistributeRewards :
+  Party ->
+  [TransactionData] ->
+  Decimal ->
+  Time ->
+  ContractId PaidMarketInsightOrder ->
+  Update [ContractId ContributorReward]
+calculateAndDistributeRewards operator transactions totalPaid fulfilledAt paidOrderCid = do
+  -- Step 1: Calculate total trust score
+  let totalTrustScore = sum $ map (\tx -> Prelude.intToDecimal tx.trustScore) transactions
+
+  -- Step 2: For each transaction, calculate its share and distribute to contributors
+  allContributions <- mapA (\tx -> do
+    let txShare = calculateTransactionShare totalPaid tx.trustScore totalTrustScore
+    distributeTransactionShare operator tx txShare fulfilledAt paidOrderCid
+    ) transactions
+
+  -- Step 3: Aggregate contributions by recipient
+  let flatContributions = concat allContributions
+  let groupedByRecipient = aggregateByRecipient flatContributions
+
+  -- Step 4: Create ContributorReward for each recipient (always create new, no lookup)
+  -- Note: We always create new contracts as each order creates new rewards
+  mapA (\(recipient, contribs, totalAmount) -> do
+    -- Create new contract
+    let contributions = DA.List.groupOn fst (DA.List.sortOn fst contribs)
+    let contributionsMap = map (\group -> (fst (DA.List.head group), map snd group)) contributions
+    create ContributorReward with
+      operator = operator
+      recipient = recipient
+      contributionCount = Prelude.length contribs
+      rewardAmount = totalAmount
+      redeemedAmount = 0.0
+      createdAt = fulfilledAt
+      contributions = contributionsMap
+    ) groupedByRecipient
+
+-- | Calculate transaction share based on trust score
+calculateTransactionShare : Decimal -> Int -> Decimal -> Decimal
+calculateTransactionShare totalPaid trustScore totalTrustScore =
+  let trustScoreDecimal = Prelude.intToDecimal trustScore
+  in (trustScoreDecimal / totalTrustScore) * totalPaid
+
+-- | Distribute transaction share to contributors
+distributeTransactionShare :
+  Party ->
+  TransactionData ->
+  Decimal ->
+  Time ->
+  ContractId PaidMarketInsightOrder ->
+  Update [(Party, (Text, TransactionContribution), Decimal)]
+distributeTransactionShare operator tx txShare fulfilledAt paidOrderCid = do
+  -- Calculate total verification weight for this transaction
+  let totalWeight = sum $ map (\v -> Prelude.intToDecimal v.verificationWeight) tx.verifications
+
+  -- Distribute to each verifier based on their weight
+  return $ map (\v ->
+    let verifierShare = (Prelude.intToDecimal v.verificationWeight / totalWeight) * txShare
+        contribution = TransactionContribution with
+          paidOrderContractId = paidOrderCid
+          amountReceived = verifierShare
+          receivedAt = fulfilledAt
+    in (v.verifier, (tx.transactionId, contribution), verifierShare)
+    ) tx.verifications
+
+-- | Aggregate by recipient
+aggregateByRecipient : [(Party, (Text, TransactionContribution), Decimal)] ->
+  [(Party, [(Text, TransactionContribution)], Decimal)]
+aggregateByRecipient contribs =
+  let
+    -- Sort by recipient
+    sorted = DA.List.sortOn (\(p, _, _) -> p) contribs
+
+    -- Group by recipient
+    grouped = DA.List.groupOn (\(p, _, _) -> p) sorted
+
+    -- Aggregate for each recipient
+    toRecipientData group =
+      let recipient = (\(p, _, _) -> p) (DA.List.head group)
+          contributions = map (\(_, c, _) -> c) group
+          totalAmount = sum $ map (\(_, _, amt) -> amt) group
+      in (recipient, contributions, totalAmount)
+  in
+    map toRecipientData grouped

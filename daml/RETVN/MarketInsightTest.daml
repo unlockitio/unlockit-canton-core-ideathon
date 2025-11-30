@@ -52,15 +52,22 @@ testMarketInsightWorkflow = do
 
   debug "✓ Alice created MarketInsightOrder"
 
-  -- Step 2: Alice pays for the order
+  -- Step 2: Alice initiates payment for the order
   let expectedPrice = calculateInsightPrice queryParams
   debug ("  Expected price: $" <> show expectedPrice)
 
-  paidOrderCid <- submit alice $ exerciseCmd orderCid PayOrder with
+  pendingOrderCid <- submit alice $ exerciseCmd orderCid InitiatePayment with
     paymentAmount = expectedPrice
-    paidAt = now
+    paymentReference = "test-payment-ref-1"
+    initiatedAt = now
 
-  debug ("✓ Alice paid $" <> show expectedPrice <> " for the insight")
+  debug "✓ Alice initiated payment"
+
+  -- Step 2b: Operator confirms payment
+  paidOrderCid <- submit operator $ exerciseCmd pendingOrderCid ConfirmPayment with
+    confirmedAt = now
+
+  debug ("✓ Payment confirmed for $" <> show expectedPrice)
 
   -- Step 3: Simulate backend filtering based on query parameters
   -- This simulates what the backend API would do before calling DAML
@@ -84,19 +91,50 @@ testMarketInsightWorkflow = do
         Some code -> tx.postalCode == code
         None -> True
 
+  -- Filter by bedrooms
+  let matchesBedrooms tx =
+        if null queryParams.bedrooms then True
+        else case tx.bedroomsTotal of
+          Some beds -> show beds `elem` queryParams.bedrooms
+          None -> False
+
+  -- Filter by living area
+  let matchesLivingArea tx =
+        if null queryParams.livingArea then True
+        else case tx.livingAreaSqft of
+          Some area -> show area `elem` queryParams.livingArea
+          None -> False
+
+  -- Filter by year built
+  let matchesYearBuilt tx =
+        if null queryParams.yearBuilt then True
+        else case tx.yearBuilt of
+          Some year -> show year `elem` queryParams.yearBuilt
+          None -> False
+
+  -- Filter by property type
+  let matchesPropertyType tx =
+        if null queryParams.propertyType then True
+        else show tx.propertyType `elem` queryParams.propertyType
+
   -- Apply all filters to simulate backend filtering
   let filteredTxs = filter
-        (\(cid, tx) -> matchesQuality tx && matchesTime tx && matchesPostalCode tx)
+        (\(cid, tx) -> matchesQuality tx && matchesTime tx && matchesPostalCode tx &&
+                       matchesBedrooms tx && matchesLivingArea tx && matchesYearBuilt tx && matchesPropertyType tx)
         txs
   let filteredTxsIds = map fst filteredTxs
 
   debug ("Backend filtered: " <> show (Prelude.length filteredTxs) <> " out of " <> show (Prelude.length txs) <> " transactions match query params")
 
+  forA_ filteredTxs (\(_, tx) -> 
+    debug ("  - " <> show tx))
+  
   -- Step 4: Operator fulfills the order with filtered transactions
   -- The DAML code will verify these transactions actually match the query params
-  insightCid <- submit operator $ exerciseCmd paidOrderCid FulfillOrder with
+  (insightCid, rewardCids) <- submit operator $ exerciseCmd paidOrderCid FulfillOrder with
     filteredTransactions = filteredTxsIds
     fulfilledAt = now
+    paidOrderCid = paidOrderCid
 
   debug ("✓ Operator fulfilled the order with " <> show (Prelude.length filteredTxs) <> " transactions")
 
@@ -252,13 +290,18 @@ testEmptyFilters = do
     orderedAt = now
 
   let price = calculateInsightPrice queryParams
-  paidOrderCid <- submit alice $ exerciseCmd orderCid PayOrder with
+  pendingOrderCid <- submit alice $ exerciseCmd orderCid InitiatePayment with
     paymentAmount = price
-    paidAt = now
+    paymentReference = "test-payment-ref-2"
+    initiatedAt = now
 
-  insightCid <- submit operator $ exerciseCmd paidOrderCid FulfillOrder with
+  paidOrderCid <- submit operator $ exerciseCmd pendingOrderCid ConfirmPayment with
+    confirmedAt = now
+
+  (insightCid, rewardCids) <- submit operator $ exerciseCmd paidOrderCid FulfillOrder with
     filteredTransactions = [tx1]
     fulfilledAt = now
+    paidOrderCid = paidOrderCid
 
   insightData <- submit alice $ exerciseCmd insightCid QueryInsight with
     requester = alice
