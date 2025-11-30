@@ -24,6 +24,26 @@ getVerificationWeight role = case role of
   NotaryPublic -> 25
   TaxAuthority -> 40
 
+-- | Get reputation cap based on role
+getReputationCap : UserRole -> Int
+getReputationCap role = case role of
+  PrivateCitizen -> 70
+  RealtorAgent -> 85
+  RealtorBroker -> 95
+  RealtorMaster -> 95
+  NotaryPublic -> 95
+  TaxAuthority -> 100
+
+-- | Get starting reputation (50% of cap)
+getStartingReputation : UserRole -> Int
+getStartingReputation role = case role of
+  PrivateCitizen -> 35
+  RealtorAgent -> 42
+  RealtorBroker -> 47
+  RealtorMaster -> 47
+  NotaryPublic -> 47
+  TaxAuthority -> 100
+
 -- | User Account - Created after credential verification
 -- This is the core identity contract for a user on the platform
 template UserAccount
@@ -35,11 +55,19 @@ template UserAccount
     credentialPresentations : [ContractId PresentationReceipt]  -- Proof of credentials
     registeredAt : Time
     status : AccountStatus
+
+    -- Reputation system fields
+    reputation : Int                          -- Current reputation score
+    reputationCap : Int                       -- Maximum reputation based on role
+    transactionsSubmitted : Int               -- Count of submitted transactions (for training wheels)
   where
     signatory operator, user
     observer operator
 
-    ensure verificationWeight == getVerificationWeight role
+    ensure
+      verificationWeight == getVerificationWeight role &&
+      reputationCap == getReputationCap role &&
+      reputation >= 0 && reputation <= reputationCap
 
     -- | Request submission capability (non-consuming)
     nonconsuming choice RequestSubmissionRight : ContractId TransactionSubmissionRight
@@ -98,6 +126,21 @@ template UserAccount
       do
         return ()
 
+    -- | Update reputation based on verification results
+    choice UpdateReputation : ContractId UserAccount
+      with
+        reputationChange : Int  -- Positive for confirmed, negative for disputed
+      controller operator
+      do
+        let newReputation = max 0 (min reputationCap (reputation + reputationChange))
+        create this with reputation = newReputation
+
+    -- | Increment transaction submission count (called when user submits a transaction)
+    choice IncrementTransactionsSubmitted : ContractId UserAccount
+      controller operator
+      do
+        create this with transactionsSubmitted = transactionsSubmitted + 1
+
 -- | Account status
 data AccountStatus
   = AccountActive
@@ -130,6 +173,9 @@ template RegistrationRequest
           credentialPresentations = credentialPresentations
           registeredAt = requestedAt
           status = AccountActive
+          reputation = getStartingReputation requestedRole
+          reputationCap = getReputationCap requestedRole
+          transactionsSubmitted = 0
 
     -- | Operator rejects registration
     choice RejectRegistration : ()

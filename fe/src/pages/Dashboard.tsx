@@ -16,7 +16,7 @@ interface Transaction {
 }
 
 export default function Dashboard() {
-  const { userId, party } = useAuth()
+  const { userId, party, userAccount } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [verificationsAsSubmitter, setVerificationsAsSubmitter] = useState(0)
@@ -90,15 +90,9 @@ export default function Dashboard() {
   // Compute aggregated stats
   const transactionsSubmitted = transactions.filter(t => t.type === 'submission').length
   const verificationsGiven = verificationsAsSubmitter + verificationsAsVerifier
-  const trustScore =
-    transactionsSubmitted > 0
-      ? Math.round(
-          transactions
-            .filter(t => t.type === 'submission' && t.status === 'Verified')
-            .reduce((sum, t) => sum + t.trustScore, 0) /
-            transactionsSubmitted
-        )
-      : 0
+
+  // Get trust score from user's reputation in their UserAccount contract
+  const trustScore = userAccount?.reputation || 0
   const pendingVerifications = pendingVerificationsCount
 
   return (

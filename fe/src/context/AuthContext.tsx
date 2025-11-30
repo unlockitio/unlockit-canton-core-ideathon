@@ -10,6 +10,9 @@ interface UserAccount {
   credentialPresentations: string[];
   registeredAt: string;
   status: string;
+  reputation: number;
+  reputationCap: number;
+  transactionsSubmitted: number;
 }
 
 interface AuthContextType {

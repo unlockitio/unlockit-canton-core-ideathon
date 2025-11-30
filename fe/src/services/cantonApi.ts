@@ -310,8 +310,22 @@ async query<T>(
     choice: string,
     argument: TChoice
   ): Promise<ExerciseResult<TResult>> {
-    if (!this.party) {
-      throw new Error('Party not set. Call setAuth() first.')
+    return this.exerciseWithParties(templateId, contractId, choice, argument, [this.party!])
+  }
+
+  /**
+   * Exercise a choice on a contract with multiple authorizing parties
+   * Use this when a choice requires multiple controllers
+   */
+  async exerciseWithParties<TChoice, TResult>(
+    templateId: string,
+    contractId: string,
+    choice: string,
+    argument: TChoice,
+    actAsParties: string[]
+  ): Promise<ExerciseResult<TResult>> {
+    if (actAsParties.length === 0) {
+      throw new Error('At least one party must be specified')
     }
 
     // Fetch the real package ID and construct the full template ID
@@ -323,8 +337,8 @@ async query<T>(
 
     const commandId = `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
 
-    // Extract userId from party (format: "alice-9b3970be::122002...")
-    const userId = this.party.split('::')[0].split('-')[0] || this.party
+    // Extract userId from first party (format: "alice-9b3970be::122002...")
+    const userId = actAsParties[0].split('::')[0].split('-')[0] || actAsParties[0]
 
     // Canton v3 API format
     const requestBody = {
@@ -341,7 +355,7 @@ async query<T>(
         ],
         userId: `${userId}-user`,
         commandId,
-        actAs: [this.party]
+        actAs: actAsParties
       }
     }
 
@@ -410,6 +424,9 @@ async query<T>(
     credentialPresentations: string[]
     registeredAt: string
     status: string
+    reputation: number
+    reputationCap: number
+    transactionsSubmitted: number
   }>>> {
     if (!this.party) {
       throw new Error('Not authenticated. Call setAuth() first.')

@@ -2,6 +2,7 @@
 module RETVN.Transaction where
 
 import DA.List (dedup)
+import DA.Action (when)
 import RETVN.Role
 
 -- | Property type enumeration (RESO Standard aligned)
@@ -65,14 +66,16 @@ template TransactionData
           assignedVerifiers = verifier :: assignedVerifiers
 
     -- | Submit verification (verifier controls their own verification)
+    -- Operator is also a controller to authorize reputation updates
     choice SubmitVerification : ContractId TransactionData
       with
         verifier : Party
         verifierAccount : ContractId UserAccount
+        submitterAccount : ContractId UserAccount  -- Submitter's account to update reputation
         decision : VerificationDecision
         notes : Optional Text
         verifiedAt : Time
-      controller verifier
+      controller verifier, operator
       do
         -- Fetch user account to get role and verification weight
         account <- fetch verifierAccount
@@ -96,6 +99,21 @@ template TransactionData
         let newVerifications = verification :: verifications
         let newTrustScore = calculateTrustScore newVerifications
         let newStatus = determineStatus newVerifications
+
+        -- Update submitter's reputation based on verification decision
+        submitterAcct <- fetch submitterAccount
+        assertMsg "Submitter account matches transaction submitter" (submitterAcct.user == submitter)
+
+        let reputationChange = case decision of
+              Confirmed -> 5
+              ConfirmedWithNotes -> 5
+              Disputed -> -10
+              RequestClarification -> 0
+
+        -- Update reputation (no training wheels for now since backend can't track submission count)
+        when (reputationChange /= 0) $ do
+          _ <- exercise submitterAccount UpdateReputation with reputationChange = reputationChange
+          return ()
 
         create this with
           verifications = newVerifications

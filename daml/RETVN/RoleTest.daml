@@ -340,6 +340,7 @@ testCompleteRetvnFlow = script do
     exerciseCmd transaction SubmitVerification with
       verifier = john
       verifierAccount = johnAccount
+      submitterAccount = mariaAccount
       decision = Confirmed
       notes = Some "I represented the buyer in this transaction. All details are accurate."
       verifiedAt = now

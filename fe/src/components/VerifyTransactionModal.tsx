@@ -63,17 +63,37 @@ export default function VerifyTransactionModal({ isOpen, onClose, transaction, o
         throw new Error('No transaction selected');
       }
 
-      await cantonApi.exercise(
+      // Query for the submitter's UserAccount contract ID using backend API
+      // (Backend queries as operator, so it can see all UserAccounts)
+      console.log('[VerifyTransactionModal] Looking for submitter UserAccount for party:', transaction.submitter);
+      const userAccounts = await cantonApi.getAllUserAccounts();
+      console.log('[VerifyTransactionModal] UserAccounts:', JSON.stringify(userAccounts, null, 2));
+      const submitterAccount = userAccounts.find((acc: any) => acc.payload.user === transaction.submitter);
+      
+      if (!submitterAccount) {
+        throw new Error(`Could not find UserAccount for submitter: ${transaction.submitter}`);
+      }
+
+      console.log('[VerifyTransactionModal] Found submitter account:', submitterAccount.contractId);
+
+      // Get operator party from the submitter's account
+      const operatorParty = submitterAccount.payload.operator;
+      console.log('[VerifyTransactionModal] Using operator party:', operatorParty);
+
+      // Exercise with both verifier and operator as authorizers (choice requires both controllers)
+      await cantonApi.exerciseWithParties(
         TemplateIds.TransactionData,
         transaction.contractId,
         'SubmitVerification',
         {
           verifier: party,
           verifierAccount: userAccountContractId,
+          submitterAccount: submitterAccount.contractId,
           decision: verificationDecision,
           notes: notes.trim() === '' ? null : notes,
           verifiedAt: isoStringToDamlTime(new Date().toISOString()),
-        }
+        },
+        [party, operatorParty]  // Both verifier and operator must authorize
       );
 
       if (onSuccess) {
