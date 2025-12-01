@@ -103,6 +103,7 @@ export const TemplateIds = {
   RegistrationRequest: '#unlockit-canton-core-ideathon:RETVN.Role:RegistrationRequest',
   TransactionSubmissionRight: '#unlockit-canton-core-ideathon:RETVN.Role:TransactionSubmissionRight',
   TransactionSubmissionProposal: '#unlockit-canton-core-ideathon:RETVN.Transaction:TransactionSubmissionProposal',
+  VerificationProposal: '#unlockit-canton-core-ideathon:RETVN.Transaction:VerificationProposal',
   TransactionData: '#unlockit-canton-core-ideathon:RETVN.Transaction:TransactionData',
   TransactionVerificationRight: '#unlockit-canton-core-ideathon:RETVN.Role:TransactionVerificationRight',
   TransactionVerificationDelegation: '#unlockit-canton-core-ideathon:RETVN.Role:TransactionVerificationDelegation',

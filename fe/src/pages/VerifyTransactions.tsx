@@ -1,119 +1,197 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { cantonApi } from '../services/cantonApi';
+import { TemplateIds } from '../utils/daml';
+import VerifyTransactionModal from '../components/VerifyTransactionModal';
+import type { Contract } from '../types/canton';
+import type { TransactionData, PropertyType } from '../codegen/unlockit-canton-core-ideathon-0.0.1/lib/RETVN/Transaction/module';
+import type { UserRole } from '../codegen/unlockit-canton-core-ideathon-0.0.1/lib/RETVN/Role/module';
 
-interface Transaction {
-  id: string;
+// Helper to convert DAML Optional ([] or [value]) to JavaScript optional (null or value)
+// Canton API sometimes returns null instead of [] for None
+function fromDamlOptional<T>(opt: [] | [T] | null | undefined): T | null {
+  if (!opt || !Array.isArray(opt) || opt.length === 0) {
+    return null;
+  }
+  return opt[0];
+}
+
+// View type for displaying transaction data in the UI
+interface TransactionView {
+  contractId: string;
+  transactionId: string;
   propertyAddress: string;
   postalCode: string;
-  propertyType: string;
-  salePrice: number;
+  propertyType: PropertyType;
+  salePrice: string;
   transactionDate: string;
+  closingDate?: string | null;
   submitter: string;
-  submitterRole: string;
+  submitterRole: UserRole;
+  livingAreaSqft?: string | null;
+  lotSizeSqft?: string | null;
+  bedroomsTotal?: string | null;
+  bathroomsTotal?: string | null;
+  yearBuilt?: string | null;
+  financingType?: string | null;
+  daysOnMarket?: string | null;
   trustScore: number;
   status: string;
   verifications: number;
-  livingAreaSqft?: number;
-  bedroomsTotal?: number;
-  bathroomsTotal?: number;
-  yearBuilt?: number;
 }
 
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: 'TXN-2024-001',
-    propertyAddress: '123 Main St, San Francisco, CA',
-    postalCode: '94102',
-    propertyType: 'Single Family',
-    salePrice: 850000,
-    transactionDate: '2024-12-15',
-    submitter: 'Maria Rodriguez',
-    submitterRole: 'Realtor Agent',
-    trustScore: 8,
-    status: 'Unverified',
-    verifications: 0,
-    livingAreaSqft: 1500,
-    bedroomsTotal: 3,
-    bathroomsTotal: 2,
-    yearBuilt: 1995,
-  },
-  {
-    id: 'TXN-2024-002',
-    propertyAddress: '456 Oak Ave, Oakland, CA',
-    postalCode: '94601',
-    propertyType: 'Condo',
-    salePrice: 620000,
-    transactionDate: '2024-12-14',
-    submitter: 'John Doe',
-    submitterRole: 'Realtor Agent',
-    trustScore: 16,
-    status: 'Partially Verified',
-    verifications: 1,
-    livingAreaSqft: 1200,
-    bedroomsTotal: 2,
-    bathroomsTotal: 2,
-  },
-];
-
 export default function VerifyTransactions() {
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [verificationDecision, setVerificationDecision] = useState('Confirmed');
-  const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { party, verificationWeight, userRole } = useAuth();
+  const [pendingTransactions, setPendingTransactions] = useState<TransactionView[]>([]);
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionView | null>(null);
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmitVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const loadPendingVerifications = async () => {
+    if (!party) return;
+
+    setIsLoading(true);
+    setError(null);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      alert('Verification submitted successfully!');
-      setSelectedTransaction(null);
-      setNotes('');
-      setVerificationDecision('Confirmed');
-    } catch (error) {
-      console.error('Verification failed:', error);
+      // Query all TransactionData contracts
+      const results = await cantonApi.query<TransactionData>(
+        TemplateIds.TransactionData
+      );
+
+      // Filter to transactions where current user is assigned as verifier but hasn't verified yet
+      const pending = results
+        .filter(contract => {
+          const hasVerified = contract.payload.verifications.some(v => v.verifier === party);
+          const isAssignedVerifier = contract.payload.assignedVerifiers.includes(party);
+          return isAssignedVerifier && !hasVerified;
+        })
+        .map(contract => ({
+          contractId: contract.contractId,
+          transactionId: contract.payload.transactionId,
+          propertyAddress: contract.payload.propertyAddress,
+          postalCode: contract.payload.postalCode,
+          propertyType: contract.payload.propertyType,
+          salePrice: contract.payload.salePrice,
+          transactionDate: contract.payload.transactionDate,
+          closingDate: fromDamlOptional(contract.payload.closingDate),
+          submitter: contract.payload.submitter,
+          submitterRole: contract.payload.submitterRole,
+          livingAreaSqft: fromDamlOptional(contract.payload.livingAreaSqft),
+          lotSizeSqft: fromDamlOptional(contract.payload.lotSizeSqft),
+          bedroomsTotal: fromDamlOptional(contract.payload.bedroomsTotal),
+          bathroomsTotal: fromDamlOptional(contract.payload.bathroomsTotal),
+          yearBuilt: fromDamlOptional(contract.payload.yearBuilt),
+          financingType: fromDamlOptional(contract.payload.financingType),
+          daysOnMarket: fromDamlOptional(contract.payload.daysOnMarket),
+          trustScore: parseInt(contract.payload.trustScore, 10),
+          status: contract.payload.status,
+          verifications: contract.payload.verifications.length,
+        }));
+
+      setPendingTransactions(pending);
+    } catch (err: any) {
+      console.error('Failed to load pending verifications:', err);
+      setError(err.message || 'Failed to load transactions');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadPendingVerifications();
+  }, [party]);
+
+  const handleVerifyClick = (transaction: TransactionView) => {
+    setSelectedTransaction(transaction);
+    setIsVerifyModalOpen(true);
+  };
+
+  const handleVerifySuccess = () => {
+    loadPendingVerifications();
+    setIsVerifyModalOpen(false);
+    setSelectedTransaction(null);
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return dateString;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container">
+        <div className="mb-4">
+          <h1 className="text-xl font-bold">Verify Transactions</h1>
+          <p className="text-muted">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container">
       <div className="mb-4">
         <h1 className="text-xl font-bold">Verify Transactions</h1>
-        <p className="text-muted">Review and verify real estate transactions</p>
+        <p className="text-muted">
+          Review and verify real estate transactions assigned to you
+          {verificationWeight && userRole && (
+            <span> • Your weight: {verificationWeight} points ({userRole})</span>
+          )}
+        </p>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: selectedTransaction ? '1fr 1fr' : '1fr' }}>
-        <div>
-          <div className="card">
-            <h2 className="card-header">Pending Verifications</h2>
+      {error && (
+        <div className="alert alert-error mb-4">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
 
-            {MOCK_TRANSACTIONS.map((transaction) => (
+      <div className="card">
+        <h2 className="card-header">
+          Pending Verifications ({pendingTransactions.length})
+        </h2>
+
+        {pendingTransactions.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">✅</div>
+            <p>No pending verifications</p>
+            <p className="text-muted">All caught up! You have verified all transactions assigned to you.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {pendingTransactions.map((transaction) => (
               <div
-                key={transaction.id}
+                key={transaction.contractId}
                 style={{
                   padding: '1.25rem',
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px',
-                  marginBottom: '1rem',
                   cursor: 'pointer',
-                  background: selectedTransaction?.id === transaction.id ? '#f0f4ff' : 'white',
+                  transition: 'background-color 0.2s',
                 }}
-                onClick={() => setSelectedTransaction(transaction)}
+                onClick={() => handleVerifyClick(transaction)}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7fafc')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                   <div>
                     <div className="font-semibold">{transaction.propertyAddress}</div>
-                    <div className="text-sm text-muted">{transaction.id}</div>
+                    <div className="text-sm text-muted">{transaction.transactionId}</div>
                   </div>
                   <span
                     className={`badge ${
                       transaction.status === 'Unverified'
                         ? 'badge-warning'
-                        : transaction.status === 'Partially Verified'
+                        : transaction.status === 'PartiallyVerified'
                         ? 'badge-info'
-                        : 'badge-success'
+                        : transaction.status === 'FullyVerified'
+                        ? 'badge-success'
+                        : 'badge-error'
                     }`}
                   >
                     {transaction.status}
@@ -121,102 +199,37 @@ export default function VerifyTransactions() {
                 </div>
 
                 <div className="grid grid-2" style={{ gap: '0.5rem', fontSize: '0.875rem' }}>
-                  <div><strong>Sale Price:</strong> ${transaction.salePrice.toLocaleString()}</div>
+                  <div><strong>Sale Price:</strong> ${Number(transaction.salePrice).toLocaleString()}</div>
                   <div><strong>Type:</strong> {transaction.propertyType}</div>
-                  <div><strong>Submitter:</strong> {transaction.submitter}</div>
+                  <div><strong>Postal Code:</strong> {transaction.postalCode}</div>
                   <div><strong>Trust Score:</strong> {transaction.trustScore}/100</div>
                   <div><strong>Verifications:</strong> {transaction.verifications}</div>
-                  <div><strong>Date:</strong> {transaction.transactionDate}</div>
+                  <div><strong>Date:</strong> {formatDate(transaction.transactionDate)}</div>
+                </div>
+
+                <div style={{ marginTop: '0.75rem' }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleVerifyClick(transaction);
+                    }}
+                  >
+                    Verify Transaction
+                  </button>
                 </div>
               </div>
             ))}
-
-            {MOCK_TRANSACTIONS.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-state-icon">📋</div>
-                <p>No pending verifications</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {selectedTransaction && (
-          <div>
-            <div className="card">
-              <h2 className="card-header">Transaction Details</h2>
-
-              <div style={{ background: '#f7fafc', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                <h3 className="font-semibold mb-2">Property Information</h3>
-                <div style={{ fontSize: '0.9rem', lineHeight: '1.8' }}>
-                  <div><strong>Address:</strong> {selectedTransaction.propertyAddress}</div>
-                  <div><strong>Postal Code:</strong> {selectedTransaction.postalCode}</div>
-                  <div><strong>Type:</strong> {selectedTransaction.propertyType}</div>
-                  {selectedTransaction.livingAreaSqft && (
-                    <div><strong>Living Area:</strong> {selectedTransaction.livingAreaSqft} sqft</div>
-                  )}
-                  {selectedTransaction.bedroomsTotal && (
-                    <div><strong>Bedrooms:</strong> {selectedTransaction.bedroomsTotal}</div>
-                  )}
-                  {selectedTransaction.bathroomsTotal && (
-                    <div><strong>Bathrooms:</strong> {selectedTransaction.bathroomsTotal}</div>
-                  )}
-                  {selectedTransaction.yearBuilt && (
-                    <div><strong>Year Built:</strong> {selectedTransaction.yearBuilt}</div>
-                  )}
-                </div>
-
-                <h3 className="font-semibold mb-2 mt-3">Transaction Details</h3>
-                <div style={{ fontSize: '0.9rem', lineHeight: '1.8' }}>
-                  <div><strong>Sale Price:</strong> ${selectedTransaction.salePrice.toLocaleString()}</div>
-                  <div><strong>Transaction Date:</strong> {selectedTransaction.transactionDate}</div>
-                  <div><strong>Submitted By:</strong> {selectedTransaction.submitter} ({selectedTransaction.submitterRole})</div>
-                  <div><strong>Current Trust Score:</strong> {selectedTransaction.trustScore}/100</div>
-                  <div><strong>Status:</strong> {selectedTransaction.status}</div>
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmitVerification}>
-                <div className="form-group">
-                  <label className="form-label">Verification Decision</label>
-                  <select
-                    className="form-select"
-                    value={verificationDecision}
-                    onChange={(e) => setVerificationDecision(e.target.value)}
-                    required
-                  >
-                    <option value="Confirmed">Confirmed - All data accurate</option>
-                    <option value="ConfirmedWithNotes">Confirmed with Notes - Accurate but with context</option>
-                    <option value="Disputed">Disputed - Data is incorrect</option>
-                    <option value="RequestClarification">Request Clarification - Need more info</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Notes (Optional)</label>
-                  <textarea
-                    className="form-control"
-                    rows={4}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add any additional context or clarification..."
-                    style={{ resize: 'vertical' }}
-                  />
-                </div>
-
-                <div className="alert alert-info mb-3">
-                  <strong>Your Verification Weight:</strong> 8 points (Realtor Agent)
-                  <br />
-                  Your verification will contribute to the overall trust score of this transaction.
-                </div>
-
-                <button type="submit" className="btn btn-success btn-block" disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting Verification...' : 'Submit Verification'}
-                </button>
-              </form>
-            </div>
           </div>
         )}
       </div>
+
+      <VerifyTransactionModal
+        isOpen={isVerifyModalOpen}
+        onClose={() => setIsVerifyModalOpen(false)}
+        transaction={selectedTransaction}
+        onSuccess={handleVerifySuccess}
+      />
     </div>
   );
 }

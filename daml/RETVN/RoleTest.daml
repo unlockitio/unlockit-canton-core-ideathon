@@ -335,15 +335,21 @@ testCompleteRetvnFlow = script do
   -- STEP 9: John verifies the transaction
   -- ========================================
 
-  -- John submits his verification directly
-  transactionAfterJohn <- submit john do
-    exerciseCmd transaction SubmitVerification with
+  -- John creates a verification proposal
+  johnProposal <- submit john do
+    createCmd VerificationProposal with
+      operator = operator
       verifier = john
+      transactionDataCid = transaction
       verifierAccount = johnAccount
       submitterAccount = mariaAccount
       decision = Confirmed
       notes = Some "I represented the buyer in this transaction. All details are accurate."
       verifiedAt = now
+
+  -- Operator accepts the verification proposal
+  transactionAfterJohn <- submit operator do
+    exerciseCmd johnProposal AcceptVerification
 
   -- ========================================
   -- STEP 10: Sarah cannot verify (PrivateCitizen role)

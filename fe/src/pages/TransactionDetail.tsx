@@ -8,8 +8,13 @@ import type { TransactionData } from '../codegen/unlockit-canton-core-ideathon-0
 import VerifyTransactionModal from '../components/VerifyTransactionModal';
 import AssignVerifierModal from '../components/AssignVerifierModal';
 
-function fromDamlOptional<T>(opt: [] | [T]): T | null {
-  return opt.length > 0 ? opt[0] : null;
+// Helper to convert DAML Optional ([] or [value]) to JavaScript optional (null or value)
+// Canton API sometimes returns null instead of [] for None
+function fromDamlOptional<T>(opt: [] | [T] | null | undefined): T | null {
+  if (!opt || !Array.isArray(opt) || opt.length === 0) {
+    return null;
+  }
+  return opt[0];
 }
 
 export default function TransactionDetail() {

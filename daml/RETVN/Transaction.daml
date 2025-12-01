@@ -65,9 +65,8 @@ template TransactionData
         create this with
           assignedVerifiers = verifier :: assignedVerifiers
 
-    -- | Submit verification (verifier controls their own verification)
-    -- Operator is also a controller to authorize reputation updates
-    choice SubmitVerification : ContractId TransactionData
+    -- | Apply verification (operator only - called after accepting proposal)
+    choice ApplyVerification : ContractId TransactionData
       with
         verifier : Party
         verifierAccount : ContractId UserAccount
@@ -75,7 +74,7 @@ template TransactionData
         decision : VerificationDecision
         notes : Optional Text
         verifiedAt : Time
-      controller verifier, operator
+      controller operator
       do
         -- Fetch user account to get role and verification weight
         account <- fetch verifierAccount
@@ -283,6 +282,42 @@ template TransactionSubmissionProposal
 
     -- | Operator rejects submission
     choice RejectSubmission : ()
+      with
+        reason : Text
+      controller operator
+      do
+        return ()
+
+-- | Verification proposal (before operator applies verification to TransactionData)
+template VerificationProposal
+  with
+    operator : Party
+    verifier : Party
+    transactionDataCid : ContractId TransactionData
+    verifierAccount : ContractId UserAccount
+    submitterAccount : ContractId UserAccount
+    decision : VerificationDecision
+    notes : Optional Text
+    verifiedAt : Time
+  where
+    signatory verifier
+    observer operator
+
+    -- | Operator accepts and applies verification
+    choice AcceptVerification : ContractId TransactionData
+      controller operator
+      do
+        -- Apply the verification to the TransactionData contract
+        exercise transactionDataCid ApplyVerification with
+          verifier = verifier
+          verifierAccount = verifierAccount
+          submitterAccount = submitterAccount
+          decision = decision
+          notes = notes
+          verifiedAt = verifiedAt
+
+    -- | Operator rejects verification
+    choice RejectVerification : ()
       with
         reason : Text
       controller operator

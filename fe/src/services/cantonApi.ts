@@ -5,7 +5,7 @@ import type { Contract, ExerciseResult } from '../types/canton'
 // Package ID from codegen
 // When you regenerate codegen after changing DAML code, update this value from:
 // src/codegen/unlockit-canton-core-ideathon-0.0.1/lib/index.js (exports.packageId)
-const DAML_PACKAGE_ID = '3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699'
+const DAML_PACKAGE_ID = '71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726'
 
 class CantonApiService {
   private token: string | null = null

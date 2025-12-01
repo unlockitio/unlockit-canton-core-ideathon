@@ -69,7 +69,7 @@ export default function VerifyTransactionModal({ isOpen, onClose, transaction, o
       const userAccounts = await cantonApi.getAllUserAccounts();
       console.log('[VerifyTransactionModal] UserAccounts:', JSON.stringify(userAccounts, null, 2));
       const submitterAccount = userAccounts.find((acc: any) => acc.payload.user === transaction.submitter);
-      
+
       if (!submitterAccount) {
         throw new Error(`Could not find UserAccount for submitter: ${transaction.submitter}`);
       }
@@ -78,22 +78,20 @@ export default function VerifyTransactionModal({ isOpen, onClose, transaction, o
 
       // Get operator party from the submitter's account
       const operatorParty = submitterAccount.payload.operator;
-      console.log('[VerifyTransactionModal] Using operator party:', operatorParty);
 
-      // Exercise with both verifier and operator as authorizers (choice requires both controllers)
-      await cantonApi.exerciseWithParties(
-        TemplateIds.TransactionData,
-        transaction.contractId,
-        'SubmitVerification',
+      // Create a VerificationProposal that the backend will automatically accept
+      await cantonApi.create(
+        TemplateIds.VerificationProposal,
         {
+          operator: operatorParty,
           verifier: party,
+          transactionDataCid: transaction.contractId,
           verifierAccount: userAccountContractId,
           submitterAccount: submitterAccount.contractId,
           decision: verificationDecision,
           notes: notes.trim() === '' ? null : notes,
           verifiedAt: isoStringToDamlTime(new Date().toISOString()),
-        },
-        [party, operatorParty]  // Both verifier and operator must authorize
+        }
       );
 
       if (onSuccess) {

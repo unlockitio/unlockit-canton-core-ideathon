@@ -10,8 +10,12 @@ import type { TransactionData } from '../codegen/unlockit-canton-core-ideathon-0
 import type { UserRole } from '../codegen/unlockit-canton-core-ideathon-0.0.1/lib/RETVN/Role/module';
 
 // Helper to convert DAML Optional ([] or [value]) to JavaScript optional (null or value)
-function fromDamlOptional<T>(opt: [] | [T]): T | null {
-  return opt.length > 0 ? opt[0] : null;
+// Canton API sometimes returns null instead of [] for None
+function fromDamlOptional<T>(opt: [] | [T] | null | undefined): T | null {
+  if (!opt || !Array.isArray(opt) || opt.length === 0) {
+    return null;
+  }
+  return opt[0];
 }
 
 interface UserAccount {
