@@ -57,7 +57,7 @@ exports.MarketDataQueryReceipt = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketDataQueryReceipt, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketDataQueryReceipt, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -111,7 +111,7 @@ exports.MarketDataAccessRight = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketDataAccessRight, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketDataAccessRight, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -144,7 +144,7 @@ exports.TransactionVerificationDelegation = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionVerificationDelegation, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionVerificationDelegation, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -196,7 +196,7 @@ exports.TransactionVerificationRight = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionVerificationRight, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionVerificationRight, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -228,7 +228,7 @@ exports.TransactionSubmissionRight = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionSubmissionRight, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionSubmissionRight, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -300,7 +300,7 @@ exports.RegistrationRequest = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.RegistrationRequest, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.RegistrationRequest, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -311,6 +311,29 @@ exports.AccountStatus = {
   keys: ['AccountActive','AccountSuspended','AccountPendingReview',],
   decoder: damlTypes.lazyMemo(function () { return jtv.oneOf(jtv.constant(exports.AccountStatus.AccountActive), jtv.constant(exports.AccountStatus.AccountSuspended), jtv.constant(exports.AccountStatus.AccountPendingReview)); }),
   encode: function (__typed__) { return __typed__; },
+};
+
+
+
+exports.IncrementTransactionsSubmitted = {
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({}); }),
+  encode: function (__typed__) {
+  return {
+  };
+}
+,
+};
+
+
+
+exports.UpdateReputation = {
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({reputationChange: damlTypes.Int.decoder, }); }),
+  encode: function (__typed__) {
+  return {
+    reputationChange: damlTypes.Int.encode(__typed__.reputationChange),
+  };
+}
+,
 };
 
 
@@ -387,7 +410,7 @@ exports.UserAccount = damlTypes.assembleTemplate(
   templateId: '#unlockit-canton-core-ideathon:RETVN.Role:UserAccount',
   keyDecoder: damlTypes.lazyMemo(function () { return jtv.constant(undefined); }),
   keyEncode: function () { throw 'EncodeError'; },
-  decoder: damlTypes.lazyMemo(function () { return jtv.object({operator: damlTypes.Party.decoder, user: damlTypes.Party.decoder, role: exports.UserRole.decoder, verificationWeight: damlTypes.Int.decoder, credentialPresentations: damlTypes.List(damlTypes.ContractId(W3C_VC.PresentationReceipt)).decoder, registeredAt: damlTypes.Time.decoder, status: exports.AccountStatus.decoder, }); }),
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({operator: damlTypes.Party.decoder, user: damlTypes.Party.decoder, role: exports.UserRole.decoder, verificationWeight: damlTypes.Int.decoder, credentialPresentations: damlTypes.List(damlTypes.ContractId(W3C_VC.PresentationReceipt)).decoder, registeredAt: damlTypes.Time.decoder, status: exports.AccountStatus.decoder, reputation: damlTypes.Int.decoder, reputationCap: damlTypes.Int.decoder, transactionsSubmitted: damlTypes.Int.decoder, }); }),
   encode: function (__typed__) {
   return {
     operator: damlTypes.Party.encode(__typed__.operator),
@@ -397,9 +420,20 @@ exports.UserAccount = damlTypes.assembleTemplate(
     credentialPresentations: damlTypes.List(damlTypes.ContractId(W3C_VC.PresentationReceipt)).encode(__typed__.credentialPresentations),
     registeredAt: damlTypes.Time.encode(__typed__.registeredAt),
     status: exports.AccountStatus.encode(__typed__.status),
+    reputation: damlTypes.Int.encode(__typed__.reputation),
+    reputationCap: damlTypes.Int.encode(__typed__.reputationCap),
+    transactionsSubmitted: damlTypes.Int.encode(__typed__.transactionsSubmitted),
   };
 }
 ,
+  UpdateReputation: {
+    template: function () { return exports.UserAccount; },
+    choiceName: 'UpdateReputation',
+    argumentDecoder: damlTypes.lazyMemo(function () { return exports.UpdateReputation.decoder; }),
+    argumentEncode: function (__typed__) { return exports.UpdateReputation.encode(__typed__); },
+    resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.ContractId(exports.UserAccount).decoder; }),
+    resultEncode: function (__typed__) { return damlTypes.ContractId(exports.UserAccount).encode(__typed__); },
+  },
   RequestMarketDataAccess: {
     template: function () { return exports.UserAccount; },
     choiceName: 'RequestMarketDataAccess',
@@ -456,12 +490,20 @@ exports.UserAccount = damlTypes.assembleTemplate(
     resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.ContractId(exports.UserAccount).decoder; }),
     resultEncode: function (__typed__) { return damlTypes.ContractId(exports.UserAccount).encode(__typed__); },
   },
+  IncrementTransactionsSubmitted: {
+    template: function () { return exports.UserAccount; },
+    choiceName: 'IncrementTransactionsSubmitted',
+    argumentDecoder: damlTypes.lazyMemo(function () { return exports.IncrementTransactionsSubmitted.decoder; }),
+    argumentEncode: function (__typed__) { return exports.IncrementTransactionsSubmitted.encode(__typed__); },
+    resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.ContractId(exports.UserAccount).decoder; }),
+    resultEncode: function (__typed__) { return damlTypes.ContractId(exports.UserAccount).encode(__typed__); },
+  },
 }
 
 );
 
 
-damlTypes.registerTemplate(exports.UserAccount, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.UserAccount, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 

@@ -47,6 +47,51 @@ export declare namespace MarketDataAggregate {
 
 
 
+export declare type RejectVerification = {
+  reason: string;
+};
+
+export declare const RejectVerification:
+  damlTypes.Serializable<RejectVerification> & {
+  }
+;
+
+
+export declare type AcceptVerification = {
+};
+
+export declare const AcceptVerification:
+  damlTypes.Serializable<AcceptVerification> & {
+  }
+;
+
+
+export declare type VerificationProposal = {
+  operator: damlTypes.Party;
+  verifier: damlTypes.Party;
+  transactionDataCid: damlTypes.ContractId<TransactionData>;
+  verifierAccount: damlTypes.ContractId<RETVN_Role.UserAccount>;
+  submitterAccount: damlTypes.ContractId<RETVN_Role.UserAccount>;
+  decision: VerificationDecision;
+  notes: damlTypes.Optional<string>;
+  verifiedAt: damlTypes.Time;
+};
+
+export declare interface VerificationProposalInterface {
+  AcceptVerification: damlTypes.Choice<VerificationProposal, AcceptVerification, damlTypes.ContractId<TransactionData>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<VerificationProposal, undefined>>;
+  RejectVerification: damlTypes.Choice<VerificationProposal, RejectVerification, {}, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<VerificationProposal, undefined>>;
+  Archive: damlTypes.Choice<VerificationProposal, pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive, {}, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<VerificationProposal, undefined>>;
+}
+export declare const VerificationProposal:
+  damlTypes.Template<VerificationProposal, undefined, '#unlockit-canton-core-ideathon:RETVN.Transaction:VerificationProposal'> &
+  damlTypes.ToInterface<VerificationProposal, never> &
+  VerificationProposalInterface;
+
+export declare namespace VerificationProposal {
+}
+
+
+
 export declare type RejectSubmission = {
   reason: string;
 };
@@ -169,16 +214,17 @@ export declare const QueryTransaction:
 ;
 
 
-export declare type SubmitVerification = {
+export declare type ApplyVerification = {
   verifier: damlTypes.Party;
   verifierAccount: damlTypes.ContractId<RETVN_Role.UserAccount>;
+  submitterAccount: damlTypes.ContractId<RETVN_Role.UserAccount>;
   decision: VerificationDecision;
   notes: damlTypes.Optional<string>;
   verifiedAt: damlTypes.Time;
 };
 
-export declare const SubmitVerification:
-  damlTypes.Serializable<SubmitVerification> & {
+export declare const ApplyVerification:
+  damlTypes.Serializable<ApplyVerification> & {
   }
 ;
 
@@ -220,7 +266,7 @@ export declare type TransactionData = {
 
 export declare interface TransactionDataInterface {
   AssignVerifier: damlTypes.Choice<TransactionData, AssignVerifier, damlTypes.ContractId<TransactionData>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<TransactionData, undefined>>;
-  SubmitVerification: damlTypes.Choice<TransactionData, SubmitVerification, damlTypes.ContractId<TransactionData>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<TransactionData, undefined>>;
+  ApplyVerification: damlTypes.Choice<TransactionData, ApplyVerification, damlTypes.ContractId<TransactionData>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<TransactionData, undefined>>;
   QueryTransaction: damlTypes.Choice<TransactionData, QueryTransaction, TransactionDataView, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<TransactionData, undefined>>;
   Archive: damlTypes.Choice<TransactionData, pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive, {}, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<TransactionData, undefined>>;
 }

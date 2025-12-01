@@ -205,6 +205,25 @@ export declare const AccountStatus:
 ;
 
 
+export declare type IncrementTransactionsSubmitted = {
+};
+
+export declare const IncrementTransactionsSubmitted:
+  damlTypes.Serializable<IncrementTransactionsSubmitted> & {
+  }
+;
+
+
+export declare type UpdateReputation = {
+  reputationChange: damlTypes.Int;
+};
+
+export declare const UpdateReputation:
+  damlTypes.Serializable<UpdateReputation> & {
+  }
+;
+
+
 export declare type ArchiveAccount = {
 };
 
@@ -268,9 +287,13 @@ export declare type UserAccount = {
   credentialPresentations: damlTypes.ContractId<W3C_VC.PresentationReceipt>[];
   registeredAt: damlTypes.Time;
   status: AccountStatus;
+  reputation: damlTypes.Int;
+  reputationCap: damlTypes.Int;
+  transactionsSubmitted: damlTypes.Int;
 };
 
 export declare interface UserAccountInterface {
+  UpdateReputation: damlTypes.Choice<UserAccount, UpdateReputation, damlTypes.ContractId<UserAccount>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<UserAccount, undefined>>;
   RequestMarketDataAccess: damlTypes.Choice<UserAccount, RequestMarketDataAccess, damlTypes.ContractId<MarketDataAccessRight>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<UserAccount, undefined>>;
   Archive: damlTypes.Choice<UserAccount, pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive, {}, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<UserAccount, undefined>>;
   ArchiveAccount: damlTypes.Choice<UserAccount, ArchiveAccount, {}, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<UserAccount, undefined>>;
@@ -278,6 +301,7 @@ export declare interface UserAccountInterface {
   RequestVerificationRight: damlTypes.Choice<UserAccount, RequestVerificationRight, damlTypes.ContractId<TransactionVerificationRight>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<UserAccount, undefined>>;
   SuspendAccount: damlTypes.Choice<UserAccount, SuspendAccount, damlTypes.ContractId<UserAccount>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<UserAccount, undefined>>;
   ReactivateAccount: damlTypes.Choice<UserAccount, ReactivateAccount, damlTypes.ContractId<UserAccount>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<UserAccount, undefined>>;
+  IncrementTransactionsSubmitted: damlTypes.Choice<UserAccount, IncrementTransactionsSubmitted, damlTypes.ContractId<UserAccount>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<UserAccount, undefined>>;
 }
 export declare const UserAccount:
   damlTypes.Template<UserAccount, undefined, '#unlockit-canton-core-ideathon:RETVN.Role:UserAccount'> &

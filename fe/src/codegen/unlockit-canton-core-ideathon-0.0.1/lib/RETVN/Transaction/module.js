@@ -70,7 +70,82 @@ exports.MarketDataAggregate = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketDataAggregate, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketDataAggregate, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+
+
+
+exports.RejectVerification = {
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({reason: damlTypes.Text.decoder, }); }),
+  encode: function (__typed__) {
+  return {
+    reason: damlTypes.Text.encode(__typed__.reason),
+  };
+}
+,
+};
+
+
+
+exports.AcceptVerification = {
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({}); }),
+  encode: function (__typed__) {
+  return {
+  };
+}
+,
+};
+
+
+
+exports.VerificationProposal = damlTypes.assembleTemplate(
+{
+  templateId: '#unlockit-canton-core-ideathon:RETVN.Transaction:VerificationProposal',
+  keyDecoder: damlTypes.lazyMemo(function () { return jtv.constant(undefined); }),
+  keyEncode: function () { throw 'EncodeError'; },
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({operator: damlTypes.Party.decoder, verifier: damlTypes.Party.decoder, transactionDataCid: damlTypes.ContractId(exports.TransactionData).decoder, verifierAccount: damlTypes.ContractId(RETVN_Role.UserAccount).decoder, submitterAccount: damlTypes.ContractId(RETVN_Role.UserAccount).decoder, decision: exports.VerificationDecision.decoder, notes: jtv.Decoder.withDefault(null, damlTypes.Optional(damlTypes.Text).decoder), verifiedAt: damlTypes.Time.decoder, }); }),
+  encode: function (__typed__) {
+  return {
+    operator: damlTypes.Party.encode(__typed__.operator),
+    verifier: damlTypes.Party.encode(__typed__.verifier),
+    transactionDataCid: damlTypes.ContractId(exports.TransactionData).encode(__typed__.transactionDataCid),
+    verifierAccount: damlTypes.ContractId(RETVN_Role.UserAccount).encode(__typed__.verifierAccount),
+    submitterAccount: damlTypes.ContractId(RETVN_Role.UserAccount).encode(__typed__.submitterAccount),
+    decision: exports.VerificationDecision.encode(__typed__.decision),
+    notes: damlTypes.Optional(damlTypes.Text).encode(__typed__.notes),
+    verifiedAt: damlTypes.Time.encode(__typed__.verifiedAt),
+  };
+}
+,
+  AcceptVerification: {
+    template: function () { return exports.VerificationProposal; },
+    choiceName: 'AcceptVerification',
+    argumentDecoder: damlTypes.lazyMemo(function () { return exports.AcceptVerification.decoder; }),
+    argumentEncode: function (__typed__) { return exports.AcceptVerification.encode(__typed__); },
+    resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.ContractId(exports.TransactionData).decoder; }),
+    resultEncode: function (__typed__) { return damlTypes.ContractId(exports.TransactionData).encode(__typed__); },
+  },
+  RejectVerification: {
+    template: function () { return exports.VerificationProposal; },
+    choiceName: 'RejectVerification',
+    argumentDecoder: damlTypes.lazyMemo(function () { return exports.RejectVerification.decoder; }),
+    argumentEncode: function (__typed__) { return exports.RejectVerification.encode(__typed__); },
+    resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.Unit.decoder; }),
+    resultEncode: function (__typed__) { return damlTypes.Unit.encode(__typed__); },
+  },
+  Archive: {
+    template: function () { return exports.VerificationProposal; },
+    choiceName: 'Archive',
+    argumentDecoder: damlTypes.lazyMemo(function () { return pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive.decoder; }),
+    argumentEncode: function (__typed__) { return pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive.encode(__typed__); },
+    resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.Unit.decoder; }),
+    resultEncode: function (__typed__) { return damlTypes.Unit.encode(__typed__); },
+  },
+}
+
+);
+
+
+damlTypes.registerTemplate(exports.VerificationProposal, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -157,7 +232,7 @@ exports.TransactionSubmissionProposal = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionSubmissionProposal, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionSubmissionProposal, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -229,12 +304,13 @@ exports.QueryTransaction = {
 
 
 
-exports.SubmitVerification = {
-  decoder: damlTypes.lazyMemo(function () { return jtv.object({verifier: damlTypes.Party.decoder, verifierAccount: damlTypes.ContractId(RETVN_Role.UserAccount).decoder, decision: exports.VerificationDecision.decoder, notes: jtv.Decoder.withDefault(null, damlTypes.Optional(damlTypes.Text).decoder), verifiedAt: damlTypes.Time.decoder, }); }),
+exports.ApplyVerification = {
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({verifier: damlTypes.Party.decoder, verifierAccount: damlTypes.ContractId(RETVN_Role.UserAccount).decoder, submitterAccount: damlTypes.ContractId(RETVN_Role.UserAccount).decoder, decision: exports.VerificationDecision.decoder, notes: jtv.Decoder.withDefault(null, damlTypes.Optional(damlTypes.Text).decoder), verifiedAt: damlTypes.Time.decoder, }); }),
   encode: function (__typed__) {
   return {
     verifier: damlTypes.Party.encode(__typed__.verifier),
     verifierAccount: damlTypes.ContractId(RETVN_Role.UserAccount).encode(__typed__.verifierAccount),
+    submitterAccount: damlTypes.ContractId(RETVN_Role.UserAccount).encode(__typed__.submitterAccount),
     decision: exports.VerificationDecision.encode(__typed__.decision),
     notes: damlTypes.Optional(damlTypes.Text).encode(__typed__.notes),
     verifiedAt: damlTypes.Time.encode(__typed__.verifiedAt),
@@ -298,11 +374,11 @@ exports.TransactionData = damlTypes.assembleTemplate(
     resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.ContractId(exports.TransactionData).decoder; }),
     resultEncode: function (__typed__) { return damlTypes.ContractId(exports.TransactionData).encode(__typed__); },
   },
-  SubmitVerification: {
+  ApplyVerification: {
     template: function () { return exports.TransactionData; },
-    choiceName: 'SubmitVerification',
-    argumentDecoder: damlTypes.lazyMemo(function () { return exports.SubmitVerification.decoder; }),
-    argumentEncode: function (__typed__) { return exports.SubmitVerification.encode(__typed__); },
+    choiceName: 'ApplyVerification',
+    argumentDecoder: damlTypes.lazyMemo(function () { return exports.ApplyVerification.decoder; }),
+    argumentEncode: function (__typed__) { return exports.ApplyVerification.encode(__typed__); },
     resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.ContractId(exports.TransactionData).decoder; }),
     resultEncode: function (__typed__) { return damlTypes.ContractId(exports.TransactionData).encode(__typed__); },
   },
@@ -327,7 +403,7 @@ exports.TransactionData = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionData, ['3b8845dbc083601b421bdd16e6c4a1326be7516e30fb079baba9120fc2b99699', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionData, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
 
 
 
