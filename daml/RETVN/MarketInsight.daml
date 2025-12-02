@@ -7,7 +7,7 @@ import DA.Optional (fromOptional, isSome)
 import DA.Text as T
 import DA.Foldable (maximum, Foldable(minimum), forA_)
 import DA.Time
-import qualified DA.List
+import DA.List as L
 
 
 -- ============================================================================
@@ -373,7 +373,7 @@ template ContributorReward
 -- ============================================================================
 
 -- | Calculate price based on query parameters
--- Price factors: dataScope, qualityLevel, timeRange
+-- Price factors: dataScope, qualityLevel, timeRange, segmentComplexity
 calculateInsightPrice : QueryParams -> Decimal
 calculateInsightPrice params =
   let
@@ -398,8 +398,16 @@ calculateInsightPrice params =
       "historic" -> 2.5
       _ -> 1.0
 
+    -- Segment complexity based on number of segment filters
+    segmentSelections = intToDecimal (
+      L.length params.bedrooms +
+      L.length params.livingArea +
+      L.length params.yearBuilt +
+      L.length params.propertyType)
+    segmentComplexity = 1.0 + (0.05 * segmentSelections)
+
     -- Calculate final price
-    finalPrice = scopePrice * qualityMultiplier * timeMultiplier
+    finalPrice = scopePrice * qualityMultiplier * timeMultiplier * segmentComplexity
   in
     finalPrice
 
@@ -638,11 +646,11 @@ mergeContributions : [(Text, [TransactionContribution])] ->
 mergeContributions existing newOnes =
   let
     -- Convert new list to map format
-    newGrouped = DA.List.groupOn fst (DA.List.sortOn fst newOnes)
-    newMap = map (\group -> (fst (DA.List.head group), map snd group)) newGrouped
+    newGrouped = L.groupOn fst (L.sortOn fst newOnes)
+    newMap = map (\group -> (fst (L.head group), map snd group)) newGrouped
 
     -- Merge with existing
-    allKeys = DA.List.dedup $ DA.List.sort $ (map fst existing) ++ (map fst newMap)
+    allKeys = L.dedup $ L.sort $ (map fst existing) ++ (map fst newMap)
 
     merged = map (\key ->
       let existingContribs = fromOptional [] (lookup key existing)
@@ -678,8 +686,8 @@ calculateAndDistributeRewards operator transactions totalPaid fulfilledAt paidOr
   -- Note: We always create new contracts as each order creates new rewards
   mapA (\(recipient, contribs, totalAmount) -> do
     -- Create new contract
-    let contributions = DA.List.groupOn fst (DA.List.sortOn fst contribs)
-    let contributionsMap = map (\group -> (fst (DA.List.head group), map snd group)) contributions
+    let contributions = L.groupOn fst (L.sortOn fst contribs)
+    let contributionsMap = map (\group -> (fst (L.head group), map snd group)) contributions
     create ContributorReward with
       operator = operator
       recipient = recipient
@@ -724,14 +732,14 @@ aggregateByRecipient : [(Party, (Text, TransactionContribution), Decimal)] ->
 aggregateByRecipient contribs =
   let
     -- Sort by recipient
-    sorted = DA.List.sortOn (\(p, _, _) -> p) contribs
+    sorted = L.sortOn (\(p, _, _) -> p) contribs
 
     -- Group by recipient
-    grouped = DA.List.groupOn (\(p, _, _) -> p) sorted
+    grouped = L.groupOn (\(p, _, _) -> p) sorted
 
     -- Aggregate for each recipient
     toRecipientData group =
-      let recipient = (\(p, _, _) -> p) (DA.List.head group)
+      let recipient = (\(p, _, _) -> p) (L.head group)
           contributions = map (\(_, c, _) -> c) group
           totalAmount = sum $ map (\(_, _, amt) -> amt) group
       in (recipient, contributions, totalAmount)

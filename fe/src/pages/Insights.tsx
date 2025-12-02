@@ -24,6 +24,7 @@ interface Insight {
 export default function Insights() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [existingOrder, setExistingOrder] = useState<any>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('insights');
@@ -38,6 +39,67 @@ export default function Insights() {
       // Start with empty list - user must purchase insights
       setInsights([]);
     }
+
+    // Listen for basket order selection
+    const handleBasketOrder = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const order = customEvent.detail;
+
+      const params = order.payload.queryParams;
+
+      // Calculate price matching RequestInsightModal logic
+      const qualityMultipliers: Record<string, number> = {
+        'basic': 1.0,
+        'verified': 1.5,
+        'premium': 2.0,
+      };
+      const scopePrices: Record<string, number> = {
+        'basic': 5,
+        'standard': 15,
+        'detailed': 35,
+      };
+      const timeMultipliers: Record<string, number> = {
+        'recent': 1.0,
+        'year': 1.5,
+        'historic': 2.5,
+      };
+
+      const segmentSelections =
+        (params.bedrooms?.length || 0) +
+        (params.livingArea?.length || 0) +
+        (params.yearBuilt?.length || 0) +
+        (params.propertyType?.length || 0);
+      const segmentComplexity = 1.0 + (0.05 * segmentSelections);
+
+      const calculatedPrice = Math.round(
+        (scopePrices[params.dataScope] || 5) *
+        (qualityMultipliers[params.qualityLevel] || 1.0) *
+        (timeMultipliers[params.timeRange] || 1.0) *
+        segmentComplexity *
+        100
+      ) / 100;
+
+      setExistingOrder({
+        contractId: order.contractId,
+        queryParams: {
+          postalCode: params.postalCode || '',
+          bedrooms: params.bedrooms || [],
+          livingArea: params.livingArea || [],
+          yearBuilt: params.yearBuilt || [],
+          propertyType: params.propertyType || [],
+          qualityLevel: params.qualityLevel,
+          dataScope: params.dataScope,
+          timeRange: params.timeRange,
+        },
+        calculatedPrice,
+      });
+      setIsRequestModalOpen(true);
+    };
+
+    window.addEventListener('openBasketOrder', handleBasketOrder);
+    return () => {
+      window.removeEventListener('openBasketOrder', handleBasketOrder);
+    };
   }, []);
 
   const handleInsightCreated = (newInsight: Insight) => {
@@ -181,8 +243,12 @@ export default function Insights() {
 
       <RequestInsightModal
         isOpen={isRequestModalOpen}
-        onClose={() => setIsRequestModalOpen(false)}
+        onClose={() => {
+          setIsRequestModalOpen(false);
+          setExistingOrder(null);
+        }}
         onSuccess={handleInsightCreated}
+        existingOrder={existingOrder}
       />
     </div>
   );
