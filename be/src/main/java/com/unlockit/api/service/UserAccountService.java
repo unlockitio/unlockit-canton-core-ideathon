@@ -3,15 +3,15 @@ package com.unlockit.api.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unlockit.api.client.CantonApiClient;
 import com.unlockit.api.dto.CantonActiveContractsRequest;
+import com.unlockit.api.dto.RankingEntry;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class UserAccountService {
@@ -201,5 +201,183 @@ public class UserAccountService {
         );
 
         return new CantonActiveContractsRequest(filterConfig, true, offset);
+    }
+
+    /**
+     * Get public rankings of non-citizen users
+     * This method doesn't require authentication - it uses operator credentials internally
+     *
+     * @return List of ranking entries sorted by reputation (descending)
+     */
+    public List<RankingEntry> getPublicRankings() {
+        // Create a simple operator token for internal use
+        // In production, this would use a proper service account token
+        String operatorToken = createOperatorToken();
+
+        // Get all user accounts
+        List<Object> contracts = getUserAccounts(operatorToken);
+
+        LOG.infof("Processing %d contracts for rankings", contracts != null ? contracts.size() : 0);
+
+        if (contracts == null || contracts.isEmpty()) {
+            return List.of();
+        }
+
+        // Extract and filter rankings
+        List<RankingEntry> rankings = contracts.stream()
+            .map(this::extractRankingEntry)
+            .filter(Objects::nonNull)
+            .filter(entry -> !"PrivateCitizen".equals(entry.getRole())) // Exclude citizens
+            .sorted((a, b) -> Integer.compare(b.getReputation(), a.getReputation())) // Sort by reputation desc
+            .collect(Collectors.toList());
+
+        LOG.infof("Returning %d ranking entries", rankings.size());
+
+        return rankings;
+    }
+
+    /**
+     * Extract ranking entry from a contract object
+     */
+    private RankingEntry extractRankingEntry(Object contract) {
+        try {
+            if (!(contract instanceof Map)) {
+                return null;
+            }
+
+            Map<?, ?> contractMap = (Map<?, ?>) contract;
+
+            // Navigate to the actual contract data
+            // Structure: contractEntry -> JsActiveContract -> createdEvent -> createArgument
+            Object contractEntry = contractMap.get("contractEntry");
+            if (!(contractEntry instanceof Map)) {
+                return null;
+            }
+
+            Map<?, ?> contractEntryMap = (Map<?, ?>) contractEntry;
+            Object jsActiveContract = contractEntryMap.get("JsActiveContract");
+            if (!(jsActiveContract instanceof Map)) {
+                return null;
+            }
+
+            Map<?, ?> jsActiveContractMap = (Map<?, ?>) jsActiveContract;
+            Object createdEvent = jsActiveContractMap.get("createdEvent");
+            if (!(createdEvent instanceof Map)) {
+                return null;
+            }
+
+            Map<?, ?> createdEventMap = (Map<?, ?>) createdEvent;
+            Object createArgument = createdEventMap.get("createArgument");
+            if (!(createArgument instanceof Map)) {
+                return null;
+            }
+
+            Map<?, ?> payloadMap = (Map<?, ?>) createArgument;
+
+            // Extract user party ID and simplify it
+            Object user = payloadMap.get("user");
+            if (user == null) {
+                return null;
+            }
+
+            String userName = extractSimplePartyName(user.toString());
+
+            // Extract reputation (comes as String from Canton)
+            Object reputation = payloadMap.get("reputation");
+            int reputationValue = 0;
+            if (reputation != null) {
+                try {
+                    if (reputation instanceof Number) {
+                        reputationValue = ((Number) reputation).intValue();
+                    } else {
+                        reputationValue = Integer.parseInt(reputation.toString());
+                    }
+                } catch (NumberFormatException e) {
+                    LOG.warnf("Failed to parse reputation value: %s", reputation);
+                }
+            }
+
+            // Extract reputationCap (comes as String from Canton)
+            Object reputationCap = payloadMap.get("reputationCap");
+            int reputationCapValue = 100;
+            if (reputationCap != null) {
+                try {
+                    if (reputationCap instanceof Number) {
+                        reputationCapValue = ((Number) reputationCap).intValue();
+                    } else {
+                        reputationCapValue = Integer.parseInt(reputationCap.toString());
+                    }
+                } catch (NumberFormatException e) {
+                    LOG.warnf("Failed to parse reputationCap value: %s", reputationCap);
+                }
+            }
+
+            // Extract role
+            Object role = payloadMap.get("role");
+            String roleValue = "";
+            if (role != null) {
+                roleValue = role.toString();
+            }
+
+            return new RankingEntry(userName, reputationValue, reputationCapValue, roleValue);
+        } catch (Exception e) {
+            LOG.warnf(e, "Failed to extract ranking entry from contract: %s", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extract simple party name from full party ID
+     * Example: "alice::1220..." -> "alice"
+     */
+    private String extractSimplePartyName(String fullPartyId) {
+        if (fullPartyId == null) {
+            return "Unknown";
+        }
+
+        // Party format: "name::hash" or "name-hash::hash"
+        // We want just the "name" part
+        int colonIndex = fullPartyId.indexOf("::");
+        if (colonIndex > 0) {
+            String namePart = fullPartyId.substring(0, colonIndex);
+            // Remove any hash suffix from the name part (e.g., "alice-abc123" -> "alice")
+            int dashIndex = namePart.lastIndexOf('-');
+            if (dashIndex > 0 && namePart.substring(dashIndex + 1).matches("[0-9a-f]+")) {
+                return namePart.substring(0, dashIndex);
+            }
+            return namePart;
+        }
+
+        return fullPartyId;
+    }
+
+    /**
+     * Create a simple operator token for internal API calls
+     * This is a simplified approach - in production, use proper service accounts
+     */
+    private String createOperatorToken() {
+        // Create a minimal JWT token for operator
+        // Header: {"alg":"HS256","typ":"JWT"}
+        // Payload: {"sub":"operator::...","aud":"canton-ledger-api","iss":"unlockit"}
+        // We're just doing structure validation, not signature verification
+
+        try {
+            String header = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes());
+
+            String payload = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(String.format(
+                    "{\"sub\":\"%s\",\"aud\":\"canton-ledger-api\",\"iss\":\"unlockit\"}",
+                    operatorPartyId
+                ).getBytes());
+
+            String signature = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("fake-signature-for-demo".getBytes());
+
+            return header + "." + payload + "." + signature;
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to create operator token");
+            throw new RuntimeException("Failed to create operator token", e);
+        }
     }
 }

@@ -89,7 +89,7 @@ exports.ContributorReward = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.ContributorReward, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.ContributorReward, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -142,7 +142,7 @@ exports.MarketInsight = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketInsight, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketInsight, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -199,7 +199,7 @@ exports.PaidMarketInsightOrder = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.PaidMarketInsightOrder, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.PaidMarketInsightOrder, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -276,7 +276,7 @@ exports.FailedPaymentOrder = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.FailedPaymentOrder, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.FailedPaymentOrder, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -352,7 +352,7 @@ exports.PaymentPendingOrder = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.PaymentPendingOrder, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.PaymentPendingOrder, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -406,7 +406,7 @@ exports.MarketInsightOrder = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketInsightOrder, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketInsightOrder, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 

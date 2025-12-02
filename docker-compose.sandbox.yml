@@ -28,6 +28,9 @@ services:
         echo 'Canton sandbox is ready, seeding test credentials...' &&
         daml script --dar /workspace/.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar --script-name SeedCredentials:seedTestCredentials --ledger-host localhost --ledger-port 6865 &&
         echo 'Test credentials seeded successfully!' &&
+        echo 'Seeding transaction data...' &&
+        daml script --dar /workspace/.daml/dist/unlockit-canton-core-ideathon-0.0.1.dar --script-name SeedTransactions:seedTransactions --ledger-host localhost --ledger-port 6865 &&
+        echo 'Transaction seeding completed!' &&
         tail -f /tmp/sandbox.log
       "
     ports:

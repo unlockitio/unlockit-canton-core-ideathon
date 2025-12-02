@@ -31,6 +31,7 @@ export default function Layout({ onLogout }: LayoutProps) {
               <li><Link to="/">Dashboard</Link></li>
               <li><Link to="/transactions">Transactions</Link></li>
               <li><Link to="/insights">Insights</Link></li>
+              <li><Link to="/rankings">Rankings</Link></li>
               <li
                 className="navbar-dropdown"
                 onMouseEnter={() => setWalletDropdownOpen(true)}

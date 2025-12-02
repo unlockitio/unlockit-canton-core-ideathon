@@ -16,6 +16,7 @@ import AdminApprovals from './pages/AdminApprovals';
 import AdminUsers from './pages/AdminUsers';
 import LedgerDebug from './pages/LedgerDebug';
 import Layout from './components/Layout';
+import Rankings from './pages/Rankings';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Wrapper component to protect admin routes
@@ -64,6 +65,7 @@ function AppContent() {
           <Route path="admin/approvals" element={<AdminRoute><AdminApprovals /></AdminRoute>} />
           <Route path="admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="debug/ledger" element={<LedgerDebug />} />
+          <Route path="rankings" element={<Rankings />} />
         </Route>
       </Routes>
     );

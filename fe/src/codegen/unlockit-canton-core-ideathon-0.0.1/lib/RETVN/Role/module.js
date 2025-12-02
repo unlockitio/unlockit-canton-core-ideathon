@@ -57,7 +57,7 @@ exports.MarketDataQueryReceipt = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketDataQueryReceipt, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketDataQueryReceipt, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -111,7 +111,7 @@ exports.MarketDataAccessRight = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketDataAccessRight, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketDataAccessRight, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -144,7 +144,7 @@ exports.TransactionVerificationDelegation = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionVerificationDelegation, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionVerificationDelegation, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -196,7 +196,7 @@ exports.TransactionVerificationRight = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionVerificationRight, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionVerificationRight, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -228,7 +228,7 @@ exports.TransactionSubmissionRight = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.TransactionSubmissionRight, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.TransactionSubmissionRight, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -300,7 +300,7 @@ exports.RegistrationRequest = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.RegistrationRequest, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.RegistrationRequest, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -503,7 +503,7 @@ exports.UserAccount = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.UserAccount, ['71583f65ef85ef1aec6cdcd004596c0d65ab0cf069f43b13a3bda128bb5ab726', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.UserAccount, ['dd834f35bcfeff31af75eb9fb6e4ab3b9f784c674be321896c1bb4d8b4cd458f', '#unlockit-canton-core-ideathon']);
 
 
 

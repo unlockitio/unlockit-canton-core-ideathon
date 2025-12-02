@@ -7,11 +7,11 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Default to 200 transactions
-TRANSACTION_COUNT=200
+# Default to 100 transactions (realistic distribution)
+TRANSACTION_COUNT=100
 
 echo -e "${YELLOW}[Transaction Seeding]${NC} Starting transaction seeding process..."
-echo -e "${YELLOW}[INFO]${NC} Will create ${GREEN}${TRANSACTION_COUNT}${NC} transactions"
+echo -e "${YELLOW}[INFO]${NC} Will create ${GREEN}${TRANSACTION_COUNT}${NC} transactions with realistic distribution"
 
 # Check if Canton is running
 CANTON_URL="http://localhost:8080"
@@ -52,10 +52,16 @@ daml script \
 echo -e "${GREEN}[SUCCESS]${NC} Transactions seeded successfully!"
 echo -e ""
 echo -e "${YELLOW}[INFO]${NC} Transaction details:"
-echo -e "  - ${GREEN}${TRANSACTION_COUNT} transactions${NC} created"
+echo -e "  - ${GREEN}${TRANSACTION_COUNT} transactions${NC} created with realistic distribution"
+echo -e "  - ${GREEN}5 agents${NC} - RealtorAgent: alice, agent2-5"
+echo -e "  - ${GREEN}3 brokers${NC} - RealtorBroker: charlie, broker2-3"
+echo -e "  - ${GREEN}2 masters${NC} - RealtorMaster: master1-2"
+echo -e "  - ${GREEN}3 notaries${NC} - NotaryPublic: notary1-3"
+echo -e "  - ${GREEN}1 tax authority${NC} - TaxAuthority: taxAuth"
+echo -e "  - ${GREEN}10 citizens${NC} - PrivateCitizen: 5 heavy users with 18 tx each, 5 regular with 2 tx each"
+echo -e "  - ${GREEN}Consistency${NC}: Each agent always uses the same broker and master"
 echo -e "  - Property types: SingleFamily, Condo, Townhouse, MultiFamily, Land"
-echo -e "  - Locations: 100 California ZIP codes (SF, LA, SD, SJ, Oakland/Berkeley)"
-echo -e "  - Sale prices: Range from \$200K to \$2M (property-type specific)"
-echo -e "  - Transaction dates: Spread over the past year"
+echo -e "  - Sale prices: Range from \$200K to \$2M - property-type specific"
+echo -e "  - Transaction dates: Spread over the past 2 years"
 echo -e "  - Financing types: Conventional, FHA, VA, Cash, USDA"
 echo -e ""
