@@ -122,32 +122,15 @@ public class PaidMarketInsightOrderProcessor {
 
             // Parse response into TransactionData.Contract objects
             List<TransactionData.Contract> contracts = new ArrayList<>();
+
             for (Object item : response) {
                 try {
-                    if (item instanceof Map) {
-                        Map<?, ?> itemMap = (Map<?, ?>) item;
-                        Object contractEntry = itemMap.get("contractEntry");
-                        if (contractEntry instanceof Map) {
-                            Map<?, ?> entryMap = (Map<?, ?>) contractEntry;
-                            Object jsActiveContract = entryMap.get("JsActiveContract");
-                            if (jsActiveContract instanceof Map) {
-                                Map<?, ?> activeMap = (Map<?, ?>) jsActiveContract;
-                                Object createdEvent = activeMap.get("createdEvent");
-                                if (createdEvent instanceof Map) {
-                                    Map<?, ?> eventMap = (Map<?, ?>) createdEvent;
-
-                                    // Convert to JSON and deserialize using generated code
-                                    String json = objectMapper.writeValueAsString(eventMap);
-                                    var createdEventProto = objectMapper.readValue(json, com.daml.ledger.javaapi.data.CreatedEvent.class);
-
-                                    TransactionData.Contract contract = TransactionData.Contract.fromCreatedEvent(createdEventProto);
-                                    contracts.add(contract);
-                                }
-                            }
-                        }
+                    TransactionData.Contract contract = parseContractFromJson(item);
+                    if (contract != null) {
+                        contracts.add(contract);
                     }
                 } catch (Exception e) {
-                    LOG.warnf("Failed to parse TransactionData contract: %s", e.getMessage());
+                    LOG.warnf(e, "Failed to parse contract from JSON: %s", e.getMessage());
                 }
             }
 
@@ -160,17 +143,134 @@ public class PaidMarketInsightOrderProcessor {
         }
     }
 
+    private TransactionData.Contract parseContractFromJson(Object jsonObject) {
+        try {
+            // The JSON structure is:
+            // {
+            //   "workflowId": "",
+            //   "contractEntry": {
+            //     "JsActiveContract": {
+            //       "createdEvent": { ... }
+            //     }
+            //   }
+            // }
+
+            if (!(jsonObject instanceof Map)) {
+                LOG.warnf("Expected Map but got: %s", jsonObject.getClass().getName());
+                return null;
+            }
+
+            Map<?, ?> wrapper = (Map<?, ?>) jsonObject;
+            Object contractEntry = wrapper.get("contractEntry");
+
+            if (!(contractEntry instanceof Map)) {
+                LOG.warnf("contractEntry is not a Map: %s", contractEntry);
+                return null;
+            }
+
+            Map<?, ?> contractEntryMap = (Map<?, ?>) contractEntry;
+            Object jsActiveContract = contractEntryMap.get("JsActiveContract");
+
+            if (!(jsActiveContract instanceof Map)) {
+                LOG.warnf("JsActiveContract is not a Map: %s", jsActiveContract);
+                return null;
+            }
+
+            Map<?, ?> jsActiveContractMap = (Map<?, ?>) jsActiveContract;
+            Object createdEventObj = jsActiveContractMap.get("createdEvent");
+
+            if (!(createdEventObj instanceof Map)) {
+                LOG.warnf("createdEvent is not a Map: %s", createdEventObj);
+                return null;
+            }
+
+            Map<?, ?> createdEventMap = (Map<?, ?>) createdEventObj;
+
+            // Extract createArgument which contains the contract data
+            Object createArgumentObj = createdEventMap.get("createArgument");
+
+            if (!(createArgumentObj instanceof Map)) {
+                LOG.warnf("createArgument is not a Map: %s", createArgumentObj);
+                return null;
+            }
+
+            Map<?, ?> createArgument = (Map<?, ?>) createArgumentObj;
+
+            // Extract contract ID
+            String contractId = (String) createdEventMap.get("contractId");
+
+            // Use the generated TransactionData.fromJson() method
+            // Convert the createArgument Map to JSON string
+            String createArgumentJson = objectMapper.writeValueAsString(createArgument);
+            TransactionData txData = TransactionData.fromJson(createArgumentJson);
+
+            // Extract signatories and observers
+            List<String> signatories = extractStringList(createdEventMap.get("signatories"));
+            List<String> observers = extractStringList(createdEventMap.get("observers"));
+
+            // Create Contract
+            TransactionData.ContractId cid = new TransactionData.ContractId(contractId);
+            return new TransactionData.Contract(
+                cid,
+                txData,
+                new java.util.HashSet<>(signatories),
+                new java.util.HashSet<>(observers)
+            );
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Error parsing contract from JSON: %s", e.getMessage());
+            return null;
+        }
+    }
+
+    private List<String> extractStringList(Object obj) {
+        if (obj == null) {
+            return Collections.emptyList();
+        }
+        if (obj instanceof List<?>) {
+            List<?> list = (List<?>) obj;
+            List<String> result = new ArrayList<>();
+            for (Object item : list) {
+                if (item instanceof String) {
+                    result.add((String) item);
+                }
+            }
+            return result;
+        }
+        return Collections.emptyList();
+    }
+
     private List<TransactionData.Contract> filterTransactionsByQueryParams(
             List<TransactionData.Contract> transactions,
             QueryParams queryParams,
             Instant fulfilledAt
     ) {
-        return transactions.stream()
+        LOG.infof("Starting filter with %d transactions. QueryParams: qualityLevel=%s, timeRange=%s, postalCode=%s, bedrooms=%s, livingArea=%s, yearBuilt=%s, propertyType=%s",
+                transactions.size(), queryParams.qualityLevel, queryParams.timeRange,
+                queryParams.postalCode, queryParams.bedrooms, queryParams.livingArea,
+                queryParams.yearBuilt, queryParams.propertyType);
+
+        List<TransactionData.Contract> afterQuality = transactions.stream()
                 .filter(tx -> matchesQualityLevel(tx, queryParams))
+                .toList();
+        LOG.infof("After quality filter: %d transactions", afterQuality.size());
+
+        List<TransactionData.Contract> afterTime = afterQuality.stream()
                 .filter(tx -> matchesTimeRange(tx, queryParams, fulfilledAt))
+                .toList();
+        LOG.infof("After time filter: %d transactions", afterTime.size());
+
+        List<TransactionData.Contract> afterPostalCode = afterTime.stream()
                 .filter(tx -> matchesPostalCode(tx, queryParams))
+                .toList();
+        LOG.infof("After postal code filter: %d transactions", afterPostalCode.size());
+
+        List<TransactionData.Contract> afterSegment = afterPostalCode.stream()
                 .filter(tx -> matchesSegment(tx, queryParams))
                 .toList();
+        LOG.infof("After segment filter: %d transactions", afterSegment.size());
+
+        return afterSegment;
     }
 
     private boolean matchesQualityLevel(TransactionData.Contract tx, QueryParams params) {
@@ -215,6 +315,13 @@ public class PaidMarketInsightOrderProcessor {
         boolean livingAreaMatch = params.livingArea.isEmpty() || matchesLivingArea(tx, params.livingArea);
         boolean yearBuiltMatch = params.yearBuilt.isEmpty() || matchesYearBuilt(tx, params.yearBuilt);
         boolean propertyTypeMatch = params.propertyType.isEmpty() || matchesPropertyType(tx, params.propertyType);
+
+        if (!bedroomsMatch || !livingAreaMatch || !yearBuiltMatch || !propertyTypeMatch) {
+            LOG.debugf("TX %s segment mismatch: bedrooms=%s (tx=%s), livingArea=%s (tx=%s), yearBuilt=%s (tx=%s), propertyType=%s (tx=%s)",
+                    tx.data.transactionId, bedroomsMatch, tx.data.bedroomsTotal,
+                    livingAreaMatch, tx.data.livingAreaSqft, yearBuiltMatch, tx.data.yearBuilt,
+                    propertyTypeMatch, tx.data.propertyType);
+        }
 
         return bedroomsMatch && livingAreaMatch && yearBuiltMatch && propertyTypeMatch;
     }
@@ -299,7 +406,8 @@ public class PaidMarketInsightOrderProcessor {
     }
 
     private boolean matchesPropertyType(TransactionData.Contract tx, List<String> propertyTypes) {
-        String txPropertyType = tx.data.propertyType.toString();
+        // Use toValue().getConstructor() to get the DAML enum string representation (e.g., "Condo" not "CONDO")
+        String txPropertyType = tx.data.propertyType.toValue().getConstructor();
         return propertyTypes.contains(txPropertyType);
     }
 

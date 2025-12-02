@@ -1,5 +1,12 @@
 -- | Seed many transactions for testing
 -- This script creates numerous realistic transaction proposals to populate the system
+-- With realistic distribution:
+-- - 5 Agents (RealtorAgent)
+-- - 3 Brokers (RealtorBroker)
+-- - 2 Masters (RealtorMaster)
+-- - 3 Notaries (NotaryPublic)
+-- - 1 Tax Authority (TaxAuthority)
+-- - 10 Citizens (PrivateCitizen) - 5 heavy users with 18 tx each, 5 regular with 2 tx each
 module SeedTransactions where
 
 import Daml.Script
@@ -7,13 +14,15 @@ import DA.Time
 import DA.Date (date, Month(..), addDays)
 import DA.List
 import qualified DA.Text
+import DA.Foldable (forA_)
+import DA.Action (when)
 import RETVN.Transaction
 import RETVN.Role
 
--- | Main seeding script - creates many realistic transactions
+-- | Main seeding script - creates 100 realistic transactions
 -- Note: Requires that SeedCredentials has been run first to create parties
 seedTransactions : Script ()
-seedTransactions = seedTransactionsWithCount 200
+seedTransactions = seedTransactionsWithCount 100
 
 -- | Seeding script with configurable transaction count
 seedTransactionsWithCount : Int -> Script ()
@@ -27,31 +36,194 @@ seedTransactionsWithCount count = do
 
   -- Get all required parties
   let operator = findParty "operator"
+
+  -- Agents (5)
   let alice = findParty "alice"
-  let bob = findParty "bob"
+  let agent2 = findParty "agent2"
+  let agent3 = findParty "agent3"
+  let agent4 = findParty "agent4"
+  let agent5 = findParty "agent5"
+
+  -- Brokers (3)
+  let charlie = findParty "charlie"
+  let broker2 = findParty "broker2"
+  let broker3 = findParty "broker3"
+
+  -- Masters (2)
+  let master1 = findParty "master1"
+  let master2 = findParty "master2"
+
+  -- Notaries (3)
+  let notary1 = findParty "notary1"
+  let notary2 = findParty "notary2"
+  let notary3 = findParty "notary3"
+
+  -- Tax Authority (1)
+  let taxAuth = findParty "taxAuth"
 
   -- Get current time
   now <- getTime
 
-  -- Create submission rights
+  -- Create 10 citizens as parties
+  -- 5 heavy users (18 transactions each = 90)
+  -- 5 regular users (2 transactions each = 10)
+  -- Total: 100 transactions
+  let citizenNames = ["citizen1", "citizen2", "citizen3", "citizen4", "citizen5"
+                     , "citizen6", "citizen7", "citizen8", "citizen9", "citizen10"]
+
+  citizenParties <- forA citizenNames (\name -> allocateParty name)
+
+  -- Create list of (Party, Name) pairs for easy reference
+  let citizensWithNames = zip citizenParties citizenNames
+
+  -- Create users for all citizens with simple names
+  forA_ citizensWithNames (\(citizen, name) -> do
+    citizenId <- validateUserId name
+    createUser (User citizenId (Some citizen)) [CanActAs citizen]
+    )
+
+  -- Create UserAccount contracts for all citizens
+  forA_ citizenParties (\citizen -> do
+    submitMulti [operator, citizen] [] $ createCmd UserAccount with
+      operator = operator
+      user = citizen
+      role = PrivateCitizen
+      verificationWeight = getVerificationWeight PrivateCitizen
+      credentialPresentations = []
+      registeredAt = now
+      status = AccountActive
+      reputation = getStartingReputation PrivateCitizen
+      reputationCap = getReputationCap PrivateCitizen
+      transactionsSubmitted = 0
+    )
+
+  -- Create submission and verification rights for all agents
   aliceSubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
     operator = operator
     user = alice
     role = RealtorAgent
     verificationWeight = 8
 
-  bobSubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
-    operator = operator
-    user = bob
-    role = PrivateCitizen
-    verificationWeight = 5
-
-  -- Create verification rights (only for RealtorAgent role)
   aliceVerificationRight <- submit operator $ createCmd TransactionVerificationRight with
     operator = operator
     user = alice
     role = RealtorAgent
     verificationWeight = 8
+
+  agent2SubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = agent2
+    role = RealtorAgent
+    verificationWeight = 8
+
+  agent2VerificationRight <- submit operator $ createCmd TransactionVerificationRight with
+    operator = operator
+    user = agent2
+    role = RealtorAgent
+    verificationWeight = 8
+
+  agent3SubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = agent3
+    role = RealtorAgent
+    verificationWeight = 8
+
+  agent3VerificationRight <- submit operator $ createCmd TransactionVerificationRight with
+    operator = operator
+    user = agent3
+    role = RealtorAgent
+    verificationWeight = 8
+
+  agent4SubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = agent4
+    role = RealtorAgent
+    verificationWeight = 8
+
+  agent4VerificationRight <- submit operator $ createCmd TransactionVerificationRight with
+    operator = operator
+    user = agent4
+    role = RealtorAgent
+    verificationWeight = 8
+
+  agent5SubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = agent5
+    role = RealtorAgent
+    verificationWeight = 8
+
+  agent5VerificationRight <- submit operator $ createCmd TransactionVerificationRight with
+    operator = operator
+    user = agent5
+    role = RealtorAgent
+    verificationWeight = 8
+
+  -- Create submission and verification rights for brokers
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = charlie
+    role = RealtorBroker
+    verificationWeight = 15
+
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = broker2
+    role = RealtorBroker
+    verificationWeight = 15
+
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = broker3
+    role = RealtorBroker
+    verificationWeight = 15
+
+  -- Create submission and verification rights for masters
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = master1
+    role = RealtorMaster
+    verificationWeight = 20
+
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = master2
+    role = RealtorMaster
+    verificationWeight = 20
+
+  -- Create submission and verification rights for notaries
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = notary1
+    role = NotaryPublic
+    verificationWeight = 25
+
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = notary2
+    role = NotaryPublic
+    verificationWeight = 25
+
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = notary3
+    role = NotaryPublic
+    verificationWeight = 25
+
+  -- Create submission and verification rights for tax authority
+  _ <- submit operator $ createCmd TransactionSubmissionRight with
+    operator = operator
+    user = taxAuth
+    role = TaxAuthority
+    verificationWeight = 40
+
+  -- Create submission rights for ALL citizens (they all submit transactions)
+  forA_ citizenParties (\citizen -> do
+    submit operator $ createCmd TransactionSubmissionRight with
+      operator = operator
+      user = citizen
+      role = PrivateCitizen
+      verificationWeight = 5
+    )
 
   -- ===== DATA CONFIGURATION =====
   -- Arrays and ranges for generating realistic transaction data
@@ -100,8 +272,69 @@ seedTransactionsWithCount count = do
         , "Park Pl", "Grove St", "Highland Ave", "Mission Blvd", "Castro St"
         ]
 
-  -- Submitters (who will create transactions)
-  let submitters = [(alice, RealtorAgent), (bob, PrivateCitizen)]
+  -- ===== CONSISTENCY MAPPING =====
+  -- Each agent is consistently associated with the same broker and master
+  -- Agent -> (Broker, Master)
+  let agentMapping =
+        [ (alice, charlie, master1)
+        , (agent2, charlie, master1)
+        , (agent3, broker2, master1)
+        , (agent4, broker2, master2)
+        , (agent5, broker3, master2)
+        ]
+
+  -- Notaries and Tax Authority for verifications (cycle through them)
+  let verifierRoles =
+        [ (notary1, NotaryPublic, 25)
+        , (notary2, NotaryPublic, 25)
+        , (notary3, NotaryPublic, 25)
+        , (taxAuth, TaxAuthority, 40)
+        ]
+
+  -- ===== TRANSACTION DISTRIBUTION =====
+  -- Build transaction list with realistic distribution:
+  -- - Professionals (30 transactions): agents (15), brokers (6), masters (4), notaries (3), tax authority (2)
+  -- - Citizens (70 transactions): 5 heavy users (12 each = 60), 5 regular users (2 each = 10)
+  -- Total: 100 transactions
+
+  -- Professional transactions (0-29)
+  let professionalTransactions =
+        -- Agents: 3 transactions each = 15 total
+        [ (alice, RealtorAgent, i) | i <- [0..2] ] <>
+        [ (agent2, RealtorAgent, i) | i <- [3..5] ] <>
+        [ (agent3, RealtorAgent, i) | i <- [6..8] ] <>
+        [ (agent4, RealtorAgent, i) | i <- [9..11] ] <>
+        [ (agent5, RealtorAgent, i) | i <- [12..14] ] <>
+        -- Brokers: 2 transactions each = 6 total
+        [ (charlie, RealtorBroker, i) | i <- [15..16] ] <>
+        [ (broker2, RealtorBroker, i) | i <- [17..18] ] <>
+        [ (broker3, RealtorBroker, i) | i <- [19..20] ] <>
+        -- Masters: 2 transactions each = 4 total
+        [ (master1, RealtorMaster, i) | i <- [21..22] ] <>
+        [ (master2, RealtorMaster, i) | i <- [23..24] ] <>
+        -- Notaries: 1 transaction each = 3 total
+        [ (notary1, NotaryPublic, i) | i <- [25..25] ] <>
+        [ (notary2, NotaryPublic, i) | i <- [26..26] ] <>
+        [ (notary3, NotaryPublic, i) | i <- [27..27] ] <>
+        -- Tax Authority: 2 transactions = 2 total
+        [ (taxAuth, TaxAuthority, i) | i <- [28..29] ]
+
+  -- Citizen transactions (30-99): 70 total
+  let heavyUserTransactions =
+        [ (citizenParties !! 0, PrivateCitizen, i) | i <- [30..41] ] <>  -- 12 transactions
+        [ (citizenParties !! 1, PrivateCitizen, i) | i <- [42..53] ] <>  -- 12 transactions
+        [ (citizenParties !! 2, PrivateCitizen, i) | i <- [54..65] ] <>  -- 12 transactions
+        [ (citizenParties !! 3, PrivateCitizen, i) | i <- [66..77] ] <>  -- 12 transactions
+        [ (citizenParties !! 4, PrivateCitizen, i) | i <- [78..89] ]     -- 12 transactions
+
+  let regularUserTransactions =
+        [ (citizenParties !! 5, PrivateCitizen, i) | i <- [90..91] ] <>  -- 2 transactions
+        [ (citizenParties !! 6, PrivateCitizen, i) | i <- [92..93] ] <>  -- 2 transactions
+        [ (citizenParties !! 7, PrivateCitizen, i) | i <- [94..95] ] <>  -- 2 transactions
+        [ (citizenParties !! 8, PrivateCitizen, i) | i <- [96..97] ] <>  -- 2 transactions
+        [ (citizenParties !! 9, PrivateCitizen, i) | i <- [98..99] ]     -- 2 transactions
+
+  let allTransactionAssignments = professionalTransactions <> heavyUserTransactions <> regularUserTransactions
 
   -- ===== HELPER FUNCTIONS =====
 
@@ -119,9 +352,12 @@ seedTransactionsWithCount count = do
 
   -- ===== TRANSACTION GENERATION =====
 
-  let createTransaction idx = do
-        -- Select submitter (alternate between alice and bob)
-        let (submitter, submitterRole) = submitters !! (idx % 2)
+  let createTransaction (submitter, submitterRole, idx) = do
+        -- Transaction submitted by either a citizen or a professional
+
+        -- Assign an agent to this transaction (cycle through 5 agents)
+        let agentIdx = idx % 5
+        let (agent, broker, master) = agentMapping !! agentIdx
 
         -- Select property type (cycle through all types)
         let propertyType = propertyTypes !! (idx % 5)
@@ -190,8 +426,10 @@ seedTransactionsWithCount count = do
         -- Generate closing date (30 days after transaction)
         let closingDate = Some (addRelTime txTime (days 30))
 
-        -- Assign verifiers (alice or bob, whoever didn't submit)
-        let proposedVerifiers = if submitter == alice then [bob] else [alice]
+        -- Assign verifiers: agent, broker, master, and one rotating notary/taxAuth
+        let verifierIdx = idx % 4
+        let (additionalVerifier, additionalRole, additionalWeight) = verifierRoles !! verifierIdx
+        let proposedVerifiers = [agent, broker, master, additionalVerifier]
 
         -- Transaction ID
         let transactionId = "TX-" <> show idx <> "-2024"
@@ -205,8 +443,21 @@ seedTransactionsWithCount count = do
               notes = None
               verifiedAt = now
 
+        -- Create verification from agent (only if agent is not the submitter)
+        let agentVerification = if agent /= submitter
+              then Some (Verification with
+                    verifier = agent
+                    verifierRole = RealtorAgent
+                    verificationWeight = 8
+                    decision = Confirmed
+                    notes = None
+                    verifiedAt = now)
+              else None
+
         let allVerifiers = dedup (submitter :: proposedVerifiers)
-        let initialVerifications = [submitterVerification]
+        let initialVerifications = case agentVerification of
+              Some av -> [submitterVerification, av]
+              None -> [submitterVerification]
         let initialTrustScore = calculateTrustScore initialVerifications
         let initialStatus = determineStatus initialVerifications
 
@@ -235,9 +486,146 @@ seedTransactionsWithCount count = do
           status = initialStatus
           submittedAt = now
 
-  -- Generate transactions based on count parameter
-  _ <- forA [0..(count - 1)] createTransaction
+  -- Generate transactions based on distribution
+  -- Use allTransactionAssignments which has the realistic distribution
+  transactionCids <- forA allTransactionAssignments createTransaction
 
   debug ("Successfully created " <> show count <> " TransactionData contracts!")
-  debug "Operator is signatory on all contracts."
+  debug "Now applying verifications to create varied reputation..."
+
+  -- Apply additional verifications to simulate real activity
+  -- This will update submitters' reputation values
+  forA_ allTransactionAssignments (\(submitter, submitterRole, idx) -> do
+    -- Determine which verifiers should verify based on idx
+    -- For variety: 60% get broker verification, 40% get master verification, 20% get notary/tax verification
+    let shouldBrokerVerify = (idx % 10) < 6
+    let shouldMasterVerify = (idx % 10) < 4
+    let shouldAdditionalVerify = (idx % 10) < 2
+
+    -- Find broker, master, and additional verifier from assigned verifiers
+    let agentIdx = idx % 5
+    let (agent, broker, master) = agentMapping !! agentIdx
+    let verifierIdx = idx % 4
+    let (additionalVerifier, additionalRole, additionalWeight) = verifierRoles !! verifierIdx
+
+    -- Get UserAccount for submitter (to pass to ApplyVerification)
+    -- Note: we will re-query this account before each verification because ApplyVerification
+    -- may exercise UpdateReputation on the submitter's UserAccount, which consumes and
+    -- recreates the account ContractId. Using a stale ContractId causes CONTRACT_NOT_FOUND.
+    submitterAccounts <- query @UserAccount operator
+    let submitterAccount = find (\(_, acc) -> acc.user == submitter) submitterAccounts
+
+    case submitterAccount of
+      Some (_, _) -> do
+        -- Get UserAccounts for verifiers (we will re-query submitter account as needed)
+        verifierAccounts <- query @UserAccount operator
+
+        -- Helper to fetch latest submitter account id
+        let fetchLatestSubmitterAccount = do
+              s <- query @UserAccount operator
+              return $ find (\(_, acc) -> acc.user == submitter) s
+
+        -- Apply broker verification if conditions met
+        when (shouldBrokerVerify && broker /= submitter) $ do
+          let brokerAccount = find (\(_, acc) -> acc.user == broker) verifierAccounts
+          case brokerAccount of
+            Some (brokerAccId, _) -> do
+              -- Query for the current transaction contract
+              tx <- query @TransactionData operator
+              let txData = find (\(_, t) -> t.transactionId == ("TX-" <> show idx <> "-2024")) tx
+              case txData of
+                Some (currentTxCid, currentTxContract) -> do
+                  when (broker `notElem` (map (\v -> v.verifier) currentTxContract.verifications)) $ do
+                    -- Re-fetch the submitter account id just before exercising
+                    latestSubmitter <- fetchLatestSubmitterAccount
+                    case latestSubmitter of
+                      Some (submitterAccId, _) -> do
+                        _ <- submit operator $ exerciseCmd currentTxCid ApplyVerification with
+                          verifier = broker
+                          verifierAccount = brokerAccId
+                          submitterAccount = submitterAccId
+                          decision = Confirmed
+                          notes = None
+                          verifiedAt = now
+                        return ()
+                      None -> return ()
+                None -> return ()
+            None -> return ()
+
+        -- Apply master verification if conditions met
+        when (shouldMasterVerify && master /= submitter) $ do
+          let masterAccount = find (\(_, acc) -> acc.user == master) verifierAccounts
+          case masterAccount of
+            Some (masterAccId, _) -> do
+              -- Query for the current transaction contract (may have been updated by broker)
+              tx <- query @TransactionData operator
+              let txData = find (\(_, t) -> t.transactionId == ("TX-" <> show idx <> "-2024")) tx
+              case txData of
+                Some (currentTxCid, currentTxContract) -> do
+                  when (master `notElem` (map (\v -> v.verifier) currentTxContract.verifications)) $ do
+                    -- Re-fetch the submitter account id just before exercising
+                    latestSubmitter <- fetchLatestSubmitterAccount
+                    case latestSubmitter of
+                      Some (submitterAccId, _) -> do
+                        _ <- submit operator $ exerciseCmd currentTxCid ApplyVerification with
+                          verifier = master
+                          verifierAccount = masterAccId
+                          submitterAccount = submitterAccId
+                          decision = Confirmed
+                          notes = None
+                          verifiedAt = now
+                        return ()
+                      None -> return ()
+                None -> return ()
+            None -> return ()
+
+        -- Apply additional verifier (notary/tax) verification if conditions met
+        when (shouldAdditionalVerify && additionalVerifier /= submitter) $ do
+          let additionalAccount = find (\(_, acc) -> acc.user == additionalVerifier) verifierAccounts
+          case additionalAccount of
+            Some (additionalAccId, _) -> do
+              -- Query for the current transaction contract (may have been updated)
+              tx <- query @TransactionData operator
+              let txData = find (\(_, t) -> t.transactionId == ("TX-" <> show idx <> "-2024")) tx
+              case txData of
+                Some (currentTxCid, currentTxContract) -> do
+                  when (additionalVerifier `notElem` (map (\v -> v.verifier) currentTxContract.verifications)) $ do
+                    -- Re-fetch the submitter account id just before exercising
+                    latestSubmitter <- fetchLatestSubmitterAccount
+                    case latestSubmitter of
+                      Some (submitterAccId, _) -> do
+                        _ <- submit operator $ exerciseCmd currentTxCid ApplyVerification with
+                          verifier = additionalVerifier
+                          verifierAccount = additionalAccId
+                          submitterAccount = submitterAccId
+                          decision = Confirmed
+                          notes = None
+                          verifiedAt = now
+                        return ()
+                      None -> return ()
+                None -> return ()
+            None -> return ()
+
+        return ()
+      None -> return ()
+    )
+
+  debug "Verifications applied!"
+  debug "Distribution:"
+  debug "  Professionals (30 transactions):"
+  debug "    - Agents: 3 each = 15 total"
+  debug "    - Brokers: 2 each = 6 total"
+  debug "    - Masters: 2 each = 4 total"
+  debug "    - Notaries: 1 each = 3 total"
+  debug "    - Tax Authority: 2 total"
+  debug "  Citizens (70 transactions):"
+  debug "    - 5 heavy users: 12 each = 60 total"
+  debug "    - 5 regular users: 2 each = 10 total"
+  debug "Consistency: Each agent always uses the same broker and master"
+  debug ("Agent mappings:")
+  debug ("  alice -> charlie (broker) -> master1")
+  debug ("  agent2 -> charlie (broker) -> master1")
+  debug ("  agent3 -> broker2 -> master1")
+  debug ("  agent4 -> broker2 -> master2")
+  debug ("  agent5 -> broker3 -> master2")
   return ()

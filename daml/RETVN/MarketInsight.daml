@@ -3,7 +3,7 @@
 module RETVN.MarketInsight where
 
 import RETVN.Transaction
-import DA.Optional (fromOptional, isSome)
+import DA.Optional (fromOptional)
 import DA.Text as T
 import DA.Foldable (maximum, Foldable(minimum), forA_)
 import DA.Time
@@ -138,13 +138,13 @@ template PaymentPendingOrder
       paymentAmount == calculateInsightPrice queryParams &&
       paymentReference /= ""
 
-    -- | Operator confirms payment (creates paid order)
-    choice ConfirmPayment : ContractId PaidMarketInsightOrder
+    -- | Operator confirms payment (creates paid order and confirmation record)
+    choice ConfirmPayment : (ContractId PaidMarketInsightOrder, ContractId ConfirmedPaymentOrder)
       with
         confirmedAt : Time
       controller operator
       do
-        create PaidMarketInsightOrder with
+        paidOrderCid <- create PaidMarketInsightOrder with
           operator = operator
           buyer = buyer
           queryParams = queryParams
@@ -152,6 +152,18 @@ template PaymentPendingOrder
           paidAmount = paymentAmount
           paidAt = confirmedAt
           paymentReference = paymentReference
+
+        confirmedCid <- create ConfirmedPaymentOrder with
+          operator = operator
+          buyer = buyer
+          queryParams = queryParams
+          orderedAt = orderedAt
+          paymentAmount = paymentAmount
+          paymentInitiatedAt = paymentInitiatedAt
+          paymentReference = paymentReference
+          confirmedAt = confirmedAt
+
+        return (paidOrderCid, confirmedCid)
 
     -- | Operator rejects payment (creates failed order)
     choice RejectPayment : ContractId FailedPaymentOrder
@@ -214,7 +226,26 @@ template FailedPaymentOrder
         return ()
 
 -- ============================================================================
--- TEMPLATE 4: PAID MARKET INSIGHT ORDER (Awaiting Fulfillment)
+-- TEMPLATE 4: CONFIRMED PAYMENT ORDER (Payment Confirmed Record)
+-- ============================================================================
+
+-- | Confirmed payment order record (no actions needed, just for querying)
+template ConfirmedPaymentOrder
+  with
+    operator : Party
+    buyer : Party
+    queryParams : QueryParams
+    orderedAt : Time
+    paymentAmount : Decimal
+    paymentInitiatedAt : Time
+    paymentReference : Text
+    confirmedAt : Time
+  where
+    signatory buyer
+    observer operator
+
+-- ============================================================================
+-- TEMPLATE 5: PAID MARKET INSIGHT ORDER (Awaiting Fulfillment)
 -- ============================================================================
 
 -- | Paid order waiting for operator to fulfill
@@ -291,7 +322,7 @@ template PaidMarketInsightOrder
         return (insightCid, rewardCids)
 
 -- ============================================================================
--- TEMPLATE 3: MARKET INSIGHT (Fulfilled)
+-- TEMPLATE 6: MARKET INSIGHT (Fulfilled)
 -- ============================================================================
 
 -- | Fulfilled market insight with aggregated data
@@ -316,7 +347,7 @@ template MarketInsight
         return insightData
 
 -- ============================================================================
--- TEMPLATE 5: CONTRIBUTOR REWARD (Aggregated Rewards)
+-- TEMPLATE 7: CONTRIBUTOR REWARD (Aggregated Rewards)
 -- ============================================================================
 
 -- | Aggregated reward contract tracking all contributions for a recipient
@@ -331,8 +362,8 @@ template ContributorReward
     -- Map: transactionId -> list of contributions from that transaction
     contributions : [(Text, [TransactionContribution])]
   where
-    signatory operator, recipient
-    observer operator
+    signatory operator
+    observer recipient
 
     ensure
       rewardAmount >= redeemedAmount &&
