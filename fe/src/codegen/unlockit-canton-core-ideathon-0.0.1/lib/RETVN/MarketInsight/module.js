@@ -89,7 +89,7 @@ exports.ContributorReward = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.ContributorReward, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.ContributorReward, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -142,7 +142,7 @@ exports.MarketInsight = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketInsight, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketInsight, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -199,7 +199,43 @@ exports.PaidMarketInsightOrder = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.PaidMarketInsightOrder, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.PaidMarketInsightOrder, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
+
+
+
+exports.ConfirmedPaymentOrder = damlTypes.assembleTemplate(
+{
+  templateId: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:ConfirmedPaymentOrder',
+  keyDecoder: damlTypes.lazyMemo(function () { return jtv.constant(undefined); }),
+  keyEncode: function () { throw 'EncodeError'; },
+  decoder: damlTypes.lazyMemo(function () { return jtv.object({operator: damlTypes.Party.decoder, buyer: damlTypes.Party.decoder, queryParams: exports.QueryParams.decoder, orderedAt: damlTypes.Time.decoder, paymentAmount: damlTypes.Numeric(10).decoder, paymentInitiatedAt: damlTypes.Time.decoder, paymentReference: damlTypes.Text.decoder, confirmedAt: damlTypes.Time.decoder, }); }),
+  encode: function (__typed__) {
+  return {
+    operator: damlTypes.Party.encode(__typed__.operator),
+    buyer: damlTypes.Party.encode(__typed__.buyer),
+    queryParams: exports.QueryParams.encode(__typed__.queryParams),
+    orderedAt: damlTypes.Time.encode(__typed__.orderedAt),
+    paymentAmount: damlTypes.Numeric(10).encode(__typed__.paymentAmount),
+    paymentInitiatedAt: damlTypes.Time.encode(__typed__.paymentInitiatedAt),
+    paymentReference: damlTypes.Text.encode(__typed__.paymentReference),
+    confirmedAt: damlTypes.Time.encode(__typed__.confirmedAt),
+  };
+}
+,
+  Archive: {
+    template: function () { return exports.ConfirmedPaymentOrder; },
+    choiceName: 'Archive',
+    argumentDecoder: damlTypes.lazyMemo(function () { return pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive.decoder; }),
+    argumentEncode: function (__typed__) { return pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive.encode(__typed__); },
+    resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.Unit.decoder; }),
+    resultEncode: function (__typed__) { return damlTypes.Unit.encode(__typed__); },
+  },
+}
+
+);
+
+
+damlTypes.registerTemplate(exports.ConfirmedPaymentOrder, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -276,7 +312,7 @@ exports.FailedPaymentOrder = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.FailedPaymentOrder, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.FailedPaymentOrder, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -336,8 +372,8 @@ exports.PaymentPendingOrder = damlTypes.assembleTemplate(
     choiceName: 'ConfirmPayment',
     argumentDecoder: damlTypes.lazyMemo(function () { return exports.ConfirmPayment.decoder; }),
     argumentEncode: function (__typed__) { return exports.ConfirmPayment.encode(__typed__); },
-    resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.ContractId(exports.PaidMarketInsightOrder).decoder; }),
-    resultEncode: function (__typed__) { return damlTypes.ContractId(exports.PaidMarketInsightOrder).encode(__typed__); },
+    resultDecoder: damlTypes.lazyMemo(function () { return pkg5aee9b21b8e9a4c4975b5f4c4198e6e6e8469df49e2010820e792f393db870f4.DA.Types.Tuple2(damlTypes.ContractId(exports.PaidMarketInsightOrder), damlTypes.ContractId(exports.ConfirmedPaymentOrder)).decoder; }),
+    resultEncode: function (__typed__) { return pkg5aee9b21b8e9a4c4975b5f4c4198e6e6e8469df49e2010820e792f393db870f4.DA.Types.Tuple2(damlTypes.ContractId(exports.PaidMarketInsightOrder), damlTypes.ContractId(exports.ConfirmedPaymentOrder)).encode(__typed__); },
   },
   RejectPayment: {
     template: function () { return exports.PaymentPendingOrder; },
@@ -352,7 +388,7 @@ exports.PaymentPendingOrder = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.PaymentPendingOrder, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.PaymentPendingOrder, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -406,7 +442,7 @@ exports.MarketInsightOrder = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.MarketInsightOrder, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.MarketInsightOrder, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 

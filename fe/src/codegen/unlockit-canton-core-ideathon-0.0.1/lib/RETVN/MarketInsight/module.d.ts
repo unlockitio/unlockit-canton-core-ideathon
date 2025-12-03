@@ -125,6 +125,30 @@ export declare namespace PaidMarketInsightOrder {
 
 
 
+export declare type ConfirmedPaymentOrder = {
+  operator: damlTypes.Party;
+  buyer: damlTypes.Party;
+  queryParams: QueryParams;
+  orderedAt: damlTypes.Time;
+  paymentAmount: damlTypes.Numeric;
+  paymentInitiatedAt: damlTypes.Time;
+  paymentReference: string;
+  confirmedAt: damlTypes.Time;
+};
+
+export declare interface ConfirmedPaymentOrderInterface {
+  Archive: damlTypes.Choice<ConfirmedPaymentOrder, pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive, {}, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<ConfirmedPaymentOrder, undefined>>;
+}
+export declare const ConfirmedPaymentOrder:
+  damlTypes.Template<ConfirmedPaymentOrder, undefined, '#unlockit-canton-core-ideathon:RETVN.MarketInsight:ConfirmedPaymentOrder'> &
+  damlTypes.ToInterface<ConfirmedPaymentOrder, never> &
+  ConfirmedPaymentOrderInterface;
+
+export declare namespace ConfirmedPaymentOrder {
+}
+
+
+
 export declare type CancelOrder = {
 };
 
@@ -205,7 +229,7 @@ export declare type PaymentPendingOrder = {
 
 export declare interface PaymentPendingOrderInterface {
   Archive: damlTypes.Choice<PaymentPendingOrder, pkg9e70a8b3510d617f8a136213f33d6a903a10ca0eeec76bb06ba55d1ed9680f69.DA.Internal.Template.Archive, {}, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<PaymentPendingOrder, undefined>>;
-  ConfirmPayment: damlTypes.Choice<PaymentPendingOrder, ConfirmPayment, damlTypes.ContractId<PaidMarketInsightOrder>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<PaymentPendingOrder, undefined>>;
+  ConfirmPayment: damlTypes.Choice<PaymentPendingOrder, ConfirmPayment, pkg5aee9b21b8e9a4c4975b5f4c4198e6e6e8469df49e2010820e792f393db870f4.DA.Types.Tuple2<damlTypes.ContractId<PaidMarketInsightOrder>, damlTypes.ContractId<ConfirmedPaymentOrder>>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<PaymentPendingOrder, undefined>>;
   RejectPayment: damlTypes.Choice<PaymentPendingOrder, RejectPayment, damlTypes.ContractId<FailedPaymentOrder>, undefined> & damlTypes.ChoiceFrom<damlTypes.Template<PaymentPendingOrder, undefined>>;
 }
 export declare const PaymentPendingOrder:

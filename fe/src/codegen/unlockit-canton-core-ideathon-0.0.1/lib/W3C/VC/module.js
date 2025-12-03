@@ -62,7 +62,7 @@ exports.RevocationRegistryEntry = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.RevocationRegistryEntry, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.RevocationRegistryEntry, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -142,7 +142,7 @@ exports.CredentialIssuanceRequest = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.CredentialIssuanceRequest, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.CredentialIssuanceRequest, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -195,7 +195,7 @@ exports.PresentationReceipt = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.PresentationReceipt, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.PresentationReceipt, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
@@ -374,7 +374,7 @@ exports.VerifiableCredential = damlTypes.assembleTemplate(
 );
 
 
-damlTypes.registerTemplate(exports.VerifiableCredential, ['6968b70e7fbe01c89f3b6c5ec483d18f5263ffb504010525d5f02ed230fec0bd', '#unlockit-canton-core-ideathon']);
+damlTypes.registerTemplate(exports.VerifiableCredential, ['0ec0da08f5196a9d6842da83c2f9627d8aba544eeb009997786c681b6e974543', '#unlockit-canton-core-ideathon']);
 
 
 
