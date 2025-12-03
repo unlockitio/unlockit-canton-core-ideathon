@@ -18,6 +18,7 @@ import DA.Foldable (forA_)
 import DA.Action (when)
 import RETVN.Transaction
 import RETVN.Role
+import W3C.VC
 
 -- | Main seeding script - creates 100 realistic transactions
 -- Note: Requires that SeedCredentials has been run first to create parties
@@ -37,15 +38,15 @@ seedTransactionsWithCount count = do
   -- Get all required parties
   let operator = findParty "operator"
 
-  -- Agents (5)
-  let alice = findParty "alice"
+  -- Agents (5) - NOT including alice or bob (they only have VCs)
+  let agent1 = findParty "agent1"
   let agent2 = findParty "agent2"
   let agent3 = findParty "agent3"
   let agent4 = findParty "agent4"
   let agent5 = findParty "agent5"
 
   -- Brokers (3)
-  let charlie = findParty "charlie"
+  let broker1 = findParty "broker1"
   let broker2 = findParty "broker2"
   let broker3 = findParty "broker3"
 
@@ -60,6 +61,9 @@ seedTransactionsWithCount count = do
 
   -- Tax Authority (1)
   let taxAuth = findParty "taxAuth"
+
+  -- Get issuers (needed for credentials)
+  let caDmv = findParty "caDmv"
 
   -- Get current time
   now <- getTime
@@ -82,14 +86,64 @@ seedTransactionsWithCount count = do
     createUser (User citizenId (Some citizen)) [CanActAs citizen]
     )
 
-  -- Create UserAccount contracts for all citizens
-  forA_ citizenParties (\citizen -> do
+  -- ===== CREATE CREDENTIALS FOR ALL CITIZENS =====
+
+  -- Helper function to create Government ID credential for citizens
+  let createCitizenGovIdCredential holder holderName licenseNum = do
+        let govIdProof = Proof with
+              proofType = "Ed25519Signature2020"
+              created = now
+              proofPurpose = "assertionMethod"
+              verificationMethod = "did:example:ca-dmv#key-1"
+              proofValue = "mock-signature-gov-id-" <> holderName
+
+        let govIdSubject = CredentialSubject with
+              id = "did:example:" <> holderName
+              claims =
+                [ ("licenseNumber", licenseNum)
+                , ("licenseClass", "C")
+                , ("state", "California")
+                , ("issueDate", "2020-01-15")
+                ]
+
+        govIdCid <- submit caDmv $ createCmd VerifiableCredential with
+          credentialId = "urn:uuid:ca-dmv-dl-" <> licenseNum
+          credentialType = ["VerifiableCredential", "GovernmentIDCredential"]
+          issuer = caDmv
+          issuanceDate = now
+          expirationDate = Some (time (date 2028 Dec 15) 0 0 0)
+          subject = govIdSubject
+          proof = govIdProof
+          status = Active
+          holder = holder
+          verifiers = [operator]
+          credentialSchema = None
+          credentialContext = ["https://www.w3.org/2018/credentials/v1"]
+
+        govIdPresentation <- submit holder $ createCmd PresentationReceipt with
+          credentialId = "urn:uuid:ca-dmv-dl-" <> licenseNum
+          holder = holder
+          verifier = operator
+          presentedAt = now
+          challenge = "registration-challenge-" <> holderName
+          presentationProof = "mock-presentation-proof-" <> holderName <> "-govid"
+
+        return govIdPresentation
+
+  -- Create credentials for all citizens
+  citizenCredentials <- forA citizensWithNames (\(citizen, name) -> do
+    let licenseNum = "C" <> name <> "-DL-12345"
+    createCitizenGovIdCredential citizen name licenseNum
+    )
+
+  -- Create UserAccount contracts for all citizens (with credentials)
+  forA_ (zip citizenParties citizenCredentials) (\(citizen, credential) -> do
     submitMulti [operator, citizen] [] $ createCmd UserAccount with
       operator = operator
       user = citizen
       role = PrivateCitizen
       verificationWeight = getVerificationWeight PrivateCitizen
-      credentialPresentations = []
+      credentialPresentations = [credential]
       registeredAt = now
       status = AccountActive
       reputation = getStartingReputation PrivateCitizen
@@ -98,15 +152,15 @@ seedTransactionsWithCount count = do
     )
 
   -- Create submission and verification rights for all agents
-  aliceSubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
+  agent1SubmissionRight <- submit operator $ createCmd TransactionSubmissionRight with
     operator = operator
-    user = alice
+    user = agent1
     role = RealtorAgent
     verificationWeight = 8
 
-  aliceVerificationRight <- submit operator $ createCmd TransactionVerificationRight with
+  agent1VerificationRight <- submit operator $ createCmd TransactionVerificationRight with
     operator = operator
-    user = alice
+    user = agent1
     role = RealtorAgent
     verificationWeight = 8
 
@@ -161,7 +215,7 @@ seedTransactionsWithCount count = do
   -- Create submission and verification rights for brokers
   _ <- submit operator $ createCmd TransactionSubmissionRight with
     operator = operator
-    user = charlie
+    user = broker1
     role = RealtorBroker
     verificationWeight = 15
 
@@ -276,8 +330,8 @@ seedTransactionsWithCount count = do
   -- Each agent is consistently associated with the same broker and master
   -- Agent -> (Broker, Master)
   let agentMapping =
-        [ (alice, charlie, master1)
-        , (agent2, charlie, master1)
+        [ (agent1, broker1, master1)
+        , (agent2, broker1, master1)
         , (agent3, broker2, master1)
         , (agent4, broker2, master2)
         , (agent5, broker3, master2)
@@ -300,13 +354,13 @@ seedTransactionsWithCount count = do
   -- Professional transactions (0-29)
   let professionalTransactions =
         -- Agents: 3 transactions each = 15 total
-        [ (alice, RealtorAgent, i) | i <- [0..2] ] <>
+        [ (agent1, RealtorAgent, i) | i <- [0..2] ] <>
         [ (agent2, RealtorAgent, i) | i <- [3..5] ] <>
         [ (agent3, RealtorAgent, i) | i <- [6..8] ] <>
         [ (agent4, RealtorAgent, i) | i <- [9..11] ] <>
         [ (agent5, RealtorAgent, i) | i <- [12..14] ] <>
         -- Brokers: 2 transactions each = 6 total
-        [ (charlie, RealtorBroker, i) | i <- [15..16] ] <>
+        [ (broker1, RealtorBroker, i) | i <- [15..16] ] <>
         [ (broker2, RealtorBroker, i) | i <- [17..18] ] <>
         [ (broker3, RealtorBroker, i) | i <- [19..20] ] <>
         -- Masters: 2 transactions each = 4 total
@@ -611,6 +665,8 @@ seedTransactionsWithCount count = do
     )
 
   debug "Verifications applied!"
+  debug "ALL citizen users now have valid credentials!"
+  debug "  - All 10 citizens have Government ID credentials"
   debug "Distribution:"
   debug "  Professionals (30 transactions):"
   debug "    - Agents: 3 each = 15 total"
@@ -623,9 +679,10 @@ seedTransactionsWithCount count = do
   debug "    - 5 regular users: 2 each = 10 total"
   debug "Consistency: Each agent always uses the same broker and master"
   debug ("Agent mappings:")
-  debug ("  alice -> charlie (broker) -> master1")
-  debug ("  agent2 -> charlie (broker) -> master1")
+  debug ("  agent1 -> broker1 -> master1")
+  debug ("  agent2 -> broker1 -> master1")
   debug ("  agent3 -> broker2 -> master1")
   debug ("  agent4 -> broker2 -> master2")
   debug ("  agent5 -> broker3 -> master2")
+  debug ("NOTE: alice and bob have VCs only - not used in transactions")
   return ()
