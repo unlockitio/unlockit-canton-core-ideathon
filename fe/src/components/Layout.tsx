@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import BasketModal from './BasketModal';
 import './Layout.css';
 
 type LayoutProps = {
@@ -10,9 +11,16 @@ type LayoutProps = {
 export default function Layout({ onLogout }: LayoutProps) {
   const { isOperator } = useAuth();
   const [walletDropdownOpen, setWalletDropdownOpen] = useState(false);
+  const [basketOpen, setBasketOpen] = useState(false);
 
   const handleLogout = () => {
     onLogout();
+  };
+
+  const handleSelectOrder = (order: any) => {
+    // Store the selected order and open the RequestInsightModal
+    // This will be handled by the parent component
+    window.dispatchEvent(new CustomEvent('openBasketOrder', { detail: order }));
   };
 
   return (
@@ -52,6 +60,16 @@ export default function Layout({ onLogout }: LayoutProps) {
           </ul>
 
           <div className="navbar-user">
+            {!isOperator && (
+              <button
+                onClick={() => setBasketOpen(true)}
+                className="btn btn-secondary btn-sm"
+                style={{ marginRight: '0.5rem' }}
+                title="Pending Orders"
+              >
+                🛒
+              </button>
+            )}
             <button onClick={handleLogout} className="btn btn-secondary btn-sm">
               Logout
             </button>
@@ -62,6 +80,12 @@ export default function Layout({ onLogout }: LayoutProps) {
       <main className="main-content">
         <Outlet />
       </main>
+
+      <BasketModal
+        isOpen={basketOpen}
+        onClose={() => setBasketOpen(false)}
+        onSelectOrder={handleSelectOrder}
+      />
     </div>
   );
 }

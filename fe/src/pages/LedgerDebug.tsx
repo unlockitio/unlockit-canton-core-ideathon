@@ -34,11 +34,20 @@ export default function LedgerDebug() {
     '#unlockit-canton-core-ideathon:RETVN.Role:RegistrationRequest',
     '#unlockit-canton-core-ideathon:RETVN.Role:TransactionSubmissionRight',
     '#unlockit-canton-core-ideathon:RETVN.Role:TransactionVerificationRight',
+    '#unlockit-canton-core-ideathon:RETVN.Role:TransactionVerificationDelegation',
     '#unlockit-canton-core-ideathon:RETVN.Role:MarketDataAccessRight',
     // RETVN Transaction templates
     '#unlockit-canton-core-ideathon:RETVN.Transaction:TransactionData',
     '#unlockit-canton-core-ideathon:RETVN.Transaction:TransactionSubmissionProposal',
-    '#unlockit-canton-core-ideathon:RETVN.Transaction:MarketDataAggregate'
+    '#unlockit-canton-core-ideathon:RETVN.Transaction:VerificationProposal',
+    '#unlockit-canton-core-ideathon:RETVN.Transaction:MarketDataAggregate',
+    // RETVN MarketInsight templates
+    '#unlockit-canton-core-ideathon:RETVN.MarketInsight:MarketInsightOrder',
+    '#unlockit-canton-core-ideathon:RETVN.MarketInsight:PaymentPendingOrder',
+    '#unlockit-canton-core-ideathon:RETVN.MarketInsight:PaidMarketInsightOrder',
+    '#unlockit-canton-core-ideathon:RETVN.MarketInsight:FailedPaymentOrder',
+    '#unlockit-canton-core-ideathon:RETVN.MarketInsight:MarketInsight',
+    '#unlockit-canton-core-ideathon:RETVN.MarketInsight:ContributorReward',
   ]
 
   useEffect(() => {

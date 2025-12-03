@@ -109,4 +109,10 @@ export const TemplateIds = {
   TransactionVerificationDelegation: '#unlockit-canton-core-ideathon:RETVN.Role:TransactionVerificationDelegation',
   PresentationReceipt: '#unlockit-canton-core-ideathon:W3C.VC:PresentationReceipt',
   VerifiableCredential: '#unlockit-canton-core-ideathon:W3C.VC:VerifiableCredential',
+  MarketInsightOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:MarketInsightOrder',
+  PaymentPendingOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:PaymentPendingOrder',
+  PaidMarketInsightOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:PaidMarketInsightOrder',
+  FailedPaymentOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:FailedPaymentOrder',
+  MarketInsight: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:MarketInsight',
+  ContributorReward: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:ContributorReward',
 } as const;

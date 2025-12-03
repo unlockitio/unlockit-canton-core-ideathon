@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { config } from '../config';
+import { cantonApi } from '../services/cantonApi';
+import { TemplateIds, dateToDamlTime } from '../utils/daml';
+import { useAuth } from '../context/AuthContext';
 
 interface DataQualityLevel {
   id: string;
@@ -120,13 +123,20 @@ interface RequestInsightModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (insight: any) => void;
+  existingOrder?: {
+    contractId: string;
+    queryParams: any;
+    calculatedPrice: number;
+  } | null;
 }
 
 export default function RequestInsightModal({
   isOpen,
   onClose,
   onSuccess,
+  existingOrder,
 }: RequestInsightModalProps) {
+  const { userAccount } = useAuth();
   const [step, setStep] = useState(1);
   const [request, setRequest] = useState<MarketDataRequest>({
     postalCode: '',
@@ -147,6 +157,26 @@ export default function RequestInsightModal({
     cvv: '',
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [marketInsightOrderContractId, setMarketInsightOrderContractId] = useState<string | null>(null);
+  const [isBasketCheckout, setIsBasketCheckout] = useState(false);
+
+  // Load existing order if provided (from basket)
+  useEffect(() => {
+    if (existingOrder && isOpen) {
+      setMarketInsightOrderContractId(existingOrder.contractId);
+      setRequest(existingOrder.queryParams);
+      setCalculatedPrice(existingOrder.calculatedPrice);
+      setStep(7); // Go directly to checkout
+      setIsBasketCheckout(true); // Mark as basket checkout mode
+    }
+  }, [existingOrder, isOpen]);
+
+  // Reset to step 1 when modal opens fresh (no existing order)
+  useEffect(() => {
+    if (isOpen && !existingOrder) {
+      handleReset();
+    }
+  }, [isOpen]);
 
   const handlePostalCodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,8 +260,66 @@ export default function RequestInsightModal({
     }
   };
 
-  const handlePurchase = () => {
-    setStep(7);
+  const handlePurchase = async () => {
+    setIsProcessing(true);
+    try {
+      // Create MarketInsightOrder contract on Canton
+      const queryParams = {
+        postalCode: request.postalCode || null, // Canton expects null for None, string for Some
+        qualityLevel: request.qualityLevel,
+        dataScope: request.dataScope,
+        timeRange: request.timeRange,
+        bedrooms: request.bedrooms,
+        livingArea: request.livingArea,
+        yearBuilt: request.yearBuilt,
+        propertyType: request.propertyType,
+      };
+
+      const orderedAt = dateToDamlTime(new Date());
+
+      const result = await cantonApi.create(TemplateIds.MarketInsightOrder, {
+        operator: userAccount?.operator || 'operator::122...',
+        buyer: cantonApi.getParty(),
+        queryParams,
+        orderedAt,
+      });
+
+      console.log('MarketInsightOrder created:', result);
+      setMarketInsightOrderContractId(result.contractId);
+      setStep(7);
+    } catch (error) {
+      console.error('Failed to create MarketInsightOrder:', error);
+      alert('Failed to create order. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!marketInsightOrderContractId) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      // Exercise Archive choice to cancel the order
+      await cantonApi.exercise(
+        TemplateIds.MarketInsightOrder,
+        marketInsightOrderContractId,
+        'Archive',
+        {}
+      );
+
+      console.log('Order cancelled successfully');
+      alert('Order cancelled successfully.');
+      handleReset();
+      onClose();
+    } catch (error) {
+      console.error('Failed to cancel order:', error);
+      alert('Failed to cancel order. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handlePayment = async (e: React.FormEvent) => {
@@ -239,63 +327,34 @@ export default function RequestInsightModal({
     setIsProcessing(true);
 
     try {
-      const quality = QUALITY_LEVELS.find(q => q.id === request.qualityLevel);
-      const scope = DATA_SCOPES.find(s => s.id === request.dataScope);
-      const timeRange = TIME_RANGES.find(t => t.id === request.timeRange);
-
-      // Fetch the actual data snapshot from backend at purchase time
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${config.backendUrl}/api/market-insights`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          postalCode: request.postalCode,
-          qualityLevel: request.qualityLevel,
-          dataScope: request.dataScope,
-          timeRange: request.timeRange,
-          bedrooms: request.bedrooms,
-          livingArea: request.livingArea,
-          yearBuilt: request.yearBuilt,
-          propertyType: request.propertyType,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch market data');
+      if (!marketInsightOrderContractId) {
+        throw new Error('No market insight order found');
       }
 
-      const reportData = await response.json();
+      // Exercise InitiatePayment choice on MarketInsightOrder
+      const paymentReference = `PAY-${Date.now()}`;
+      const initiatedAt = dateToDamlTime(new Date());
 
-      // Store the insight with the data snapshot
-      const newInsight = {
-        id: `insight-${Date.now()}`,
-        postalCode: request.postalCode,
-        qualityLevel: quality?.name || '',
-        dataScope: scope?.name || '',
-        timeRange: timeRange?.name || '',
-        price: calculatedPrice,
-        purchaseDate: new Date().toISOString(),
-        status: 'completed',
-        segment: {
-          bedrooms: request.bedrooms,
-          livingArea: request.livingArea,
-          yearBuilt: request.yearBuilt,
-          propertyType: request.propertyType,
-        },
-        // Store the actual data snapshot
-        reportData: reportData,
-      };
+      await cantonApi.exercise(
+        TemplateIds.MarketInsightOrder,
+        marketInsightOrderContractId,
+        'InitiatePayment',
+        {
+          paymentAmount: calculatedPrice?.toString() || '0',
+          paymentReference,
+          initiatedAt,
+        }
+      );
+
+      console.log('Payment initiated successfully');
+      alert('Payment initiated! Your order will be processed automatically.');
 
       setIsProcessing(false);
-      onSuccess?.(newInsight);
       handleReset();
       onClose();
     } catch (error) {
       console.error('Payment failed:', error);
-      alert('Failed to purchase insight. Please try again.');
+      alert('Failed to initiate payment. Please try again.');
       setIsProcessing(false);
     }
   };
@@ -319,6 +378,8 @@ export default function RequestInsightModal({
       expiryDate: '',
       cvv: '',
     });
+    setMarketInsightOrderContractId(null);
+    setIsBasketCheckout(false);
   };
 
   if (!isOpen) return null;
@@ -685,11 +746,11 @@ export default function RequestInsightModal({
                   </div>
 
                   <div className="grid grid-2" style={{ gap: '1rem' }}>
-                    <button className="btn btn-secondary" onClick={handleReset}>
-                      Start Over
+                    <button className="btn btn-secondary" onClick={() => setStep(5)} disabled={isProcessing}>
+                      Back
                     </button>
-                    <button className="btn btn-success" onClick={handlePurchase}>
-                      Proceed to Checkout
+                    <button className="btn btn-success" onClick={handlePurchase} disabled={isProcessing}>
+                      {isProcessing ? 'Creating Order...' : 'Proceed to Checkout'}
                     </button>
                   </div>
                 </>
@@ -710,6 +771,25 @@ export default function RequestInsightModal({
                   <div>{QUALITY_LEVELS.find(q => q.id === request.qualityLevel)?.name}</div>
                   <div>{DATA_SCOPES.find(s => s.id === request.dataScope)?.name}</div>
                   <div>{TIME_RANGES.find(t => t.id === request.timeRange)?.name}</div>
+
+                  {(request.bedrooms.length > 0 || request.livingArea.length > 0 ||
+                    request.yearBuilt.length > 0 || request.propertyType.length > 0) && (
+                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
+                      <div className="font-semibold mb-1">Segment Filters:</div>
+                      {request.bedrooms.length > 0 && (
+                        <div>Bedrooms: {request.bedrooms.join(', ')}</div>
+                      )}
+                      {request.livingArea.length > 0 && (
+                        <div>Living Area: {request.livingArea.join(', ')} sqft</div>
+                      )}
+                      {request.yearBuilt.length > 0 && (
+                        <div>Year Built: {request.yearBuilt.join(', ')}</div>
+                      )}
+                      {request.propertyType.length > 0 && (
+                        <div>Property Type: {request.propertyType.join(', ')}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -782,10 +862,19 @@ export default function RequestInsightModal({
                 </div>
 
                 <div className="grid grid-2" style={{ gap: '1rem' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setStep(6)} disabled={isProcessing}>
-                    Back
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleCancelOrder}
+                    disabled={isProcessing}
+                  >
+                    Cancel Order
                   </button>
-                  <button type="submit" className="btn btn-success" disabled={isProcessing}>
+                  <button
+                    type="submit"
+                    className="btn btn-success"
+                    disabled={isProcessing}
+                  >
                     {isProcessing ? 'Processing...' : `Pay $${calculatedPrice?.toFixed(2)}`}
                   </button>
                 </div>

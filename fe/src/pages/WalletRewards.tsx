@@ -1,89 +1,71 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { cantonApi } from '../services/cantonApi';
+import { TemplateIds } from '../utils/daml';
 
 interface Reward {
   id: string;
-  insightId: string;
-  insightPostalCode: string;
-  transactionIds: string[];
-  baseAmount: number;
-  qualityMultiplier: number;
-  roleWeight: number;
-  usageRatio: number;
+  contributionCount: number;
   totalAmount: number;
-  status: 'pending' | 'processing' | 'paid';
+  redeemedAmount: number;
+  availableAmount: number;
   createdDate: string;
-  paidDate?: string;
+  transactionCount: number;
 }
-
-const MOCK_REWARDS: Reward[] = [
-  {
-    id: 'reward-1',
-    insightId: 'insight-2',
-    insightPostalCode: '94103',
-    transactionIds: ['tx-001', 'tx-003'],
-    baseAmount: 11.25,
-    qualityMultiplier: 1.5,
-    roleWeight: 1.2,
-    usageRatio: 0.05,
-    totalAmount: 1.01,
-    status: 'paid',
-    createdDate: '2024-11-18T14:15:00.000Z',
-    paidDate: '2024-11-20T09:30:00.000Z',
-  },
-  {
-    id: 'reward-2',
-    insightId: 'insight-1',
-    insightPostalCode: '94102',
-    transactionIds: ['tx-002'],
-    baseAmount: 65.63,
-    qualityMultiplier: 2.0,
-    roleWeight: 1.0,
-    usageRatio: 0.024,
-    totalAmount: 3.15,
-    status: 'paid',
-    createdDate: '2024-11-20T10:30:00.000Z',
-    paidDate: '2024-11-22T11:00:00.000Z',
-  },
-  {
-    id: 'reward-3',
-    insightId: 'insight-pending',
-    insightPostalCode: '94105',
-    transactionIds: ['tx-001', 'tx-002', 'tx-004'],
-    baseAmount: 25.0,
-    qualityMultiplier: 1.5,
-    roleWeight: 1.1,
-    usageRatio: 0.071,
-    totalAmount: 2.93,
-    status: 'processing',
-    createdDate: '2024-11-25T16:45:00.000Z',
-  },
-];
 
 export default function WalletRewards() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('walletRewards');
-    if (stored) {
-      setRewards(JSON.parse(stored));
-    } else {
-      setRewards(MOCK_REWARDS);
-      localStorage.setItem('walletRewards', JSON.stringify(MOCK_REWARDS));
-    }
-    setLoading(false);
+    loadRewards();
   }, []);
+
+  const loadRewards = async () => {
+    setLoading(true);
+    try {
+      // Query ContributorReward contracts
+      const contracts = await cantonApi.query(TemplateIds.ContributorReward);
+
+      // Transform to Reward format
+      const transformedRewards: Reward[] = contracts.map((contract: any) => {
+        const payload = contract.payload;
+        const transactionIds = new Set<string>();
+
+        // Extract unique transaction IDs from contributions map
+        if (payload.contributions && Array.isArray(payload.contributions)) {
+          payload.contributions.forEach((entry: any) => {
+            if (entry && entry._1) { // _1 is the transaction ID in the tuple
+              transactionIds.add(entry._1);
+            }
+          });
+        }
+
+        return {
+          id: contract.contractId,
+          contributionCount: payload.contributionCount || 0,
+          totalAmount: parseFloat(payload.rewardAmount) || 0,
+          redeemedAmount: parseFloat(payload.redeemedAmount) || 0,
+          availableAmount: (parseFloat(payload.rewardAmount) || 0) - (parseFloat(payload.redeemedAmount) || 0),
+          createdDate: payload.createdAt,
+          transactionCount: transactionIds.size,
+        };
+      });
+
+      setRewards(transformedRewards);
+    } catch (error) {
+      console.error('Failed to load rewards:', error);
+      setRewards([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) return <div>Loading rewards...</div>;
 
-  const totalEarned = rewards
-    .filter(r => r.status === 'paid')
-    .reduce((sum, r) => sum + r.totalAmount, 0);
-
-  const totalPending = rewards
-    .filter(r => r.status !== 'paid')
-    .reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalEarned = rewards.reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalRedeemed = rewards.reduce((sum, r) => sum + r.redeemedAmount, 0);
+  const totalAvailable = rewards.reduce((sum, r) => sum + r.availableAmount, 0);
 
   return (
     <div className="container">
@@ -94,17 +76,17 @@ export default function WalletRewards() {
 
       <div className="grid grid-2 mb-4">
         <div className="card">
-          <div className="text-muted text-sm font-semibold mb-1">Total Earned (Paid)</div>
+          <div className="text-muted text-sm font-semibold mb-1">Total Earned</div>
           <div className="text-xl font-bold text-success">${totalEarned.toFixed(2)}</div>
           <div className="text-sm text-muted">
-            {rewards.filter(r => r.status === 'paid').length} payments
+            {rewards.length} reward contracts
           </div>
         </div>
         <div className="card">
-          <div className="text-muted text-sm font-semibold mb-1">Pending Rewards</div>
-          <div className="text-xl font-bold text-warning">${totalPending.toFixed(2)}</div>
+          <div className="text-muted text-sm font-semibold mb-1">Available to Redeem</div>
+          <div className="text-xl font-bold text-primary">${totalAvailable.toFixed(2)}</div>
           <div className="text-sm text-muted">
-            {rewards.filter(r => r.status !== 'paid').length} pending
+            Redeemed: ${totalRedeemed.toFixed(2)}
           </div>
         </div>
       </div>
@@ -126,68 +108,52 @@ export default function WalletRewards() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                  <th style={{ padding: '0.75rem', textAlign: 'left' }}>Insight</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left' }}>Contract ID</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center' }}>Contributions</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>Transactions</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>Base</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center' }}>Quality</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center' }}>Role</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center' }}>Usage</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>Amount</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center' }}>Status</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left' }}>Date</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>Total Reward</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>Redeemed</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>Available</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left' }}>Created</th>
                 </tr>
               </thead>
               <tbody>
                 {rewards.map((reward) => (
                   <tr key={reward.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <td style={{ padding: '0.75rem' }}>
-                      <div className="font-semibold">{reward.insightPostalCode}</div>
-                      <div className="text-sm text-muted">{reward.insightId}</div>
+                      <div className="text-sm text-muted" style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {reward.id.substring(0, 20)}...
+                      </div>
+                    </td>
+                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                      <span className="badge badge-info">
+                        {reward.contributionCount}
+                      </span>
                     </td>
                     <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                       <span className="badge badge-secondary">
-                        {reward.transactionIds.length}
+                        {reward.transactionCount}
                       </span>
-                    </td>
-                    <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                      ${reward.baseAmount.toFixed(2)}
-                    </td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                      {reward.qualityMultiplier}x
-                    </td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                      {reward.roleWeight}x
-                    </td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                      {(reward.usageRatio * 100).toFixed(1)}%
                     </td>
                     <td style={{ padding: '0.75rem', textAlign: 'right' }}>
                       <span className="font-bold text-success">
                         ${reward.totalAmount.toFixed(2)}
                       </span>
                     </td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                      <span
-                        className={`badge ${
-                          reward.status === 'paid'
-                            ? 'badge-success'
-                            : reward.status === 'processing'
-                            ? 'badge-info'
-                            : 'badge-warning'
-                        }`}
-                      >
-                        {reward.status}
+                    <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                      <span className="text-muted">
+                        ${reward.redeemedAmount.toFixed(2)}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                      <span className="font-bold text-primary">
+                        ${reward.availableAmount.toFixed(2)}
                       </span>
                     </td>
                     <td style={{ padding: '0.75rem' }}>
                       <div className="text-sm">
                         {new Date(reward.createdDate).toLocaleDateString()}
                       </div>
-                      {reward.paidDate && (
-                        <div className="text-sm text-muted">
-                          Paid: {new Date(reward.paidDate).toLocaleDateString()}
-                        </div>
-                      )}
                     </td>
                   </tr>
                 ))}

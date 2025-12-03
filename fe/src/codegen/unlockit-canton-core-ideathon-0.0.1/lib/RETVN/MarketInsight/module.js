@@ -336,8 +336,8 @@ exports.PaymentPendingOrder = damlTypes.assembleTemplate(
     choiceName: 'ConfirmPayment',
     argumentDecoder: damlTypes.lazyMemo(function () { return exports.ConfirmPayment.decoder; }),
     argumentEncode: function (__typed__) { return exports.ConfirmPayment.encode(__typed__); },
-    resultDecoder: damlTypes.lazyMemo(function () { return damlTypes.ContractId(exports.PaidMarketInsightOrder).decoder; }),
-    resultEncode: function (__typed__) { return damlTypes.ContractId(exports.PaidMarketInsightOrder).encode(__typed__); },
+    resultDecoder: damlTypes.lazyMemo(function () { return pkg5aee9b21b8e9a4c4975b5f4c4198e6e6e8469df49e2010820e792f393db870f4.DA.Types.Tuple2(damlTypes.ContractId(exports.PaidMarketInsightOrder), damlTypes.ContractId(exports.ConfirmedPaymentOrder)).decoder; }),
+    resultEncode: function (__typed__) { return pkg5aee9b21b8e9a4c4975b5f4c4198e6e6e8469df49e2010820e792f393db870f4.DA.Types.Tuple2(damlTypes.ContractId(exports.PaidMarketInsightOrder), damlTypes.ContractId(exports.ConfirmedPaymentOrder)).encode(__typed__); },
   },
   RejectPayment: {
     template: function () { return exports.PaymentPendingOrder; },

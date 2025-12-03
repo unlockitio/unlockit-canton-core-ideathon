@@ -8,13 +8,17 @@ import type { TransactionData } from '../codegen/unlockit-canton-core-ideathon-0
 import VerifyTransactionModal from '../components/VerifyTransactionModal';
 import AssignVerifierModal from '../components/AssignVerifierModal';
 
-// Helper to convert DAML Optional ([] or [value]) to JavaScript optional (null or value)
-// Canton API sometimes returns null instead of [] for None
-function fromDamlOptional<T>(opt: [] | [T] | null | undefined): T | null {
-  if (!opt || !Array.isArray(opt) || opt.length === 0) {
+// Helper to handle Canton JSON API Optional values
+// Canton returns Optional as either null or the direct value (not wrapped in an array)
+// However, TypeScript codegen types still declare them as [] | [T], so we handle both formats
+function fromDamlOptional<T>(opt: [] | [T] | T | null | undefined): T | null {
+  if (opt === null || opt === undefined) {
     return null;
   }
-  return opt[0];
+  if (Array.isArray(opt)) {
+    return opt.length > 0 ? opt[0] : null;
+  }
+  return opt;
 }
 
 export default function TransactionDetail() {

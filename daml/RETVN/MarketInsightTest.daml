@@ -64,7 +64,7 @@ testMarketInsightWorkflow = do
   debug "✓ Alice initiated payment"
 
   -- Step 2b: Operator confirms payment
-  paidOrderCid <- submit operator $ exerciseCmd pendingOrderCid ConfirmPayment with
+  (paidOrderCid, _) <- submit operator $ exerciseCmd pendingOrderCid ConfirmPayment with
     confirmedAt = now
 
   debug ("✓ Payment confirmed for $" <> show expectedPrice)
@@ -295,7 +295,7 @@ testEmptyFilters = do
     paymentReference = "test-payment-ref-2"
     initiatedAt = now
 
-  paidOrderCid <- submit operator $ exerciseCmd pendingOrderCid ConfirmPayment with
+  (paidOrderCid, _) <- submit operator $ exerciseCmd pendingOrderCid ConfirmPayment with
     confirmedAt = now
 
   (insightCid, rewardCids) <- submit operator $ exerciseCmd paidOrderCid FulfillOrder with

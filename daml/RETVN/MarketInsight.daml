@@ -3,11 +3,11 @@
 module RETVN.MarketInsight where
 
 import RETVN.Transaction
-import DA.Optional (fromOptional, isSome)
+import DA.Optional (fromOptional)
 import DA.Text as T
 import DA.Foldable (maximum, Foldable(minimum), forA_)
 import DA.Time
-import qualified DA.List
+import DA.List as L
 
 
 -- ============================================================================
@@ -138,13 +138,13 @@ template PaymentPendingOrder
       paymentAmount == calculateInsightPrice queryParams &&
       paymentReference /= ""
 
-    -- | Operator confirms payment (creates paid order)
-    choice ConfirmPayment : ContractId PaidMarketInsightOrder
+    -- | Operator confirms payment (creates paid order and confirmation record)
+    choice ConfirmPayment : (ContractId PaidMarketInsightOrder, ContractId ConfirmedPaymentOrder)
       with
         confirmedAt : Time
       controller operator
       do
-        create PaidMarketInsightOrder with
+        paidOrderCid <- create PaidMarketInsightOrder with
           operator = operator
           buyer = buyer
           queryParams = queryParams
@@ -152,6 +152,18 @@ template PaymentPendingOrder
           paidAmount = paymentAmount
           paidAt = confirmedAt
           paymentReference = paymentReference
+
+        confirmedCid <- create ConfirmedPaymentOrder with
+          operator = operator
+          buyer = buyer
+          queryParams = queryParams
+          orderedAt = orderedAt
+          paymentAmount = paymentAmount
+          paymentInitiatedAt = paymentInitiatedAt
+          paymentReference = paymentReference
+          confirmedAt = confirmedAt
+
+        return (paidOrderCid, confirmedCid)
 
     -- | Operator rejects payment (creates failed order)
     choice RejectPayment : ContractId FailedPaymentOrder
@@ -214,7 +226,26 @@ template FailedPaymentOrder
         return ()
 
 -- ============================================================================
--- TEMPLATE 4: PAID MARKET INSIGHT ORDER (Awaiting Fulfillment)
+-- TEMPLATE 4: CONFIRMED PAYMENT ORDER (Payment Confirmed Record)
+-- ============================================================================
+
+-- | Confirmed payment order record (no actions needed, just for querying)
+template ConfirmedPaymentOrder
+  with
+    operator : Party
+    buyer : Party
+    queryParams : QueryParams
+    orderedAt : Time
+    paymentAmount : Decimal
+    paymentInitiatedAt : Time
+    paymentReference : Text
+    confirmedAt : Time
+  where
+    signatory buyer
+    observer operator
+
+-- ============================================================================
+-- TEMPLATE 5: PAID MARKET INSIGHT ORDER (Awaiting Fulfillment)
 -- ============================================================================
 
 -- | Paid order waiting for operator to fulfill
@@ -291,7 +322,7 @@ template PaidMarketInsightOrder
         return (insightCid, rewardCids)
 
 -- ============================================================================
--- TEMPLATE 3: MARKET INSIGHT (Fulfilled)
+-- TEMPLATE 6: MARKET INSIGHT (Fulfilled)
 -- ============================================================================
 
 -- | Fulfilled market insight with aggregated data
@@ -316,7 +347,7 @@ template MarketInsight
         return insightData
 
 -- ============================================================================
--- TEMPLATE 5: CONTRIBUTOR REWARD (Aggregated Rewards)
+-- TEMPLATE 7: CONTRIBUTOR REWARD (Aggregated Rewards)
 -- ============================================================================
 
 -- | Aggregated reward contract tracking all contributions for a recipient
@@ -331,8 +362,8 @@ template ContributorReward
     -- Map: transactionId -> list of contributions from that transaction
     contributions : [(Text, [TransactionContribution])]
   where
-    signatory operator, recipient
-    observer operator
+    signatory operator
+    observer recipient
 
     ensure
       rewardAmount >= redeemedAmount &&
@@ -373,7 +404,7 @@ template ContributorReward
 -- ============================================================================
 
 -- | Calculate price based on query parameters
--- Price factors: dataScope, qualityLevel, timeRange
+-- Price factors: dataScope, qualityLevel, timeRange, segmentComplexity
 calculateInsightPrice : QueryParams -> Decimal
 calculateInsightPrice params =
   let
@@ -398,8 +429,16 @@ calculateInsightPrice params =
       "historic" -> 2.5
       _ -> 1.0
 
+    -- Segment complexity based on number of segment filters
+    segmentSelections = intToDecimal (
+      L.length params.bedrooms +
+      L.length params.livingArea +
+      L.length params.yearBuilt +
+      L.length params.propertyType)
+    segmentComplexity = 1.0 + (0.05 * segmentSelections)
+
     -- Calculate final price
-    finalPrice = scopePrice * qualityMultiplier * timeMultiplier
+    finalPrice = scopePrice * qualityMultiplier * timeMultiplier * segmentComplexity
   in
     finalPrice
 
@@ -638,11 +677,11 @@ mergeContributions : [(Text, [TransactionContribution])] ->
 mergeContributions existing newOnes =
   let
     -- Convert new list to map format
-    newGrouped = DA.List.groupOn fst (DA.List.sortOn fst newOnes)
-    newMap = map (\group -> (fst (DA.List.head group), map snd group)) newGrouped
+    newGrouped = L.groupOn fst (L.sortOn fst newOnes)
+    newMap = map (\group -> (fst (L.head group), map snd group)) newGrouped
 
     -- Merge with existing
-    allKeys = DA.List.dedup $ DA.List.sort $ (map fst existing) ++ (map fst newMap)
+    allKeys = L.dedup $ L.sort $ (map fst existing) ++ (map fst newMap)
 
     merged = map (\key ->
       let existingContribs = fromOptional [] (lookup key existing)
@@ -678,8 +717,8 @@ calculateAndDistributeRewards operator transactions totalPaid fulfilledAt paidOr
   -- Note: We always create new contracts as each order creates new rewards
   mapA (\(recipient, contribs, totalAmount) -> do
     -- Create new contract
-    let contributions = DA.List.groupOn fst (DA.List.sortOn fst contribs)
-    let contributionsMap = map (\group -> (fst (DA.List.head group), map snd group)) contributions
+    let contributions = L.groupOn fst (L.sortOn fst contribs)
+    let contributionsMap = map (\group -> (fst (L.head group), map snd group)) contributions
     create ContributorReward with
       operator = operator
       recipient = recipient
@@ -724,14 +763,14 @@ aggregateByRecipient : [(Party, (Text, TransactionContribution), Decimal)] ->
 aggregateByRecipient contribs =
   let
     -- Sort by recipient
-    sorted = DA.List.sortOn (\(p, _, _) -> p) contribs
+    sorted = L.sortOn (\(p, _, _) -> p) contribs
 
     -- Group by recipient
-    grouped = DA.List.groupOn (\(p, _, _) -> p) sorted
+    grouped = L.groupOn (\(p, _, _) -> p) sorted
 
     -- Aggregate for each recipient
     toRecipientData group =
-      let recipient = (\(p, _, _) -> p) (DA.List.head group)
+      let recipient = (\(p, _, _) -> p) (L.head group)
           contributions = map (\(_, c, _) -> c) group
           totalAmount = sum $ map (\(_, _, amt) -> amt) group
       in (recipient, contributions, totalAmount)
