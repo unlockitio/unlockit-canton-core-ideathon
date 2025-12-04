@@ -1,236 +1,172 @@
-# Canton UserAccount API
+# RETVN Backend
 
-A simple Quarkus-based Java API that proxies requests to the Canton JSON API to retrieve UserAccount contracts.
+Quarkus-based Java backend providing REST APIs for the Real Estate Transaction Verification Network (RETVN) platform, integrating with Canton/Daml smart contracts.
 
-## Features
+## Table of Contents
 
-- **Unrealistic Bearer Token Authentication**: Validates JWT token format only (not signature or content)
-- **Canton JSON API Integration**: Calls `/v2/state/active-contracts` endpoint
-- **CORS Enabled**: For easy frontend integration
-- **Simple Proxy**: Returns Canton API responses directly
+- [Quick Start](#quick-start)
+- [Overview](#overview)
+- [API Endpoints](#api-endpoints)
+- [Automation](#automation)
+- [Configuration](#configuration)
 
-## Requirements
+---
 
-- Java 17+
-- Maven 3.8+
-- Canton JSON API running on `localhost:7575`
-
-## Configuration
-
-Before running, you need to configure the Canton package ID and operator party ID in `src/main/resources/application.properties`:
-
-```properties
-canton.api.package-id=<YOUR_PACKAGE_ID>
-canton.api.operator-party-id=<YOUR_OPERATOR_PARTY_ID>
-```
-
-To find your package ID:
-
-1. Build your Daml project: `daml build`
-2. The `.dar` file will contain the package ID
-3. You can also query it from Canton JSON API or check the codegen output
-
-To find your operator party ID:
-
-1. Check the Canton sandbox logs when it starts
-2. Query the `/v2/parties` endpoint
-3. The operator party is created by the seedTestCredentials script
-
-## Running the Application
-
-### Development Mode
+## Quick Start
 
 ```bash
-./mvnw quarkus:dev
+# 1. Start all services (Canton, backend, frontend)
+docker compose -f docker-compose.sandbox.yml up -d
 ```
 
-The API will be available at `http://localhost:9090`
+**API available at**: http://localhost:9090
 
-### API Documentation
+**Swagger UI (via Docker)**:
+- Backend API: http://localhost:8082
+- Canton Ledger API: http://localhost:8081
 
-When running with Docker Compose, two Swagger UI instances are available:
+---
 
-**Backend API (UserAccount API):**
-```
-http://localhost:8082
-```
+## Overview
 
-**Canton JSON Ledger API:**
-```
-http://localhost:8081
-```
+Quarkus-based Java API that integrates with Canton to provide:
 
-The Swagger UI instances allow you to:
-- View all available endpoints
-- See request/response schemas
-- Try out API calls directly from the browser
-- Generate JWT tokens for testing (Backend API)
-- Explore the full Canton JSON API capabilities
+- **User Account Management**: Retrieves UserAccount contracts from Canton
+- **Rankings**: Public reputation rankings endpoint
+- **Market Insights Automation**: Processes data insights
+- **Payment Automation**: Processes payment workflows
+- **Transaction Automation**: Approves transaction proposals
+- **Verification Automation**: Processes verification proposals
 
-### Building for Production
+**Tech Stack**: Java 17+, Quarkus 3.x, Maven 3.8+
 
-```bash
-./mvnw clean package
-java -jar target/quarkus-app/quarkus-run.jar
-```
+**Requirements**: Canton running on `localhost:8080`
 
-## API Endpoint
+---
+
+## API Endpoints
 
 ### GET /api/user-accounts
 
-Retrieves UserAccount contracts for the authenticated user.
+Retrieves all UserAccount contracts visible to the operator.
 
-**Headers:**
-```
-Authorization: Bearer <JWT_TOKEN>
-```
+**Authentication**: Bearer token (JWT format validation only)
 
-**JWT Token Requirements (Format Only):**
-- Must be a valid JWT structure (3 parts separated by dots)
-- Signature is **NOT** validated (unrealistic API for development)
-- Token is used for authentication only, not for party filtering
-- The API always queries using the operator party ID from configuration
-
-**Example Request:**
+**Example**:
 ```bash
-# First, get a token from the frontend or create one manually
-TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0UGFydHkiLCJhdWQiOiJkYW1sX2xlZGdlcl9hcGkiLCJleHAiOjE3MzQzMzk2MDB9.example"
-
 curl -X GET http://localhost:9090/api/user-accounts \
-  -H "Authorization: Bearer $TOKEN"
+  -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
-**Success Response (200 OK):**
-```json
-{
-  "result": [
-    {
-      "contractId": "...",
-      "payload": {
-        "operator": "...",
-        "user": "...",
-        "role": "...",
-        ...
-      },
-      ...
-    }
-  ]
-}
+**Response**: List of UserAccount contracts with user details, roles, and reputation.
+
+---
+
+### GET /api/rankings
+
+Public endpoint for user rankings by reputation.
+
+**Authentication**: None required
+
+**Example**:
+```bash
+curl http://localhost:9090/api/rankings
 ```
 
-**Error Responses:**
+**Response**: Array of ranking entries (name, reputation, role) sorted by reputation descending.
 
-- `401 Unauthorized`: Missing or invalid Authorization header
-- `401 Unauthorized`: Invalid JWT token format
-- `500 Internal Server Error`: Operator party ID not configured
-- `500 Internal Server Error`: Error calling Canton API
+## Automation
 
-## Token Generation (Frontend)
+The backend runs automated processors that monitor Canton contracts and execute workflows:
 
-The frontend generates tokens using this code (from `fe/src/config.ts`):
+### PaymentPendingOrderProcessor
 
-```javascript
-import { SignJWT } from 'jose'
+**Purpose**: Processes pending payment orders
+**Workflow**: `PaymentPendingOrder` → `ConfirmedPaymentOrder` or `FailedPaymentOrder`
+**Trigger**: On pending order detection
+**Behavior**: Simulates payment processing with random success/failure
 
-async function makeLocalToken(userId: string): Promise<string> {
-  const secret = new TextEncoder().encode('mydevsecretkeythatshouldbelongenough123')
-  const jwt = await new SignJWT({})
-    .setProtectedHeader({ alg: 'HS256' })
-    .setSubject(userId)
-    .setAudience('daml_ledger_api')
-    .setExpirationTime('2h')
-    .sign(secret)
-  return jwt
-}
+---
+
+### PaidMarketInsightOrderProcessor
+
+**Purpose**: Fulfills paid market insight orders
+**Workflow**: `PaidMarketInsightOrder` → `MarketInsight` (delivered)
+**Trigger**: On paid order detection
+**Behavior**: Generates market insight data and creates MarketInsight contract
+
+---
+
+### TransactionProposalProcessor
+
+**Purpose**: Auto-approves transaction submission proposals
+**Workflow**: `TransactionSubmissionProposal` → `TransactionData`
+**Trigger**: On new proposal detection
+**Behavior**: Automatically approves and creates TransactionData contract
+
+---
+
+### VerificationProposalProcessor
+
+**Purpose**: Processes verification submissions
+**Workflow**: `VerificationSubmissionProposal` → Updates `TransactionData` verifications
+**Trigger**: On new verification proposal
+**Behavior**: Adds verification to TransactionData and recalculates trust score
+
+---
+
+## Configuration
+
+Edit `src/main/resources/application.properties`:
+
+```properties
+# Canton API
+canton.api.url=http://localhost:8080
+canton.api.package-id=<PACKAGE_ID>
+canton.api.operator-party-id=<OPERATOR_PARTY_ID>
+
+# Quarkus
+quarkus.http.port=9090
+quarkus.http.cors=true
 ```
 
-## How It Works
-
-1. Client sends request with Bearer token
-2. API validates token format (3-part JWT structure)
-3. API calls Canton JSON API at `localhost:7575/v2/state/active-contracts` using the operator party ID
-4. Canton API filters for `RETVN.Role:UserAccount` templates visible to the operator
-5. API returns all UserAccount contracts (operator can see all accounts as a signatory)
-6. API returns Canton's response to the client
-
-**Note**: The operator party can see all UserAccount contracts because it's a signatory on all of them (required by the UserAccount template design).
-
-## Canton JSON API Request Format
-
-The API constructs this request body:
-
-```json
-{
-  "filter": {
-    "filtersByParty": {
-      "<OPERATOR_PARTY_ID>": {
-        "cumulative": [
-          {
-            "identifierFilter": {
-              "TemplateFilter": {
-                "value": {
-                  "templateId": "<PACKAGE_ID>:RETVN.Role:UserAccount",
-                  "includeCreatedEventBlob": true
-                }
-              }
-            }
-          }
-        ]
-      }
-    }
-  },
-  "verbose": true,
-  "activeAtOffset": "<LEDGER_OFFSET>"
-}
+**Finding Package ID**:
+```bash
+daml damlc inspect .daml/dist/unlockit-canton-core-ideathon-0.0.1.dar | grep "package-id"
 ```
 
-Where:
-- `<OPERATOR_PARTY_ID>` is from `canton.api.operator-party-id` config
-- `<PACKAGE_ID>` is from `canton.api.package-id` config
-- `<LEDGER_OFFSET>` is fetched from `/v2/state/ledger-end` endpoint
-
-## Development Notes
-
-- **Security Warning**: This is an **unrealistic API** for development/demo purposes only
-- Token signature validation is **disabled**
-- Token expiration is **not checked**
-- Use proper JWT validation in production environments
-- The API trusts the party ID from the token without verification
-
-## Troubleshooting
-
-### Package ID Not Configured
+## Project Structure
 
 ```
-IllegalStateException: Package ID not configured
+be/
+├── src/main/java/com/unlockit/
+│   ├── api/
+│   │   ├── resource/
+│   │   │   ├── UserAccountResource.java     # GET /api/user-accounts
+│   │   │   ├── RankingsResource.java        # GET /api/rankings
+│   │   ├── service/
+│   │   │   ├── UserAccountService.java
+│   │   │   └── MarketInsightService.java
+│   │   ├── client/
+│   │   │   └── CantonApiClient.java         # Canton JSON API client
+│   │   └── dto/                             # Request/response DTOs
+│   └── automation/
+│       ├── PaymentPendingOrderProcessor.java
+│       ├── PaidMarketInsightOrderProcessor.java
+│       ├── TransactionProposalProcessor.java
+│       └── VerificationProposalProcessor.java
+├── src/main/resources/
+│   └── application.properties               # Configuration
+└── pom.xml                                  # Maven dependencies
 ```
 
-**Solution**: Set `canton.api.package-id` in `application.properties`
+---
 
-### Connection Refused to Canton API
+## Security Notes
 
-```
-Error calling Canton API: Connection refused
-```
+**⚠️ Development API Only**
 
-**Solution**: Ensure Canton JSON API is running on `localhost:7575`
-
-### No Contracts Returned
-
-Check:
-1. UserAccount contracts exist on the ledger (run seedTestCredentials script)
-2. Package ID is correct in `canton.api.package-id`
-3. Operator party ID is correct in `canton.api.operator-party-id`
-4. Canton API is accessible and responding
-
-### Operator Party ID Not Configured
-
-```
-IllegalStateException: Operator party ID not configured
-```
-
-**Solution**: Set `canton.api.operator-party-id` in `application.properties`
-
-## License
-
-MIT
+- JWT signature validation disabled
+- Token expiration not checked
+- All queries use operator party (sees all contracts)
+- No authorization checks beyond token format

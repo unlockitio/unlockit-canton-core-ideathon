@@ -5,8 +5,6 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import TransactionDetail from './pages/TransactionDetail';
-import SubmitTransaction from './pages/SubmitTransaction';
-import VerifyTransactions from './pages/VerifyTransactions';
 import Insights from './pages/Insights';
 import InsightDetail from './pages/InsightDetail';
 import WalletRewards from './pages/WalletRewards';
@@ -60,8 +58,6 @@ function AppContent() {
           <Route path="wallet/rewards" element={<WalletRewards />} />
           <Route path="wallet/payments" element={<WalletPayments />} />
           <Route path="wallet/credentials" element={<WalletCredentials />} />
-          <Route path="submit" element={<SubmitTransaction />} />
-          <Route path="verify" element={<VerifyTransactions />} />
           <Route path="admin/approvals" element={<AdminRoute><AdminApprovals /></AdminRoute>} />
           <Route path="admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="debug/ledger" element={<LedgerDebug />} />

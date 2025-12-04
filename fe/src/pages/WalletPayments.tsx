@@ -27,57 +27,24 @@ export default function WalletPayments() {
   const loadPayments = async () => {
     setLoading(true);
     try {
-      // Query both PaidMarketInsightOrder and FailedPaymentOrder contracts
-      const [paidOrders, failedOrders] = await Promise.all([
-        cantonApi.query(TemplateIds.PaidMarketInsightOrder),
+      // Query ConfirmedPaymentOrder and FailedPaymentOrder contracts
+      const [confirmedOrders, failedOrders] = await Promise.all([
+        cantonApi.query(TemplateIds.ConfirmedPaymentOrder),
         cantonApi.query(TemplateIds.FailedPaymentOrder),
       ]);
 
-      const calculatePrice = (params: any) => {
-        const qualityMultipliers: Record<string, number> = {
-          'basic': 1.0,
-          'verified': 1.5,
-          'premium': 2.0,
-        };
-        const scopePrices: Record<string, number> = {
-          'basic': 5,
-          'standard': 15,
-          'detailed': 35,
-        };
-        const timeMultipliers: Record<string, number> = {
-          'recent': 1.0,
-          'year': 1.5,
-          'historic': 2.5,
-        };
-
-        const segmentSelections =
-          (params.bedrooms?.length || 0) +
-          (params.livingArea?.length || 0) +
-          (params.yearBuilt?.length || 0) +
-          (params.propertyType?.length || 0);
-        const segmentComplexity = 1.0 + (0.05 * segmentSelections);
-
-        return Math.round(
-          (scopePrices[params.dataScope] || 5) *
-          (qualityMultipliers[params.qualityLevel] || 1.0) *
-          (timeMultipliers[params.timeRange] || 1.0) *
-          segmentComplexity *
-          100
-        ) / 100;
-      };
-
-      // Transform paid orders
-      const paidPayments: Payment[] = paidOrders.map((contract: any) => {
+      // Transform confirmed orders
+      const confirmedPayments: Payment[] = confirmedOrders.map((contract: any) => {
         const params = contract.payload.queryParams;
         return {
           id: contract.contractId,
-          insightId: contract.contractId,
+          insightId: null,
           postalCode: params.postalCode || 'N/A',
           qualityLevel: params.qualityLevel,
           dataScope: params.dataScope,
           timeRange: params.timeRange,
-          amount: parseFloat(contract.payload.paidAmount) || calculatePrice(params),
-          date: contract.payload.paymentConfirmedAt,
+          amount: parseFloat(contract.payload.paymentAmount),
+          date: contract.payload.confirmedAt,
           status: 'success' as const,
         };
       });
@@ -92,7 +59,7 @@ export default function WalletPayments() {
           qualityLevel: params.qualityLevel,
           dataScope: params.dataScope,
           timeRange: params.timeRange,
-          amount: parseFloat(contract.payload.paymentAmount) || calculatePrice(params),
+          amount: parseFloat(contract.payload.paymentAmount),
           date: contract.payload.paymentRejectedAt,
           status: 'failed' as const,
           failureReason: contract.payload.failureReason,
@@ -100,7 +67,7 @@ export default function WalletPayments() {
       });
 
       // Combine and sort by date (most recent first)
-      const allPayments = [...paidPayments, ...failedPayments].sort(
+      const allPayments = [...confirmedPayments, ...failedPayments].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 

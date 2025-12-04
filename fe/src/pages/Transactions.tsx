@@ -18,6 +18,79 @@ function fromDamlOptional<T>(opt: [] | [T] | null | undefined): T | null {
   return opt[0];
 }
 
+// Helper to get role-specific SVG icon
+function getRoleIcon(role: string | null | undefined) {
+  const iconColor = '#5850ec'; // Purple color like RETVN title
+
+  if (!role) {
+    // Question mark for unknown role
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    );
+  }
+
+  switch (role) {
+    case 'RealtorAgent':
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      );
+    case 'PrivateCitizen':
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      );
+    case 'RealtorBroker':
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+          <path d="M9 22v-6h6v6"/>
+          <line x1="8" y1="6" x2="16" y2="6"/>
+          <line x1="8" y1="10" x2="16" y2="10"/>
+        </svg>
+      );
+    case 'RealtorMaster':
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      );
+    case 'NotaryPublic':
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <path d="M3 19h18M5 19V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14"/>
+          <path d="M9 3v16"/>
+          <circle cx="12" cy="11" r="2" fill={iconColor}/>
+        </svg>
+      );
+    case 'TaxAuthority':
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          <line x1="7" y1="11" x2="7" y2="11.01"/>
+          <line x1="12" y1="11" x2="12" y2="11.01"/>
+          <line x1="17" y1="11" x2="17" y2="11.01"/>
+        </svg>
+      );
+    default:
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      );
+  }
+}
+
 interface UserAccount {
   operator: string;
   user: string;
@@ -308,68 +381,83 @@ export default function Transactions() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexDirection: 'column' }}>
-                      {verification.total > 0 && (
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          {Array.from({ length: verification.total }).map((_, i) => {
-                            const v = verification.verifications[i];
-                            const isConfirmed = v && (v.decision === 'Confirmed' || v.decision === 'ConfirmedWithNotes');
-                            const isDisputed = v && v.decision === 'Disputed';
+                      <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                        {verification.total > 0 && Array.from({ length: verification.total }).map((_, i) => {
+                          const v = verification.verifications[i];
+                          const assignedVerifier = transaction.payload.assignedVerifiers[i];
+                          const isConfirmed = v && (v.decision === 'Confirmed' || v.decision === 'ConfirmedWithNotes');
+                          const isDisputed = v && v.decision === 'Disputed';
 
-                            return (
-                              <div
-                                key={i}
-                                style={{
-                                  width: '24px',
-                                  height: '24px',
-                                  borderRadius: '50%',
-                                  border: `2px solid ${
-                                    isConfirmed ? '#48bb78' : isDisputed ? '#f56565' : '#cbd5e0'
-                                  }`,
-                                  background: isConfirmed ? '#48bb78' : isDisputed ? '#f56565' : 'white',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 600,
-                                  color: v ? 'white' : '#a0aec0',
-                                }}
-                                title={
-                                  v
-                                    ? `${v.verifierRole}: ${v.decision}`
-                                    : 'Pending verification'
-                                }
-                              >
-                                {isConfirmed ? '✓' : isDisputed ? '✗' : '?'}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {canVerify && !hasVerified && (
-                          <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => handleVerifyClick(transaction)}
-                            style={{ minWidth: '80px' }}
-                          >
-                            Verify
-                          </button>
-                        )}
+                          return (
+                            <div
+                              key={i}
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                border: `2px solid ${
+                                  isConfirmed ? '#48bb78' : isDisputed ? '#f56565' : '#cbd5e0'
+                                }`,
+                                background: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'help',
+                              }}
+                              title={
+                                v
+                                  ? `${v.verifierRole} - ${v.verifier.split(':')[0]}: ${v.decision}`
+                                  : assignedVerifier
+                                  ? `${assignedVerifier.split(':')[0]} (pending)`
+                                  : 'Pending verification'
+                              }
+                            >
+                              {getRoleIcon(v ? v.verifierRole : null)}
+                            </div>
+                          );
+                        })}
 
                         {unassignedRoles.length > 0 && (
-                          <button
-                            className="btn btn-sm btn-secondary"
+                          <div
                             onClick={() => setDropdownState({ show: !dropdownState.show })}
-                            disabled={isAssigningVerifier && assigningForTransaction === transaction.contractId}
-                            style={{ minWidth: '120px' }}
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              border: '2px dashed #cbd5e0',
+                              background: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '1rem',
+                              color: '#5850ec',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                            }}
+                            title="Assign new verifier"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = '#5850ec';
+                              e.currentTarget.style.background = '#f7fafc';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = '#cbd5e0';
+                              e.currentTarget.style.background = 'white';
+                            }}
                           >
-                            {isAssigningVerifier && assigningForTransaction === transaction.contractId
-                              ? 'Assigning...'
-                              : '+ Assign Verifier'}
-                          </button>
+                            +
+                          </div>
                         )}
                       </div>
+
+                      {canVerify && !hasVerified && (
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => handleVerifyClick(transaction)}
+                          style={{ minWidth: '80px' }}
+                        >
+                          Verify
+                        </button>
+                      )}
                     </div>
                   </div>
 

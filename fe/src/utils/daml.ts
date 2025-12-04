@@ -112,6 +112,7 @@ export const TemplateIds = {
   MarketInsightOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:MarketInsightOrder',
   PaymentPendingOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:PaymentPendingOrder',
   PaidMarketInsightOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:PaidMarketInsightOrder',
+  ConfirmedPaymentOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:ConfirmedPaymentOrder',
   FailedPaymentOrder: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:FailedPaymentOrder',
   MarketInsight: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:MarketInsight',
   ContributorReward: '#unlockit-canton-core-ideathon:RETVN.MarketInsight:ContributorReward',

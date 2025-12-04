@@ -21,6 +21,79 @@ function fromDamlOptional<T>(opt: [] | [T] | T | null | undefined): T | null {
   return opt;
 }
 
+// Helper to get role-specific SVG icon
+function getRoleIcon(role: string | null | undefined) {
+  const iconColor = '#5850ec'; // Purple color like RETVN title
+
+  if (!role) {
+    // Question mark for unknown role
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    );
+  }
+
+  switch (role) {
+    case 'RealtorAgent':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      );
+    case 'PrivateCitizen':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      );
+    case 'RealtorBroker':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+          <path d="M9 22v-6h6v6"/>
+          <line x1="8" y1="6" x2="16" y2="6"/>
+          <line x1="8" y1="10" x2="16" y2="10"/>
+        </svg>
+      );
+    case 'RealtorMaster':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      );
+    case 'NotaryPublic':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <path d="M3 19h18M5 19V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14"/>
+          <path d="M9 3v16"/>
+          <circle cx="12" cy="11" r="2" fill={iconColor}/>
+        </svg>
+      );
+    case 'TaxAuthority':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          <line x1="7" y1="11" x2="7" y2="11.01"/>
+          <line x1="12" y1="11" x2="12" y2="11.01"/>
+          <line x1="17" y1="11" x2="17" y2="11.01"/>
+        </svg>
+      );
+    default:
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      );
+  }
+}
+
 export default function TransactionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -123,9 +196,6 @@ export default function TransactionDetail() {
           <h1 className="text-xl font-bold mt-2">Transaction Details</h1>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn btn-secondary" onClick={() => setIsAssignVerifierModalOpen(true)}>
-            Assign Verifier
-          </button>
           {canVerify && !hasVerified && (
             <button className="btn btn-primary" onClick={() => setIsVerifyModalOpen(true)}>
               Verify Transaction
@@ -183,7 +253,7 @@ export default function TransactionDetail() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
             <div>
               <label className="text-sm text-muted">Transaction ID</label>
               <p className="font-semibold">{transaction.payload.transactionId}</p>
@@ -219,48 +289,50 @@ export default function TransactionDetail() {
           <strong>Property Details</strong>
         </div>
         <div style={{ padding: '1.5rem' }}>
-          {fromDamlOptional(transaction.payload.livingAreaSqft) && (
-            <div className="mb-3">
-              <label className="text-sm text-muted">Living Area</label>
-              <p className="font-semibold">{fromDamlOptional(transaction.payload.livingAreaSqft)} sqft</p>
-            </div>
-          )}
-          {fromDamlOptional(transaction.payload.lotSizeSqft) && (
-            <div className="mb-3">
-              <label className="text-sm text-muted">Lot Size</label>
-              <p className="font-semibold">{fromDamlOptional(transaction.payload.lotSizeSqft)} sqft</p>
-            </div>
-          )}
-          {fromDamlOptional(transaction.payload.bedroomsTotal) && (
-            <div className="mb-3">
-              <label className="text-sm text-muted">Bedrooms</label>
-              <p className="font-semibold">{fromDamlOptional(transaction.payload.bedroomsTotal)}</p>
-            </div>
-          )}
-          {fromDamlOptional(transaction.payload.bathroomsTotal) && (
-            <div className="mb-3">
-              <label className="text-sm text-muted">Bathrooms</label>
-              <p className="font-semibold">{fromDamlOptional(transaction.payload.bathroomsTotal)}</p>
-            </div>
-          )}
-          {fromDamlOptional(transaction.payload.yearBuilt) && (
-            <div className="mb-3">
-              <label className="text-sm text-muted">Year Built</label>
-              <p className="font-semibold">{fromDamlOptional(transaction.payload.yearBuilt)}</p>
-            </div>
-          )}
-          {fromDamlOptional(transaction.payload.financingType) && (
-            <div className="mb-3">
-              <label className="text-sm text-muted">Financing Type</label>
-              <p className="font-semibold">{fromDamlOptional(transaction.payload.financingType)}</p>
-            </div>
-          )}
-          {fromDamlOptional(transaction.payload.daysOnMarket) && (
-            <div>
-              <label className="text-sm text-muted">Days on Market</label>
-              <p className="font-semibold">{fromDamlOptional(transaction.payload.daysOnMarket)} days</p>
-            </div>
-          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            {fromDamlOptional(transaction.payload.livingAreaSqft) && (
+              <div>
+                <label className="text-sm text-muted">Living Area</label>
+                <p className="font-semibold">{fromDamlOptional(transaction.payload.livingAreaSqft)} sqft</p>
+              </div>
+            )}
+            {fromDamlOptional(transaction.payload.lotSizeSqft) && (
+              <div>
+                <label className="text-sm text-muted">Lot Size</label>
+                <p className="font-semibold">{fromDamlOptional(transaction.payload.lotSizeSqft)} sqft</p>
+              </div>
+            )}
+            {fromDamlOptional(transaction.payload.bedroomsTotal) && (
+              <div>
+                <label className="text-sm text-muted">Bedrooms</label>
+                <p className="font-semibold">{fromDamlOptional(transaction.payload.bedroomsTotal)}</p>
+              </div>
+            )}
+            {fromDamlOptional(transaction.payload.bathroomsTotal) && (
+              <div>
+                <label className="text-sm text-muted">Bathrooms</label>
+                <p className="font-semibold">{fromDamlOptional(transaction.payload.bathroomsTotal)}</p>
+              </div>
+            )}
+            {fromDamlOptional(transaction.payload.yearBuilt) && (
+              <div>
+                <label className="text-sm text-muted">Year Built</label>
+                <p className="font-semibold">{fromDamlOptional(transaction.payload.yearBuilt)}</p>
+              </div>
+            )}
+            {fromDamlOptional(transaction.payload.financingType) && (
+              <div>
+                <label className="text-sm text-muted">Financing Type</label>
+                <p className="font-semibold">{fromDamlOptional(transaction.payload.financingType)}</p>
+              </div>
+            )}
+            {fromDamlOptional(transaction.payload.daysOnMarket) && (
+              <div>
+                <label className="text-sm text-muted">Days on Market</label>
+                <p className="font-semibold">{fromDamlOptional(transaction.payload.daysOnMarket)} days</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -269,17 +341,19 @@ export default function TransactionDetail() {
           <strong>Submission Details</strong>
         </div>
         <div style={{ padding: '1.5rem' }}>
-          <div className="mb-3">
-            <label className="text-sm text-muted">Submitter</label>
-            <p className="font-semibold">{transaction.payload.submitter}</p>
-          </div>
-          <div className="mb-3">
-            <label className="text-sm text-muted">Submitter Role</label>
-            <p className="font-semibold">{transaction.payload.submitterRole}</p>
-          </div>
-          <div>
-            <label className="text-sm text-muted">Operator</label>
-            <p className="font-semibold">{transaction.payload.operator}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            <div>
+              <label className="text-sm text-muted">Submitter</label>
+              <p className="font-semibold">{transaction.payload.submitter.split(':')[0]}</p>
+            </div>
+            <div>
+              <label className="text-sm text-muted">Submitter Role</label>
+              <p className="font-semibold">{transaction.payload.submitterRole}</p>
+            </div>
+            <div>
+              <label className="text-sm text-muted">Operator</label>
+              <p className="font-semibold">{transaction.payload.operator.split(':')[0]}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -292,11 +366,8 @@ export default function TransactionDetail() {
           </span>
         </div>
         <div style={{ padding: '1.5rem' }}>
-          {verification.assignedVerifiers.length === 0 ? (
-            <p className="text-muted">No verifiers assigned yet.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {verification.assignedVerifiers.map((verifier, index) => {
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+            {verification.assignedVerifiers.map((verifier, index) => {
                 const v = verification.verifications.find(v => v.verifier === verifier);
                 const isCompleted = !!v;
 
@@ -312,7 +383,7 @@ export default function TransactionDetail() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
-                        <div className="font-semibold">{verifier}</div>
+                        <div className="font-semibold">{verifier.split(':')[0]}</div>
                         {v && (
                           <>
                             <div className="text-sm text-muted mt-1">
@@ -351,48 +422,64 @@ export default function TransactionDetail() {
                         )}
                       </div>
                       <div>
-                        {isCompleted ? (
-                          <div
-                            style={{
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '50%',
-                              background: v.decision === 'Disputed' ? '#f56565' : '#48bb78',
-                              color: 'white',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '1.25rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {v.decision === 'Disputed' ? '✗' : '✓'}
-                          </div>
-                        ) : (
-                          <div
-                            style={{
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '50%',
-                              border: '2px solid #cbd5e0',
-                              background: 'white',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '1rem',
-                              color: '#a0aec0',
-                            }}
-                          >
-                            ?
-                          </div>
-                        )}
+                        <div
+                          title={isCompleted && v ? `${v.verifierRole} - ${v.verifier.split(':')[0]}` : `${verifier.split(':')[0]} (pending)`}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            border: `3px solid ${
+                              isCompleted && v
+                                ? v.decision === 'Disputed'
+                                  ? '#f56565'
+                                  : '#48bb78'
+                                : '#cbd5e0'
+                            }`,
+                            background: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'help',
+                          }}
+                        >
+                          {getRoleIcon(isCompleted && v ? v.verifierRole : null)}
+                        </div>
                       </div>
                     </div>
                   </div>
                 );
               })}
+
+              {/* Add Verifier Card */}
+              <div
+                onClick={() => setIsAssignVerifierModalOpen(true)}
+                title="Assign new verifier"
+                style={{
+                  padding: '1rem',
+                  border: '2px dashed #cbd5e0',
+                  borderRadius: '8px',
+                  background: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '2rem',
+                  color: '#5850ec',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  minHeight: '100px',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#5850ec';
+                  e.currentTarget.style.background = '#f7fafc';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#cbd5e0';
+                  e.currentTarget.style.background = 'white';
+                }}
+              >
+                +
+              </div>
             </div>
-          )}
         </div>
       </div>
 

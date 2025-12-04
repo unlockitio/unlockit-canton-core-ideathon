@@ -133,61 +133,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-2">
-        <div>
-          <div className="card">
-            <h2 className="card-header">Quick Actions</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <Link to="/submit" className="btn btn-primary">
-                Submit New Transaction
-              </Link>
-              <Link to="/verify" className="btn btn-secondary">
-                Verify Transactions
-              </Link>
-              <Link to="/market-data" className="btn btn-secondary">
-                View Market Data
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="card">
-            <h2 className="card-header">Recent Activity</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {transactions.slice(0, 5).map(activity => (
-                <div
-                  key={activity.contractId}
-                  style={{
-                    padding: '1rem',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span className="font-semibold">{activity.title}</span>
-                    <span
-                      className={`badge ${
-                        activity.status === 'Verified'
-                          ? 'badge-success'
-                          : activity.status === 'Pending'
-                          ? 'badge-warning'
-                          : 'badge-info'
-                      }`}
-                    >
-                      {activity.status}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                    <span className="text-muted">Trust Score: {activity.trustScore}</span>
-                    <span className="text-muted">{activity.date}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
