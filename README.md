@@ -280,6 +280,217 @@ docker compose -f docker-compose.sandbox.yml down
 - **Backend**: http://localhost:9090
 - **Canton JSON API**: http://localhost:8080
 - **Canton gRPC**: http://localhost:6865
+- **Swagger UI - Canton API**: http://localhost:8081
+- **Swagger UI - Backend API**: http://localhost:8082
+
+---
+
+## Using the PoC
+
+### Pre-Seeded Data
+
+The system automatically seeds on startup:
+- **Multiple test users** across all role types (agents, brokers, masters, notaries, tax authorities, citizens)
+- **100 sample transactions** with realistic property data
+- **W3C Verifiable Credentials** for test users
+
+**You can login and logout of multiple users at will to explore different perspectives.**
+
+### Important Note
+
+**This PoC has been built following a happy path approach.** While we've attempted to handle some edge cases, it's possible to encounter unhappy paths. The focus is on demonstrating core functionality and Canton integration patterns.
+
+---
+
+### Suggested Testing Workflow
+
+#### Step 1: Explore Pre-Seeded Data
+
+1. **Login as any user** (the system shows available users on the login screen)
+2. **Navigate to the Dashboard** to see:
+   - Transaction statistics
+   - Verification counts
+   - Trust score
+   - Pending verifications
+3. **Browse the Transactions page** to see the 100 pre-seeded transactions
+4. **Check the Rankings page** to see reputation scores across stakeholders
+
+#### Step 2: Submit a New Transaction
+
+**Login as a Real Estate Agent** (e.g., `alice` or any agent from the user list)
+
+1. Navigate to **Transactions** page
+2. Click **Submit Transaction** button
+3. Fill out the 4-step form:
+
+**Suggested test data** (chosen to demonstrate insights later):
+- **Property Address**: 123 Test Street, Los Angeles, CA
+- **Postal Code**: `90001`
+- **Property Type**: `Condo`
+- **Living Area**: `1400` sqft (between 1200-1600)
+- **Bedrooms**: `2`
+- **Bathrooms**: `2`
+- **Year Built**: `1985` (1980s-1990s range)
+- **Sale Price**: `450000`
+- **Closing Date**: Any recent date
+- **Financing Type**: Conventional
+- **Days on Market**: `30`
+
+4. **Assign Verifiers** (optional - select verifiers by role)
+5. **Review and Submit**
+
+The transaction will be created and visible in the Transactions list.
+
+#### Step 3: Verify the Transaction
+
+**Logout and login as a Notary or Tax Authority** (higher verification weight)
+
+1. Navigate to **Transactions** page
+2. Find the transaction you just created (it will show as "Unverified" or "Partially Verified")
+3. Click on the transaction to open **Transaction Detail** page
+4. Click **Verify Transaction** button
+5. Select a verification decision:
+   - **Confirmed** - Data is accurate
+   - **Confirmed with Notes** - Accurate with additional context
+   - **Disputed** - Data is incorrect
+   - **Request Clarification** - Need more information
+6. Add optional notes
+7. **Submit Verification**
+
+**Observe the changes:**
+- **Transaction trust score updates**: Calculated as Σ(confirmed weights) - Σ(disputed weights × 2), clamped to [0, 100]
+  - Each role has a verification weight (Citizen: 5, Agent: 8, Broker: 12, Master: 15, Notary: 25, Tax Authority: 40)
+  - Confirming adds your role's weight to the score
+  - Disputing subtracts 2× your role's weight
+- **Transaction status changes**: Unverified → Partially Verified (1+ confirmations) → Fully Verified (3+ confirmations from 2+ different roles)
+- **User reputation is affected**:
+  - Transaction submitter's reputation increases when their data is confirmed by verifiers
+  - Verifier's reputation increases when their verification aligns with consensus
+  - Disputed transactions or incorrect verifications damage reputation
+
+**Note**: The current scoring algorithms are simplistic for PoC demonstration. Production implementation should make these configurable with more sophisticated weighting, time-decay, and reputation mechanisms.
+
+#### Step 4: Request Market Insights
+
+Now that you have transaction data in the `90001` postal code range:
+
+**Login as any user** and navigate to **Insights** page
+
+1. Click **Request Insight** button
+2. Configure the request:
+   - **Postal Code**: `90001`
+   - **Quality Level**: `Basic`
+   - **Data Scope**: `Basic`
+   - **Time Range**: `Historic` (important - this ensures we include the test data)
+   - **Segments**: Select filters that match your test transaction:
+     - Property Type: `Condo`
+     - Bedrooms: `2`
+     - Living Area: `1200-1600 sqft`
+     - Year Built: `1980-1990`
+
+3. **Review the calculated price** (based on quality level, scope, time range, and segment complexity)
+4. **Submit the order**
+
+The system creates a **PaymentPendingOrder**.
+
+#### Step 5: Payment Processing & Rewards
+
+**The backend automation processes payments automatically.**
+
+1. Navigate to **Wallet → Payments** page
+2. Wait a few seconds and refresh the page
+3. The payment will be processed:
+   - **80% chance of success** → Creates `ConfirmedPaymentOrder`
+   - **20% chance of failure** → Creates `FailedPaymentOrder`
+
+**If payment fails:**
+- You'll see the failure reason (e.g., "Insufficient funds", "Payment gateway timeout")
+- **Feel free to try again** - submit another insight request and wait for processing
+
+**When payment succeeds:**
+- The order becomes a **PaidMarketInsightOrder**
+- Backend automation generates the **MarketInsight** contract
+- Navigate to **Insights** page to see your purchased insight with aggregated data
+
+4. Navigate to **Wallet → Rewards** page
+5. **Check for new rewards** distributed to:
+   - **Data contributors** who submitted transactions in that postal code/segment
+   - **Verifiers** who validated the transaction data
+   - Reward amounts are proportional to contribution quality and verification weight
+
+#### Step 6: Explore Reputation System
+
+1. Navigate to **Rankings** page
+2. **Filter by role** to see top contributors
+3. Notice how reputation scores reflect:
+   - Quality of submitted transactions
+   - Accuracy of verifications
+   - Overall contribution to the platform
+
+**Test reputation changes:**
+- Submit multiple transactions as one user and have them verified → **submitter reputation increases**
+- Verify transactions correctly (aligned with consensus) → **verifier reputation increases**
+- Submit a transaction with incorrect data that gets disputed → **submitter reputation decreases**
+- Dispute a transaction incorrectly (against consensus) → **verifier reputation decreases**
+- Check the **Rankings** page to see updated reputation scores after these actions
+
+**Note**: Reputation calculations in this PoC are basic. Future iterations will implement configurable algorithms that account for historical accuracy, contribution frequency, role expertise, and time-weighted decay.
+
+---
+
+### Additional Features to Explore
+
+**Wallet → Credentials**
+- View W3C Verifiable Credentials for the logged-in user
+- See credential status (Active, Suspended, Revoked)
+- Check credential expiration dates
+
+**Transaction Detail Page**
+- Deep dive into individual transactions
+- See complete verification history
+- View all verifiers and their decisions
+- Understand trust score calculation
+
+**Admin Features** (login as `operator`)
+- User approval queue
+- User directory
+- System-wide oversight
+
+---
+
+### Known Limitations (PoC Scope)
+
+1. **Authentication**: JWT signature validation is disabled (development mode)
+2. **Payment simulation**: 20% random failure rate for demonstration
+3. **No persistent storage**: Data resets when Docker containers restart
+4. **Limited error handling**: Focus on happy path scenarios
+5. **No production security**: For demo purposes only
+
+---
+
+### Troubleshooting
+
+**Services won't start or backend shows errors**
+
+The backend requires Canton to be fully initialized and seeded before it can start. Use this **staged startup approach**:
+
+```bash
+# Step 1: Start Canton, nginx-cors, and frontend first
+docker compose -f docker-compose.sandbox.yml up canton-sandbox nginx-cors frontend -d
+
+# Step 2: Follow Canton logs to wait for seeding completion
+docker logs retvn-canton-sandbox -f
+
+# Wait for these messages:
+# - "Canton sandbox is ready"
+# - "Test credentials seeded successfully!"
+# - "Transaction seeding completed!"
+
+# Step 3: Once seeding is complete (Ctrl+C to exit logs), start backend
+docker compose -f docker-compose.sandbox.yml up backend -d
+```
+
+---
 
 ## Project Structure
 
@@ -302,22 +513,6 @@ Each component has detailed documentation in its respective folder:
 - **[Daml Contracts](./daml/README.md)** - Smart contracts, seeding, and querying
 - **[Docker Setup](./docker/README.md)** - Container deployment and configuration
 - **[Scripts](./scripts/README.md)** - Utility scripts documentation
-
-## Key Features
-
-- **W3C Verifiable Credentials** - Digital credential presentation for user verification
-- **Role-Based Access Control** - Six-tier system (Citizen to Tax Authority)
-- **Multi-Party Verification** - Weighted trust scores from multiple verifiers
-- **Privacy-Preserving** - Canton's sub-transaction privacy
-- **Market Data Marketplace** - Tiered access to aggregated transaction data
-- **Payment System** - Integrated payment workflow with confirmed/failed orders
-
-## Tech Stack
-
-- **Backend**: Quarkus, Java 17, Maven
-- **Frontend**: React 18, TypeScript, Vite
-- **Smart Contracts**: Daml 3.4.0-rc2
-- **Infrastructure**: Docker, Docker Compose
 
 ## User Roles
 
@@ -342,20 +537,3 @@ Clamped to [0, 100]
 - **Partially Verified**: 1+ confirmations
 - **Fully Verified**: 3+ confirmations from 2+ roles
 - **Disputed**: At least one dispute
-
-## Common Commands
-
-```bash
-# View logs
-docker logs retvn-canton-sandbox -f   # Canton logs
-docker logs retvn-frontend -f         # Frontend logs
-docker logs retvn-backend -f          # Backend logs
-
-# Health checks
-curl http://localhost:8080/livez      # Canton health
-curl http://localhost:9090/q/health   # Backend health
-
-# Full restart with fresh ledger
-docker compose -f docker-compose.sandbox.yml down
-docker compose -f docker-compose.sandbox.yml up -d
-```
