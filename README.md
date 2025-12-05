@@ -472,7 +472,7 @@ The system creates a **PaymentPendingOrder**.
 
 **Services won't start or backend shows errors**
 
-The backend requires Canton to be fully initialized and seeded before it can start. Use this **staged startup approach**:
+The backend requires Canton to be fully initialized and seeded before it can start. Use this **staged startup approach** if the delays incorporated to take this into account are not sufficient:
 
 ```bash
 # Step 1: Start Canton, nginx-cors, and frontend first

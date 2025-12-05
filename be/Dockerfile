@@ -89,5 +89,5 @@ RUN chmod +x /app/scripts/configureApplicationProps.sh
 # Expose backend port
 EXPOSE 9090
 
-# Entry point: configure then run
-CMD ["sh", "-c", "/app/scripts/configureApplicationProps.sh && ./mvnw quarkus:dev -Dquarkus.http.host=0.0.0.0 -Dquarkus.analytics.disabled=true"]
+# Entry point: wait for Canton seeding, configure, then run
+CMD ["sh", "-c", "echo 'Waiting for Canton seeding to complete...' && sleep 180 && echo 'Starting backend...' && /app/scripts/configureApplicationProps.sh && ./mvnw quarkus:dev -Dquarkus.http.host=0.0.0.0 -Dquarkus.analytics.disabled=true"]

@@ -54,7 +54,7 @@ export default function Layout({ onLogout }: LayoutProps) {
                   </ul>
                 )}
               </li>
-              <li><Link to="/debug/ledger" style={{ color: '#e53e3e' }}>Debug</Link></li>
+              {/* <li><Link to="/debug/ledger" style={{ color: '#e53e3e' }}>Debug</Link></li> */}
               </>
             )}
           </ul>
