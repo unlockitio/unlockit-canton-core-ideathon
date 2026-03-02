@@ -1,0 +1,240 @@
+module Unlockit.Interface.Property.Base.Property where
+
+import DA.Set
+-- | Type synonym for `BaseProperty`.
+type I = BaseProperty
+
+-- | Type synonym for `View`.
+type V = View
+
+-- Core helper types
+data Money = Money 
+  with 
+    value : Decimal
+    currency : Text 
+  deriving (Eq, Show)
+
+data GeoPoint = GeoPoint 
+  with 
+    latitude : Decimal
+    longitude : Decimal 
+  deriving (Eq, Show)
+
+data Distance = Distance 
+  with
+    numeric  : Optional Decimal
+    units    : Optional Text
+    comments : Optional Text
+  deriving (Eq, Show)
+
+-- RESO Address (subset, grouped under Location)
+data Address = Address 
+  with
+    unparsed              : Optional Text
+    streetNumber          : Optional Text
+    streetNumberNumeric   : Optional Int
+    streetDirPrefix       : Optional Text
+    streetName            : Optional Text
+    streetSuffix          : Optional Text
+    streetDirSuffix       : Optional Text
+    unitNumber            : Optional Text
+    unitType              : Optional Text
+    city                  : Optional Text
+    stateOrProvince       : Optional Text
+    postalCode            : Optional Text
+    postalCodePlus4       : Optional Text
+    country               : Optional Text
+    countyOrParish        : Optional Text
+    carrierRoute          : Optional Text
+    crossStreet           : Optional Text
+  deriving (Eq, Show)
+
+-- Groups
+data Characteristics = Characteristics 
+  with
+    bedroomsTotal              : Optional Int
+    bathroomsTotal             : Optional Decimal       -- supports half baths
+    fullBaths                  : Optional Int
+    halfBaths                  : Optional Int
+    livingArea                 : Optional Decimal
+    aboveGradeFinishedArea     : Optional Decimal
+    belowGradeFinishedArea     : Optional Decimal
+    buildingArea               : Optional Decimal
+    buildingAreaUnits          : Optional Text
+    lotSizeArea                : Optional Decimal
+    lotSizeUnits               : Optional Text
+    lotSizeDimensions          : Optional Text
+    lotSizeSource              : Optional Text
+    storiesTotal               : Optional Int
+    levels                     : Optional Text
+    accessibilityFeatures      : Optional [Text]
+    architecturalStyle         : Optional [Text]
+    constructionMaterials      : Optional [Text]
+    fireplaceYN                : Optional Bool
+    fireplaceFeatures          : Optional [Text]
+    interiorFeatures           : Optional [Text]
+    exteriorFeatures           : Optional [Text]
+    viewFeatures               : Optional [Text]
+    waterfrontFeatures         : Optional [Text]
+    poolFeatures               : Optional [Text]
+    spaFeatures                : Optional [Text]
+    patioAndPorchFeatures      : Optional [Text]
+    parkingFeatures            : Optional [Text]
+    garageSpaces               : Optional Decimal
+    openParkingSpaces          : Optional Decimal
+    carportSpaces              : Optional Decimal
+    greenVerification          : Optional [Text]
+    greenVerificationSource    : Optional [Text]
+    remarksPublic              : Optional Text
+  deriving (Eq, Show)
+
+data Equipment = Equipment 
+  with
+    appliances             : Optional [Text]
+    securityFeatures       : Optional [Text]
+    windowFeatures         : Optional [Text]
+    otherEquipment         : Optional [Text]
+  deriving (Eq, Show)
+
+data Farming = Farming 
+  with
+    cropsIncluded            : Optional [Text]
+    farmLandArea             : Optional Decimal
+    farmLandAreaUnits        : Optional Text
+    livestock                : Optional [Text]
+    irrigationSource         : Optional [Text]
+    irrigationWaterRights    : Optional Text
+    irrigationWaterRightsYN  : Optional Bool
+    soilType                 : Optional [Text]
+    tillableArea             : Optional Decimal
+  deriving (Eq, Show)
+
+data Financial = Financial 
+  with
+    listPrice              : Optional Money
+    closePrice             : Optional Money
+    taxAnnualAmount        : Optional Decimal
+    taxYear                : Optional Int
+    ownership              : Optional Text              -- Fee Simple, Condo, etc.
+    leaseRenewalComp       : Optional Decimal
+    rentControlYN          : Optional Bool
+    insuranceExpense       : Optional Decimal
+    maintenanceExpense     : Optional Decimal
+    hoaFeeTotal            : Optional Decimal
+    netOperatingIncome     : Optional Decimal
+    grossIncome            : Optional Decimal
+    operatingExpense       : Optional Decimal
+  deriving (Eq, Show)
+
+data HOA = HOA 
+  with
+    associationFee           : Optional Decimal
+    associationFeeFrequency  : Optional Text            -- Monthly, Quarterly, etc.
+    associationFee2          : Optional Decimal
+    associationFee2Frequency : Optional Text
+    associationFee3          : Optional Decimal
+    associationFee3Frequency : Optional Text
+    associationName          : Optional Text
+    associationPhone         : Optional Text
+    associationAmenities     : Optional [Text]
+    associationIncludes      : Optional [Text]
+  deriving (Eq, Show)
+
+data Location = Location 
+  with
+    address                : Address                  -- RESO Address group
+    geo                    : Optional GeoPoint
+    subdivisionName        : Optional Text
+    directions             : Optional Text
+    elementarySchool       : Optional Text
+    middleOrJuniorSchool   : Optional Text
+    highSchool             : Optional Text
+    schoolDistrict         : Optional Text
+    zoning                 : Optional Text
+    township               : Optional Text
+    lotNumber              : Optional Text
+    block                  : Optional Text
+    lotFeatures            : Optional [Text]
+  deriving (Eq, Show)
+
+data Structure = Structure 
+  with
+    yearBuilt              : Optional Int
+    yearBuiltEffective     : Optional Int
+    foundationDetails      : Optional [Text]
+    roof                   : Optional [Text]
+    basement               : Optional Text
+    constructionMaterials  : Optional [Text]
+    doorFeatures           : Optional [Text]
+    windowFeatures         : Optional [Text]
+    cooling                : Optional [Text]
+    heating                : Optional [Text]
+    energyEfficient        : Optional [Text]
+    buildingName           : Optional Text
+    buildingFeatures       : Optional [Text]
+  deriving (Eq, Show)
+
+data Utilities = Utilities 
+  with
+    -- Distance to utility services
+    distanceToElectric        : Optional Distance
+    distanceToGas             : Optional Distance
+    distanceToPhoneService    : Optional Distance
+    distanceToSewer           : Optional Distance
+    distanceToWater           : Optional Distance
+
+    -- Core utility availability/lookups
+    electric                 : Optional [Text]
+    electricOnPropertyYN     : Optional Bool
+    gas                      : Optional [Text]
+    sewer                    : Optional [Text]
+    waterSource              : Optional [Text]
+    telecommunications       : Optional [Text]
+    irrigationSource         : Optional [Text]
+    irrigationWaterRightsYN  : Optional Bool
+    irrigationWaterRightsAcres : Optional Decimal
+    numberOfSeparateElectricMeters : Optional Int
+    numberOfSeparateGasMeters      : Optional Int
+    numberOfSeparateWaterMeters    : Optional Int
+    powerProduction                : Optional Decimal
+    powerProductionType            : Optional Text
+  deriving (Eq, Show)
+
+-- | View for `Instrument`.
+
+data View = View
+  with
+    owner : Party
+    observers : Set Party    
+    propertyType           : Text                     -- RESO PropertyType
+    propertySubType        : Optional Text            -- RESO PropertySubType
+    universalPropertyId    : Text                     -- RESO UniversalPropertyId
+    universalPropertySubId : Optional Text
+    parcelNumber           : Optional Text
+    taxLegalDescription    : Optional Text
+    modificationTimestamp  : Optional Time
+    characteristics        : Characteristics
+    equipment              : Equipment
+    farming                : Farming
+    financial              : Financial
+    hoa                    : HOA
+    location               : Location
+    structure              : Structure
+    utilities              : Utilities
+  deriving (Eq, Show)
+
+-- | Interface to expose a consistent view for any Verifiable Credential implementation.
+interface BaseProperty where
+  viewtype V
+  {-
+  getIssuer : Party
+  getHolder : Party
+  -}
+  nonconsuming choice GetView : View
+    -- ^ Retrieves the interface view.
+    with
+      viewer : Party
+        -- ^ The party retrieving the view.
+    controller viewer
+    do
+      pure $ view this
