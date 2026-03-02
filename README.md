@@ -12,6 +12,38 @@ Supporting material and code:
 - Slide Deck: [unlockit](./unlockit/...)
 - UI codebase: [ui](./unlockit/ui) - Open locally individual html pages
 - Daml codebase: [daml](./unlockit/canton)
-- Additional details: [unlockit](./unlockit) - Check other files under this folder
+- Video demo (advanced mode): https://drive.google.com/file/d/1JWz0oTlnJ8nlZBSOgkdfPYVU0h-Tnjvo/view?usp=sharing 
+- Video demo (realtor ux): Coming soon...
+- Additional details: [unlockit](./unlockit) - Feel free to check other files under this folder
 
 The experience focused on the project presented can be seen at [mockups.unlockit.io](https://mockups.unlockit.io). User and pass: `canton-core`.
+
+**Walkthrough**
+Use the screenshots below and follow the widget prompts to move through the experience.
+
+**Supporting Story**
+An agent supports a buyer. When there is an open buy transaction, the Realtor AI assistant initiates a chat with the agent and alerts them about relevant data.
+
+![Assistant notification in transaction](./unlockit/screenshots/image%201.png)
+
+When the agent opens the notification, a widget appears with insights and suggested follow ups. The documentation informing these insights is recorded on Canton as open data resources on the internet to demonstrate where the data comes from.
+
+![Insights widget with initial follow ups](./unlockit/screenshots/image%202.png)
+
+The Realtor AI Assistante suggests the agent to request for more real time insights to support the journey with the prospective buyer. Throughout the journey the Realtor AI Assistant supports the refinement of the data request.
+
+![Refined follow up inputs](./unlockit/screenshots/image%203.png)
+
+As that refinement is sufficient to trigger a confirming action, the assistant provides an overview along with the data cost.
+
+![Estimated cost and checkout option](./unlockit/screenshots/image%204.png)
+
+At checkout, the user is offered different ways to settle the request, including wallet balances and delegation rights using an organization’s wallet tokens.
+
+![Wallet selection and balances](./unlockit/screenshots/image%205.png)
+
+After selecting the wallet and confirming payment, a summary is provided, including the split between roles on the tokens used to settle the transaction.
+
+![Settlement summary and value split](./unlockit/screenshots/image%206.png)
+
+Finally, the user can ask the Realtor AI agent to build a branded report with all collected insights.
