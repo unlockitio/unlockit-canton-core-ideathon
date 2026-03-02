@@ -43,7 +43,7 @@ At checkout, the user is offered different ways to settle the request, including
 
 ![Wallet selection and balances](./unlockit/screenshots/image%205.png)
 
-After selecting the wallet and confirming payment, a summary is provided, including the split between roles on the tokens used to settle the transaction.
+After selecting the wallet and confirming payment, a summary is provided, including the split of the used tokens between the different stakeholder roles that provided the needed information to settle the transaction.
 
 ![Settlement summary and value split](./unlockit/screenshots/image%206.png)
 
