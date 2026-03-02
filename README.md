@@ -12,6 +12,7 @@ Supporting material and code:
 - Slide Deck: [unlockit](./unlockit/...)
 - UI codebase: [ui](./unlockit/ui) - Open locally individual html pages
 - Daml codebase: [daml](./unlockit/canton)
+- Slide Deck: https://drive.google.com/file/d/15jtV2z0LIA9lyvhAjQqDQxpilwlIUkXX/view?usp=sharing
 - Video demo (advanced mode): https://drive.google.com/file/d/1JWz0oTlnJ8nlZBSOgkdfPYVU0h-Tnjvo/view?usp=sharing 
 - Video demo (realtor ux): Coming soon...
 - Additional details: [unlockit](./unlockit) - Feel free to check other files under this folder
