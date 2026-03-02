@@ -17,7 +17,7 @@ Supporting material and code:
 - Video demo (realtor ux): Coming soon...
 - Additional details: [unlockit](./unlockit) - Feel free to check other files under this folder
 
-The experience focused on the project presented can be seen at [mockups.unlockit.io](https://mockups.unlockit.io). User and pass: `canton-core`.
+The experience focused on the project presented can be seen at [mockups.unlockit.io](https://mockups.unlockit.io/features/003-transactions/002-detail/transaction-detail-mockup.html?id=WF-003). User and pass: `canton-core`.
 
 **Walkthrough**
 Use the screenshots below and follow the widget prompts to move through the experience.
