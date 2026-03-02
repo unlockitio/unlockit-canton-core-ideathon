@@ -1,0 +1,145 @@
+/* Virtual Card Editor Modal Specific Styles */
+
+/* Card Preview */
+.virtual-card-preview {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 0.857rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.virtual-card-preview h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.virtual-card-preview p {
+    font-size: 0.875rem;
+    margin: 0 0 0.25rem 0;
+    opacity: 0.9;
+}
+
+.virtual-card-preview .contact-info {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-top: 1rem;
+}
+
+.virtual-card-preview .contact-info p {
+    margin: 0.25rem 0;
+}
+
+/* Form Layout */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Color Picker */
+.color-picker-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.color-input-wrapper {
+    position: relative;
+    width: 50px;
+    height: 38px;
+}
+
+.color-input {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #e7e7e7;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.color-text-input {
+    flex: 1;
+}
+
+/* Gradient Presets */
+.gradient-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.gradient-preset {
+    aspect-ratio: 2;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gradient-preset:hover {
+    border-color: var(--color-primary);
+}
+
+.gradient-preset.selected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(102, 78, 224, 0.1);
+}
+
+.gradient-preset.purple {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-preset.blue {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.gradient-preset.green {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.gradient-preset.orange {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.gradient-preset.pink {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+.gradient-preset.dark {
+    background: linear-gradient(135deg, #434343 0%, #000000 100%);
+}
+
+.gradient-preset.sunset {
+    background: linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%);
+}
+
+.gradient-preset.ocean {
+    background: linear-gradient(135deg, #2e3192 0%, #1bffff 100%);
+}
+
+/* Section Divider */
+.form-section-divider {
+    border: none;
+    border-top: 1px solid #e7e7e7;
+    margin: 1.5rem 0;
+}
+
+.form-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #3a3b45;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .gradient-presets {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

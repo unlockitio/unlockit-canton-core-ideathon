@@ -1,0 +1,171 @@
+/*
+ * Unlockit Design System Variables
+ * Central source of truth for colors, spacing, shadows, and other design tokens
+ */
+
+:root {
+    /* ========== COLORS ========== */
+
+    /* Primary Colors */
+    --color-primary: #664EE0;
+    --color-primary-hover: #5a42d4;
+    --color-primary-light: #f3f0ff;
+    --color-primary-lighter: #f8f6ff;
+    --color-secondary: #4722AD;
+
+    /* Gradient */
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --gradient-green: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    --gradient-orange: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --gradient-pink: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+    --gradient-dark: linear-gradient(135deg, #434343 0%, #000000 100%);
+    --gradient-sunset: linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%);
+    --gradient-ocean: linear-gradient(135deg, #2e3192 0%, #1bffff 100%);
+
+    /* Text Colors */
+    --color-text-primary: #3a3b45;
+    --color-text-secondary: #747474;
+    --color-text-tertiary: #888888;
+    --color-text-light: #b0b0b0;
+    --color-text-white: #ffffff;
+
+    /* Background Colors */
+    --color-bg-white: #ffffff;
+    --color-bg-light: #f8f9fa;
+    --color-bg-lighter: #fafbfc;
+    --color-bg-dark: #3a3b45;
+    --color-bg-overlay: rgba(0, 0, 0, 0.5);
+
+    /* Border Colors */
+    --color-border-primary: #e7e7e7;
+    --color-border-light: #f0f0f0;
+    --color-border-dark: #d0d0d0;
+    --color-border-focus: var(--color-primary);
+
+    /* Status Colors */
+    --color-success: #16a34a;
+    --color-success-bg: #dcfce7;
+    --color-success-light: #ecfdf5;
+
+    --color-warning: #d97706;
+    --color-warning-bg: #fef3c7;
+    --color-warning-light: #fef3e2;
+
+    --color-error: #dc2626;
+    --color-error-bg: #fee2e2;
+    --color-error-light: #fef2f2;
+
+    --color-info: #1890ff;
+    --color-info-bg: #e6f7ff;
+    --color-info-light: #f0f9ff;
+
+    /* Priority Colors */
+    --color-priority-high: #dc2626;
+    --color-priority-high-bg: #fee2e2;
+
+    --color-priority-medium: #d97706;
+    --color-priority-medium-bg: #fef3c7;
+
+    --color-priority-low: #059669;
+    --color-priority-low-bg: #d1fae5;
+
+    --color-priority-none: #6b7280;
+    --color-priority-none-bg: #f3f4f6;
+
+    /* Social Media Colors */
+    --color-linkedin: #0077b5;
+    --color-facebook: #1877f2;
+    --color-twitter: #1da1f2;
+    --color-instagram: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    --color-youtube: #ff0000;
+    --color-tiktok: #000000;
+    --color-whatsapp: #25d366;
+
+    /* ========== SPACING ========== */
+
+    /* Base spacing unit: 1rem = 16px */
+    --spacing-xs: 0.25rem;      /* 4px */
+    --spacing-sm: 0.5rem;       /* 8px */
+    --spacing-md: 0.75rem;      /* 12px */
+    --spacing-lg: 1rem;         /* 16px */
+    --spacing-xl: 1.5rem;       /* 24px */
+    --spacing-2xl: 2rem;        /* 32px */
+    --spacing-3xl: 3rem;        /* 48px */
+    --spacing-4xl: 4rem;        /* 64px */
+
+    /* ========== TYPOGRAPHY ========== */
+
+    /* Font Family */
+    --font-family-primary: "Aeonik Fono", sans-serif;
+
+    /* Font Sizes */
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.875rem;   /* 14px */
+    --font-size-base: 1rem;     /* 16px */
+    --font-size-lg: 1.125rem;   /* 18px */
+    --font-size-xl: 1.25rem;    /* 20px */
+    --font-size-2xl: 1.5rem;    /* 24px */
+    --font-size-3xl: 1.714rem;  /* 24px - page titles */
+
+    /* Font Weights */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Line Heights */
+    --line-height-tight: 1.2;
+    --line-height-normal: 1.4;
+    --line-height-relaxed: 1.5;
+    --line-height-loose: 1.75;
+
+    /* ========== BORDER RADIUS ========== */
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-2xl: 0.857rem;     /* 13.71px - card radius */
+    --radius-round: 50%;
+    --radius-pill: 9999px;
+
+    /* ========== SHADOWS ========== */
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+    /* Colored Shadows */
+    --shadow-primary: 0 2px 8px rgba(102, 78, 224, 0.1);
+    --shadow-primary-lg: 0 4px 16px rgba(102, 78, 224, 0.15);
+
+    /* ========== TRANSITIONS ========== */
+
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+
+    /* ========== Z-INDEX ========== */
+
+    --z-dropdown: 100;
+    --z-navbar: 101;
+    --z-modal-backdrop: 1000;
+    --z-modal: 1001;
+    --z-tooltip: 1002;
+
+    /* ========== BREAKPOINTS ========== */
+    /* Note: These are used in media queries, not as CSS variables */
+    /* --breakpoint-sm: 640px;  */
+    /* --breakpoint-md: 768px;  */
+    /* --breakpoint-lg: 1024px; */
+    /* --breakpoint-xl: 1280px; */
+
+    /* ========== LAYOUT ========== */
+
+    --sidebar-width: 280px;
+    --navbar-height: 60px;
+    --container-max-width: 1440px;
+}

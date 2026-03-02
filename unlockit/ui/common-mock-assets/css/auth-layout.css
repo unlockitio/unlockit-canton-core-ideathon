@@ -1,0 +1,337 @@
+/*
+ * Authentication Pages Layout
+ * Shared styles for login, register, and other auth pages
+ */
+
+/* ========== AUTH LAYOUT ========== */
+
+.auth-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100vh;
+}
+
+/* ========== LEFT SIDE (BRANDED) ========== */
+
+.left-side {
+    background-image: url(https://auth.dev.unlockit.io/resources/hs73a/login/unlockit-base/img/background-desktop-overlay.jpg);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.left-side::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.1"><text x="10" y="50" font-size="80" fill="white">💼</text></svg>');
+    opacity: 0.3;
+}
+
+.welcome-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: var(--color-text-white, white);
+    max-width: 500px;
+    padding: var(--spacing-2xl, 2rem);
+}
+
+.welcome-content h2 {
+    font-size: var(--font-size-3xl, 1.714rem);
+    font-weight: var(--font-weight-semibold, 600);
+    margin-bottom: var(--spacing-lg, 1rem);
+}
+
+.welcome-content p {
+    font-size: var(--font-size-base, 1rem);
+    opacity: 0.9;
+    line-height: var(--line-height-relaxed, 1.5);
+}
+
+/* ========== RIGHT SIDE (FORM) ========== */
+
+.right-side {
+    background: var(--color-bg-white, #ffffff);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-3xl, 3rem);
+    position: relative;
+    overflow-y: auto;
+}
+
+/* ========== LOGO ========== */
+
+.logo-container {
+    position: absolute;
+    top: var(--spacing-2xl, 2rem);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+}
+
+.logo-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-icon svg {
+    width: 32px;
+    height: 32px;
+    color: var(--color-primary, var(--color-primary));
+}
+
+.logo-text {
+    font-size: var(--font-size-2xl, 1.5rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--color-text-primary, #3a3b45);
+}
+
+/* ========== FORM CONTAINER ========== */
+
+.form-container {
+    width: 100%;
+    max-width: 440px;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: var(--spacing-2xl, 2rem);
+}
+
+.form-header h1 {
+    font-size: var(--font-size-3xl, 2rem);
+    font-weight: var(--font-weight-normal, 400);
+    color: var(--color-text-primary, #3a3b45);
+    margin-bottom: var(--spacing-sm, 0.5rem);
+}
+
+.form-header p {
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-text-secondary, #747474);
+}
+
+/* ========== FORM ELEMENTS (AUTH SPECIFIC) ========== */
+
+.auth-form-group {
+    margin-bottom: 1.25rem;
+}
+
+.auth-form-label {
+    display: block;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-text-secondary, #747474);
+    margin-bottom: var(--spacing-sm, 0.5rem);
+}
+
+.auth-form-input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-border-primary, #e7e7e7);
+    border-radius: var(--radius-md, 6px);
+    font-size: var(--font-size-sm, 0.875rem);
+    font-family: var(--font-family-primary, "Aeonik Fono", sans-serif);
+    transition: all var(--transition-base, 0.2s ease);
+    background: var(--color-bg-white, #ffffff);
+}
+
+.auth-form-input:focus {
+    outline: none;
+    border-color: var(--color-primary, var(--color-primary));
+    box-shadow: 0 0 0 3px rgba(102, 78, 224, 0.1);
+}
+
+.auth-form-input::placeholder {
+    color: var(--color-text-light, #b0b0b0);
+}
+
+/* ========== PASSWORD INPUT ========== */
+
+.password-input-wrapper {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-light, #b0b0b0);
+    padding: 0;
+    transition: color var(--transition-base, 0.2s ease);
+}
+
+.toggle-password:hover {
+    color: var(--color-text-secondary, #747474);
+}
+
+.toggle-password svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ========== FORGOT PASSWORD ========== */
+
+.forgot-password {
+    text-align: right;
+    margin-top: var(--spacing-sm, 0.5rem);
+    margin-bottom: var(--spacing-xl, 1.5rem);
+}
+
+.forgot-password a {
+    color: var(--color-text-secondary, #747474);
+    text-decoration: underline;
+    font-size: var(--font-size-xs, 0.75rem);
+    transition: color var(--transition-base, 0.2s ease);
+}
+
+.forgot-password a:hover {
+    color: var(--color-text-primary, #3a3b45);
+}
+
+/* ========== SUBMIT BUTTON ========== */
+
+.submit-btn {
+    width: 100%;
+    padding: 0.875rem 2rem;
+    background: var(--color-primary, var(--color-primary));
+    color: var(--color-text-white, #ffffff);
+    border: none;
+    border-radius: var(--radius-lg, 8px);
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-medium, 500);
+    font-family: var(--font-family-primary, "Aeonik Fono", sans-serif);
+    cursor: pointer;
+    transition: all var(--transition-base, 0.2s ease);
+    margin-bottom: var(--spacing-lg, 1rem);
+}
+
+.submit-btn:hover {
+    background: var(--color-primary-hover, #5a42d4);
+}
+
+.submit-btn:active {
+    transform: translateY(1px);
+}
+
+/* ========== SIGNUP/LOGIN LINK ========== */
+
+.signup-link,
+.login-link {
+    text-align: center;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-text-secondary, #747474);
+    margin-bottom: var(--spacing-xl, 1.5rem);
+}
+
+.signup-link a,
+.login-link a {
+    color: var(--color-primary, var(--color-primary));
+    text-decoration: underline;
+    font-weight: var(--font-weight-medium, 500);
+    transition: color var(--transition-base, 0.2s ease);
+}
+
+.signup-link a:hover,
+.login-link a:hover {
+    color: var(--color-primary-hover, #5a42d4);
+}
+
+/* ========== DIVIDER ========== */
+
+.divider {
+    text-align: center;
+    color: var(--color-text-secondary, #747474);
+    font-size: var(--font-size-xs, 0.75rem);
+    margin: var(--spacing-xl, 1.5rem) 0;
+    position: relative;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: var(--color-border-primary, #e7e7e7);
+}
+
+.divider::before {
+    left: 0;
+}
+
+.divider::after {
+    right: 0;
+}
+
+/* ========== GOVERNMENT AUTH BUTTON ========== */
+
+.gov-auth-btn {
+    width: 100%;
+    padding: 0.875rem 2rem;
+    background: #5a6fd8;
+    color: var(--color-text-white, #ffffff);
+    border: none;
+    border-radius: var(--radius-lg, 8px);
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-medium, 500);
+    cursor: pointer;
+    transition: all var(--transition-base, 0.2s ease);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm, 0.5rem);
+    font-family: var(--font-family-primary, "Aeonik Fono", sans-serif);
+    margin-bottom: var(--spacing-2xl, 2rem);
+}
+
+.gov-auth-btn:hover {
+    background: #4a5fc8;
+}
+
+.gov-auth-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+    .auth-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .left-side {
+        display: none;
+    }
+
+    .right-side {
+        padding: var(--spacing-2xl, 2rem) var(--spacing-lg, 1rem);
+    }
+
+    .logo-container {
+        position: relative;
+        top: auto;
+        margin-bottom: var(--spacing-2xl, 2rem);
+    }
+
+    .form-container {
+        max-width: 100%;
+    }
+}

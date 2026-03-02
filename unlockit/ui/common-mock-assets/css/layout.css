@@ -1,0 +1,114 @@
+/* Grid Layout System */
+.default-layout {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 280px 1fr;
+    grid-template-areas:
+        "menubar navbar"
+        "menubar pagearea";
+    height: 100dvh;
+    max-width: 100%;
+    overflow: hidden;
+    width: 100%;
+    position: relative;
+}
+
+/* Top Navigation Bar */
+.nav-bar-wrap, #navbar-container {
+    grid-area: navbar;
+    position: relative;
+    background-color: #ffffff;
+}
+
+#navbar-container .nav-bar-wrap {
+    grid-area: unset;
+    position: static;
+}
+
+.nav-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 15px 1.429rem 14px;
+    position: relative;
+    z-index: 101;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e7e7e7;
+}
+
+.nav-bar__inner {
+    min-width: 25%;
+    display: flex;
+    align-items: center;
+}
+
+.nav-bar__inner h1 {
+    margin: 0;
+    font-size: 1.286rem;
+    color: #3a3b45;
+    font-weight: 400;
+}
+
+.navigation-wrap {
+    min-width: 50%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.navigation-wrap ul {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: flex-end;
+    list-style: none;
+}
+
+.navigation-wrap ul li {
+    width: 3.125rem;
+    height: 3.125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    list-style: none;
+    margin-bottom: 0;
+}
+
+.navigation-wrap ul li button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.navigation-wrap ul li svg {
+    stroke: #3a3b45;
+    width: 20px;
+    height: 20px;
+}
+
+/* Page Content Area */
+.default-layout__content {
+    grid-area: pagearea;
+    overflow: auto;
+    position: relative;
+    background: radial-gradient(circle at top, #f7f3ff 0%, #f8f9fa 55%, #f5f4fb 100%);
+}
+
+.page-content {
+    padding: 1rem 1.429rem;
+    height: 100%;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.429rem;
+}

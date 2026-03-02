@@ -1,0 +1,120 @@
+/* Social Media Modal Specific Styles */
+
+/* Platform Selection Grid */
+.social-platform-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.social-platform-option {
+    aspect-ratio: 1;
+    border: 2px solid #e7e7e7;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #ffffff;
+    padding: 0.75rem;
+}
+
+.social-platform-option:hover {
+    border-color: var(--color-primary);
+    background: #f8f9fa;
+}
+
+.social-platform-option.selected {
+    border-color: var(--color-primary);
+    background: #f3f0ff;
+}
+
+.social-platform-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.social-platform-icon.linkedin {
+    background: #0077b5;
+    color: white;
+}
+
+.social-platform-icon.facebook {
+    background: #1877f2;
+    color: white;
+}
+
+.social-platform-icon.twitter {
+    background: #1da1f2;
+    color: white;
+}
+
+.social-platform-icon.instagram {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    color: white;
+}
+
+.social-platform-icon.youtube {
+    background: #ff0000;
+    color: white;
+}
+
+.social-platform-icon.tiktok {
+    background: #000000;
+    color: white;
+}
+
+.social-platform-icon.whatsapp {
+    background: #25d366;
+    color: white;
+}
+
+.social-platform-icon.other {
+    background: #6b7280;
+    color: white;
+}
+
+.social-platform-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.social-platform-name {
+    font-size: 11px;
+    font-weight: 500;
+    color: #3a3b45;
+    text-align: center;
+}
+
+/* URL Input Group */
+.url-input-group {
+    position: relative;
+}
+
+.url-prefix {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: #888888;
+    pointer-events: none;
+}
+
+.form-input.with-prefix {
+    padding-left: 2.5rem;
+}
+
+@media (max-width: 768px) {
+    .social-platform-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

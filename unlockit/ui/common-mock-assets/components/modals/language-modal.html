@@ -1,0 +1,95 @@
+<!-- Language Selection Modal -->
+<div id="languageModal" class="language-modal" style="display: none;">
+    <div class="language-modal-content">
+        <div class="language-modal-header">
+            <h3>Select Language</h3>
+            <button class="close-modal" onclick="closeLanguageModal()">&times;</button>
+        </div>
+        <div class="language-modal-body">
+            <p>Choose your preferred language</p>
+            <div class="language-options">
+                <label class="language-option" data-language="en">
+                    <input type="radio" name="language" value="en" checked>
+                    <div class="language-flag">
+                        <svg width="24" height="18" viewBox="0 0 24 18" fill="none">
+                            <rect width="24" height="18" rx="2" fill="#012169"/>
+                            <path d="M0 0l24 18M24 0L0 18" stroke="#fff" stroke-width="2"/>
+                            <path d="M0 0l24 18M24 0L0 18" stroke="#C8102E" stroke-width="1"/>
+                            <path d="M12 0v18M0 9h24" stroke="#fff" stroke-width="3"/>
+                            <path d="M12 0v18M0 9h24" stroke="#C8102E" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="language-name">English</div>
+                    <div class="language-check">✓</div>
+                </label>
+                <label class="language-option" data-language="pt">
+                    <input type="radio" name="language" value="pt">
+                    <div class="language-flag">
+                        <svg width="24" height="18" viewBox="0 0 24 18" fill="none">
+                            <rect width="24" height="18" rx="2" fill="#FF0000"/>
+                            <rect x="0" y="0" width="9.6" height="18" fill="#006600"/>
+                            <circle cx="9.6" cy="9" r="3" fill="#FFFF00" stroke="#0000FF" stroke-width="0.5"/>
+                            <circle cx="9.6" cy="9" r="2.2" fill="none" stroke="#0000FF" stroke-width="0.3"/>
+                            <rect x="8.8" y="8.2" width="1.6" height="1.6" fill="#FF0000"/>
+                        </svg>
+                    </div>
+                    <div class="language-name">Português</div>
+                    <div class="language-check">✓</div>
+                </label>
+                <label class="language-option" data-language="es">
+                    <input type="radio" name="language" value="es">
+                    <div class="language-flag">
+                        <svg width="24" height="18" viewBox="0 0 24 18" fill="none">
+                            <rect width="24" height="18" rx="2" fill="#AA151B"/>
+                            <rect x="0" y="4.5" width="24" height="9" fill="#F1BF00"/>
+                            <rect x="0" y="13.5" width="24" height="4.5" fill="#AA151B"/>
+                        </svg>
+                    </div>
+                    <div class="language-name">Español</div>
+                    <div class="language-check">✓</div>
+                </label>
+                <label class="language-option" data-language="fr">
+                    <input type="radio" name="language" value="fr">
+                    <div class="language-flag">
+                        <svg width="24" height="18" viewBox="0 0 24 18" fill="none">
+                            <rect width="24" height="18" rx="2" fill="#ED2939"/>
+                            <rect x="0" y="0" width="8" height="18" fill="#002395"/>
+                            <rect x="8" y="0" width="8" height="18" fill="#FFFFFF"/>
+                        </svg>
+                    </div>
+                    <div class="language-name">Français</div>
+                    <div class="language-check">✓</div>
+                </label>
+                <label class="language-option" data-language="de">
+                    <input type="radio" name="language" value="de">
+                    <div class="language-flag">
+                        <svg width="24" height="18" viewBox="0 0 24 18" fill="none">
+                            <rect width="24" height="18" rx="2" fill="#FFCE00"/>
+                            <rect x="0" y="0" width="24" height="6" fill="#000000"/>
+                            <rect x="0" y="6" width="24" height="6" fill="#DD0000"/>
+                        </svg>
+                    </div>
+                    <div class="language-name">Deutsch</div>
+                    <div class="language-check">✓</div>
+                </label>
+                <label class="language-option" data-language="it">
+                    <input type="radio" name="language" value="it">
+                    <div class="language-flag">
+                        <svg width="24" height="18" viewBox="0 0 24 18" fill="none">
+                            <rect width="24" height="18" rx="2" fill="#CE2B37"/>
+                            <rect x="0" y="0" width="8" height="18" fill="#009246"/>
+                            <rect x="8" y="0" width="8" height="18" fill="#FFFFFF"/>
+                        </svg>
+                    </div>
+                    <div class="language-name">Italiano</div>
+                    <div class="language-check">✓</div>
+                </label>
+            </div>
+            <div class="language-modal-footer">
+                <button class="btn btn-primary" onclick="applyLanguageSelection()">Apply</button>
+                <button class="btn btn-secondary" onclick="closeLanguageModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+    <script src="../../js/theme-loader.js"></script>

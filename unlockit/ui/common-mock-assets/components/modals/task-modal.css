@@ -1,0 +1,147 @@
+/* Task Modal Styles */
+.task-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.task-modal.show {
+    display: flex;
+}
+
+.task-modal-content {
+    background-color: #ffffff;
+    margin: auto;
+    padding: 0;
+    border: 1px solid #e7e7e7;
+    border-radius: 24px;
+    width: min(760px, 92vw);
+    max-width: 760px;
+    box-shadow: 0 24px 60px rgba(46, 35, 120, 0.12);
+    animation: taskModalSlideIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+
+@keyframes taskModalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.task-modal-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 2.5rem 1rem;
+    border-bottom: none;
+    position: relative;
+}
+
+.task-modal-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2f2f3a;
+    margin: 0;
+}
+
+.task-modal-close {
+    color: #3a3b45;
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease;
+    background: #f2f3f7;
+    border: none;
+    padding: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    position: absolute;
+    right: 24px;
+    top: 24px;
+}
+
+.task-modal-close:hover,
+.task-modal-close:focus {
+    color: #3a3b45;
+}
+
+.task-modal-body {
+    padding: 0 2.5rem 1.5rem;
+    overflow: auto;
+}
+
+.task-modal-footer {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.task-form-group {
+    margin-bottom: 1rem;
+}
+
+.task-form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #3a3b45;
+    margin-bottom: 0.5rem;
+}
+
+.task-form-input,
+.task-form-select,
+.task-form-textarea {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: 1px solid #e2e2e7;
+    border-radius: 14px;
+    font-size: 16px;
+    color: #3a3b45;
+    background: #ffffff;
+    transition: border-color 0.2s ease;
+    font-family: inherit;
+}
+
+.task-form-input:focus,
+.task-form-select:focus,
+.task-form-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(102, 78, 224, 0.1);
+}
+
+.task-form-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .task-modal-content {
+        width: 95%;
+        max-width: 95%;
+    }
+
+    .task-modal-header,
+    .task-modal-body {
+        padding: 1rem;
+    }
+}

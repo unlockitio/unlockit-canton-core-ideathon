@@ -1,0 +1,198 @@
+/* Administrative Menu Component CSS (Type B - Complex menu-bar__list__item structure) */
+.menu-bar {
+    width: 260px;
+    min-width: 260px;
+    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.menu-bar__logo-wrap_desktop {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-bar__logo-wrap_desktop svg {
+    max-width: 120px;
+    height: auto;
+}
+
+.menu-bar__wrap-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+.menu-bar__wrap-list--scrollable-list {
+    padding: 1rem 0;
+}
+
+.menu-bar__wrap-list__go-to-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+}
+
+.menu-bar__wrap-list__go-to-link:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.menu-bar__wrap-list--scrollable-list h3 {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1rem 1rem 0.5rem 1rem;
+    margin: 1rem 0 0.5rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-bar__wrap-list--scrollable-list h3:first-of-type {
+    border-top: none;
+    margin-top: 0;
+}
+
+.menu-bar__wrap-list__list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+}
+
+.menu-bar__wrap-list__list a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: all 0.2s ease;
+}
+
+.menu-bar__wrap-list__list a:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.menu-bar__wrap-list__list a.active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-bar__list__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.menu-bar__list__item:hover {
+    color: white;
+}
+
+.menu-bar__list__item__icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.menu-bar__list__item__icon-wrap svg {
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.menu-bar__list__item:hover .menu-bar__list__item__icon-wrap svg {
+    opacity: 1;
+}
+
+.menu-bar__list__item__title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.menu-bar__bottom {
+    height: 60px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Scrollbar styling */
+.menu-bar__wrap-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.menu-bar__wrap-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-bar__wrap-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.menu-bar__wrap-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .menu-bar {
+        width: 240px;
+        min-width: 240px;
+    }
+
+    .menu-bar__logo-wrap_desktop {
+        padding: 1rem;
+    }
+
+    .menu-bar__logo-wrap_desktop svg {
+        max-width: 100px;
+    }
+
+    .menu-bar__list__item {
+        padding: 0.625rem 1rem;
+        font-size: 13px;
+    }
+
+    .menu-bar__wrap-list--scrollable-list h3 {
+        font-size: 11px;
+        padding: 0.75rem 1rem 0.25rem 1rem;
+    }
+}
+
+/* Smaller menu variant */
+.menu-bar.compact {
+    width: 220px;
+    min-width: 220px;
+}
+
+.menu-bar.compact .menu-bar__list__item {
+    padding: 0.5rem 0.75rem;
+    font-size: 13px;
+}
+
+.menu-bar.compact .menu-bar__wrap-list--scrollable-list h3 {
+    font-size: 11px;
+    padding: 0.75rem 0.75rem 0.25rem 0.75rem;
+}

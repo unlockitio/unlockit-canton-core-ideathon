@@ -1,0 +1,104 @@
+/* Email Modal Specific Styles */
+
+.email-security-notice {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.email-security-notice h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #92400e;
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.email-security-notice h4 svg {
+    width: 16px;
+    height: 16px;
+}
+
+.email-security-notice p {
+    font-size: 0.75rem;
+    color: #78350f;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+}
+
+.email-security-notice p:last-child {
+    margin-bottom: 0;
+}
+
+.email-info-box {
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.email-info-box h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e40af;
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.email-info-box h4 svg {
+    width: 16px;
+    height: 16px;
+}
+
+.email-info-box p {
+    font-size: 0.75rem;
+    color: #1e3a8a;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+}
+
+.email-info-box p:last-child {
+    margin-bottom: 0;
+}
+
+.email-protection-list {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.email-protection-list h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #3a3b45;
+    margin: 0 0 0.75rem 0;
+}
+
+.email-protection-list ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.email-protection-list li {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.email-protection-list li:last-child {
+    margin-bottom: 0;
+}
+
+.email-protection-list li strong {
+    color: #3a3b45;
+}

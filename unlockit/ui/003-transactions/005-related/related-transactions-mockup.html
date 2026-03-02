@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unlockit - Related Transactions</title>
+    <link rel="stylesheet" href="../../common-mock-assets/css/unlockit-ui.css">
+    <link rel="stylesheet" href="../../common-mock-assets/css/navigation.css">
+    <link rel="stylesheet" href="../../common-mock-assets/css/profile-dropdown.css">
+    <link rel="stylesheet" href="../../common-mock-assets/css/notifications-dropdown.css">
+    <link rel="stylesheet" href="../../common-mock-assets/css/help-dropdown.css">
+    <link rel="stylesheet" href="../../common-mock-assets/css/beta-badge.css">
+    <link rel="stylesheet" href="../../common-mock-assets/css/nav-logo.css">
+    <style>
+        .default-layout__content {
+            background: radial-gradient(circle at top, #f7f3ff 0%, #f8f9fa 55%, #f5f4fb 100%);
+        }
+
+        .page-content {
+            padding: 1rem 1.429rem;
+            height: 100%;
+        }
+
+        .page-header {
+            margin-bottom: 1rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .back-link svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+        }
+
+        .transaction-card {
+            background: #ffffff;
+            border-radius: 1.25rem;
+            padding: 1.5rem 1.75rem;
+            box-shadow: 0 14px 40px rgba(76, 59, 162, 0.08);
+        }
+
+        .related-transactions-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
+
+        .related-transactions-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #2f2a44;
+            margin: 0.4rem 0 0.25rem;
+        }
+
+        .related-transactions-subtitle {
+            color: #7f7c92;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .related-transactions-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .related-transactions-summary {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 0.6rem;
+        }
+
+        .summary-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: #f1edff;
+            color: #6f5be0;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .related-transaction-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border: 1px solid #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            background: #ffffff;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: visible;
+        }
+
+        .related-transaction-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .related-transaction-item:hover {
+            border-color: var(--color-primary);
+            box-shadow: 0 2px 8px rgba(102, 78, 224, 0.1);
+            background: #fafbff;
+        }
+
+        .related-transaction-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f0f0ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--color-primary);
+        }
+
+        .related-transaction-info {
+            flex: 1;
+        }
+
+        .related-transaction-title {
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: #3a3b45;
+            margin-bottom: 0.25rem;
+        }
+
+        .related-transaction-meta {
+            font-size: 0.8125rem;
+            color: #747474;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .related-transaction-type {
+            font-weight: 500;
+            color: var(--color-primary);
+        }
+
+        .related-transaction-separator {
+            color: #d0d0d0;
+        }
+
+        .related-transaction-tags {
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .related-transaction-tag {
+            background: #efe9ff;
+            color: #6f5be0;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+        }
+
+        .related-transaction-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .status-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: help;
+            position: relative;
+            transition: all 0.2s ease;
+            z-index: 1;
+        }
+
+        .status-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .status-icon.active {
+            background: #e6f7e6;
+            color: #22c55e;
+        }
+
+        .status-icon.inactive {
+            background: #f3f4f6;
+            color: #9ca3af;
+        }
+
+        .status-icon.pending {
+            background: #fff3cd;
+            color: #d97706;
+        }
+
+        .status-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .status-icon-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: var(--color-primary);
+            color: white;
+            font-size: 9px;
+            font-weight: 600;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+        }
+
+        .status-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            background: #3a3b45;
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .status-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: #3a3b45;
+        }
+
+        .status-icon:hover .status-tooltip {
+            opacity: 1;
+        }
+
+        .status-tooltip-line {
+            display: block;
+            line-height: 1.4;
+        }
+
+        .status-tooltip-line + .status-tooltip-line {
+            margin-top: 0.25rem;
+        }
+
+        .status-tooltip-label {
+            font-weight: 600;
+            margin-right: 0.25rem;
+        }
+
+        .related-transaction-participants {
+            display: flex;
+            align-items: center;
+            margin-right: 0.75rem;
+            position: relative;
+        }
+
+        .related-participant-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #c7c3f7;
+            color: var(--color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 600;
+            margin-left: -6px;
+            border: 2px solid #ffffff;
+            position: relative;
+        }
+
+        .related-participant-avatar:first-child {
+            margin-left: 0;
+        }
+
+        .participant-mini-tooltip {
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3a3b45;
+            color: white;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+        }
+
+        .related-participant-avatar:hover .participant-mini-tooltip {
+            opacity: 1;
+        }
+
+        .related-participant-avatar.privacy-limited .participant-mini-tooltip {
+            font-style: italic;
+            color: #d1d5db;
+        }
+
+        .related-transaction-arrow {
+            color: #747474;
+            transition: transform 0.2s ease;
+        }
+
+        .related-transaction-item:hover .related-transaction-arrow {
+            transform: translateX(4px);
+            color: var(--color-primary);
+        }
+
+        .related-view-button {
+            border: 1px solid #e4def8;
+            background: #ffffff;
+            color: #6f5be0;
+            padding: 0.45rem 0.9rem;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .related-view-button:hover {
+            border-color: #cfc3f8;
+            box-shadow: 0 8px 16px rgba(111, 91, 224, 0.12);
+        }
+
+        .related-transaction-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+            padding: 2rem;
+        }
+
+        .related-transaction-modal-overlay.active {
+            display: flex;
+        }
+
+        .related-transaction-modal {
+            background: #ffffff;
+            border-radius: 18px;
+            width: min(920px, 100%);
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .related-transaction-modal-header {
+            padding: 1.5rem 1.75rem 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .related-transaction-modal-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: #2f2a44;
+        }
+
+        .related-transaction-modal-subtitle {
+            font-size: 0.85rem;
+            color: #8a8798;
+            margin-top: 0.35rem;
+        }
+
+        .related-transaction-modal-close {
+            border: none;
+            background: #f8f9fa;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .related-transaction-filters {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            padding: 1rem 1.75rem 1.25rem;
+            border-bottom: 1px solid #f0f0f0;
+            background: #fafbff;
+        }
+
+        .related-transaction-filter {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            color: #6b6883;
+            font-weight: 600;
+        }
+
+        .related-transaction-filter input,
+        .related-transaction-filter select {
+            border: 1px solid #e4def8;
+            border-radius: 10px;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.85rem;
+            color: #2f2a44;
+            background: #ffffff;
+        }
+
+        .related-transaction-modal-list {
+            padding: 1.25rem 1.75rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .related-transaction-item--modal {
+            cursor: default;
+        }
+
+        .related-transaction-item--modal .related-transaction-arrow {
+            display: none;
+        }
+
+        .related-transaction-item--modal.selected {
+            border-color: #6f5be0;
+            box-shadow: 0 10px 24px rgba(111, 91, 224, 0.18);
+            background: #f5f2ff;
+        }
+
+        .related-transaction-select {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .related-transaction-select button {
+            border: 1px solid #e4def8;
+            background: #ffffff;
+            color: #6f5be0;
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .related-transaction-select button.selected {
+            background: #6f5be0;
+            color: #ffffff;
+            border-color: #6f5be0;
+        }
+
+        .related-transaction-modal-actions {
+            padding: 1rem 1.75rem 1.5rem;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            background: #ffffff;
+        }
+
+        @media (max-width: 900px) {
+            .related-transaction-item {
+                flex-wrap: wrap;
+            }
+
+            .related-transaction-status {
+                margin-left: auto;
+                order: 4;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .related-transaction-filters {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <script src="../../common-mock-assets/js/component-loader.js"></script>
+    <script src="../../common-mock-assets/js/menu-loader.js"></script>
+    <script src="../../common-mock-assets/js/navbar-loader.js"></script>
+    <script src="../../common-mock-assets/js/theme-loader.js"></script>
+</head>
+<body class="transaction-detail-page">
+    <div class="default-layout">
+        <div id="menu-container" data-menu-type="main"></div>
+        <div id="navbar-container"></div>
+        <div class="default-layout__content">
+            <div class="page-content">
+                <div class="page-header">
+                    <a class="back-link" id="backToTransaction" href="../002-detail/transaction-detail-mockup.html">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6"/><polyline points="12 5 6 12 12 19"/></svg>
+                        Back to Transaction
+                    </a>
+                </div>
+
+                <div class="transaction-card">
+                    <div class="related-transactions-header">
+                        <div>
+                            <div class="meta-pill meta-pill--id" id="parentTransactionId"># WF-001</div>
+                            <h1 class="related-transactions-title">Related Transactions</h1>
+                            <p class="related-transactions-subtitle">All transactions linked to this workflow, with the full status footprint.</p>
+                            <div class="related-transactions-summary" id="relatedSummary"></div>
+                        </div>
+                        <div class="related-transactions-actions">
+                            <button class="related-view-button" type="button" onclick="openRelatedTransactionModal()">Add Related Transaction</button>
+                            <button class="btn-secondary" type="button" onclick="goToParentTransaction()">Open Parent Transaction</button>
+                        </div>
+                    </div>
+
+                    <div id="relatedTransactionsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="related-transaction-modal-overlay" id="relatedTransactionModal" role="dialog" aria-modal="true" aria-labelledby="relatedTransactionModalTitle" aria-hidden="true">
+        <div class="related-transaction-modal">
+            <div class="related-transaction-modal-header">
+                <div>
+                    <div class="related-transaction-modal-title" id="relatedTransactionModalTitle">Add Related Transaction</div>
+                    <div class="related-transaction-modal-subtitle" id="relatedTransactionModalCount">0 results</div>
+                </div>
+                <button class="related-transaction-modal-close" type="button" onclick="closeRelatedTransactionModal()" aria-label="Close">
+                    ✕
+                </button>
+            </div>
+            <div class="related-transaction-filters">
+                <label class="related-transaction-filter">
+                    Transaction ID
+                    <input type="text" id="relatedFilterId" placeholder="Search by ID (ex: TXN-2024-010)">
+                </label>
+                <label class="related-transaction-filter">
+                    Category
+                    <select id="relatedFilterCategory">
+                        <option value="all">All categories</option>
+                        <option value="sell">Sell</option>
+                        <option value="buy">Buy</option>
+                        <option value="rent_tenant">Rent Tenant</option>
+                        <option value="rent_landlord">Rent Landlord</option>
+                    </select>
+                </label>
+                <label class="related-transaction-filter">
+                    Location
+                    <input type="text" id="relatedFilterLocation" placeholder="Search by location">
+                </label>
+            </div>
+            <div class="related-transaction-modal-list" id="relatedTransactionModalList"></div>
+            <div class="related-transaction-modal-actions">
+                <button class="btn-secondary" type="button" onclick="closeRelatedTransactionModal()">Cancel</button>
+                <button class="btn-primary" type="button" id="relatedTransactionModalAddBtn" onclick="confirmRelatedTransactionSelection()">Add Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const relatedTransactionsData = {
+            'SELL': [
+                {
+                    id: 'TXN-2024-002',
+                    title: 'Property Purchase - 123 Main St',
+                    type: 'Buy',
+                    status: 'Active',
+                    date: 'Started 5 days ago',
+                    category: 'Residential',
+                    location: 'Lisbon - 123 Main St',
+                    participants: [
+                        { avatar: 'MS', name: 'Maria Santos', color: '#c7c3f7' },
+                        { avatar: 'PA', name: 'Pedro Alves', color: '#c7c3f7' }
+                    ],
+                    hasVisit: true,
+                    visitDetails: 'Mar 10, 2024',
+                    hasProposal: true,
+                    proposalDetails: 'Proposal: €395.000,00<br>Sent Mar 12, 2024',
+                    documents: { count: 3, details: '3 docs shared<br>To: Maria Santos' },
+                    contracts: { count: 0, details: 'No contracts shared' }
+                },
+                {
+                    id: 'TXN-2024-003',
+                    title: 'Villa Purchase - Cascais Waterfront',
+                    type: 'Buy',
+                    status: 'Pending',
+                    date: 'Started 3 weeks ago',
+                    category: 'Luxury',
+                    location: 'Cascais Waterfront',
+                    participants: [
+                        { avatar: 'JD', name: 'João Da Silva', color: '#c7c3f7' },
+                        { avatar: '??', name: 'Private participant', color: '#c7c3f7', privacy: true },
+                        { avatar: 'PA', name: 'Pedro Alves', color: '#c7c3f7' }
+                    ],
+                    hasVisit: false,
+                    visitDetails: 'No visit scheduled',
+                    hasProposal: 'pending',
+                    proposalDetails: 'Proposal: €415.000,00<br>Draft - Not sent',
+                    documents: { count: 1, details: '1 doc shared<br>To: Pedro Alves' },
+                    contracts: { count: 2, details: '2 contracts shared<br>From: João Da Silva' }
+                }
+            ],
+            'BUY': [
+                {
+                    id: 'TXN-2024-010',
+                    title: 'Single-family Dwelling T3 - Mafra',
+                    type: 'Sell',
+                    status: 'Active',
+                    date: 'Started 2 weeks ago',
+                    category: 'Residential',
+                    location: 'Mafra',
+                    participants: [
+                        { avatar: 'JD', name: 'João Da Silva', color: '#c7c3f7' },
+                        { avatar: 'AL', name: 'António Lima', color: '#c7c3f7' }
+                    ],
+                    hasVisit: true,
+                    visitDetails: 'Mar 8, 2024',
+                    hasProposal: true,
+                    proposalDetails: 'Proposal: €400.000,00<br>Sent Mar 9, 2024',
+                    documents: { count: 2, details: '2 docs shared<br>To: António Lima' },
+                    contracts: { count: 1, details: '1 contract shared<br>From: João Da Silva' }
+                },
+                {
+                    id: 'TXN-2024-011',
+                    title: 'Townhouse T4 - Cascais',
+                    type: 'Sell',
+                    status: 'Active',
+                    date: 'Started 1 week ago',
+                    category: 'Residential',
+                    location: 'Cascais',
+                    participants: [
+                        { avatar: 'RC', name: 'Rita Costa', color: '#c7c3f7' },
+                        { avatar: 'LR', name: 'Laura Reis', color: '#c7c3f7' }
+                    ],
+                    hasVisit: false,
+                    visitDetails: 'No visit scheduled',
+                    hasProposal: false,
+                    proposalDetails: 'No proposal sent',
+                    documents: { count: 4, details: '4 docs shared<br>To: Laura Reis' },
+                    contracts: { count: 0, details: 'No contracts shared' }
+                }
+            ],
+            'RENTAL_LANDLORD': [
+                {
+                    id: 'TXN-2024-020',
+                    title: 'Apartment Search - City Center',
+                    type: 'Rental Tenant',
+                    status: 'Active',
+                    date: 'Started 4 days ago',
+                    category: 'Rental',
+                    location: 'City Center',
+                    participants: [
+                        { avatar: 'MF', name: 'Miguel Fonseca', color: '#c7c3f7' },
+                        { avatar: 'AN', name: 'Ana Nunes', color: '#c7c3f7' }
+                    ],
+                    hasVisit: true,
+                    visitDetails: 'Mar 11, 2024',
+                    hasProposal: true,
+                    proposalDetails: 'Application: €1,200/month<br>Submitted Mar 12, 2024',
+                    documents: { count: 3, details: '3 docs shared<br>To: Ana Nunes' },
+                    contracts: { count: 0, details: 'No contracts shared' }
+                },
+                {
+                    id: 'TXN-2024-021',
+                    title: 'Office Space Search - Baixa',
+                    type: 'Rental Tenant',
+                    status: 'Pending',
+                    date: 'Started 1 week ago',
+                    category: 'Commercial',
+                    location: 'Baixa',
+                    participants: [
+                        { avatar: 'PM', name: 'Pedro Martins', color: '#c7c3f7' },
+                        { avatar: '??', name: 'Private participant', color: '#c7c3f7', privacy: true }
+                    ],
+                    hasVisit: false,
+                    visitDetails: 'No visit scheduled',
+                    hasProposal: 'pending',
+                    proposalDetails: 'Application: €2,500/month<br>Draft - Not sent',
+                    documents: { count: 2, details: '2 docs shared<br>To: Property Manager' },
+                    contracts: { count: 1, details: '1 contract shared<br>From: Landlord' }
+                }
+            ],
+            'RENTAL_TENANT': [
+                {
+                    id: 'TXN-2024-030',
+                    title: 'Apartment T2 - City Center',
+                    type: 'Rental Landlord',
+                    status: 'Active',
+                    date: 'Started 6 days ago',
+                    category: 'Rental',
+                    location: 'City Center',
+                    participants: [
+                        { avatar: 'RC', name: 'Rita Costa', color: '#c7c3f7' },
+                        { avatar: 'TM', name: 'Tiago Moreira', color: '#c7c3f7' }
+                    ],
+                    hasVisit: true,
+                    visitDetails: 'Mar 9, 2024',
+                    hasProposal: true,
+                    proposalDetails: 'Offer: €900/month<br>Sent Mar 10, 2024',
+                    documents: { count: 2, details: '2 docs shared<br>To: Tiago Moreira' },
+                    contracts: { count: 1, details: '1 contract shared<br>From: Rita Costa' }
+                },
+                {
+                    id: 'TXN-2024-031',
+                    title: 'Studio Apartment - Alfama',
+                    type: 'Rental Landlord',
+                    status: 'Active',
+                    date: 'Started 2 days ago',
+                    category: 'Rental',
+                    location: 'Alfama',
+                    participants: [
+                        { avatar: 'JD', name: 'João Da Silva', color: '#c7c3f7' }
+                    ],
+                    hasVisit: false,
+                    visitDetails: 'No visit scheduled',
+                    hasProposal: false,
+                    proposalDetails: 'No offer sent',
+                    documents: { count: 1, details: '1 doc shared<br>To: João Da Silva' },
+                    contracts: { count: 0, details: 'No contracts shared' }
+                }
+            ]
+        };
+
+        const catalogExtras = [
+            {
+                id: 'TXN-2024-040',
+                title: 'Loft T1 - Bairro Alto',
+                type: 'Sell',
+                status: 'Active',
+                date: 'Started 2 days ago',
+                category: 'Residential',
+                location: 'Bairro Alto',
+                participants: [
+                    { avatar: 'IS', name: 'Inês Sousa', color: '#c7c3f7' },
+                    { avatar: 'MF', name: 'Miguel Fonseca', color: '#c7c3f7' }
+                ],
+                hasVisit: true,
+                visitDetails: 'Mar 13, 2024',
+                hasProposal: false,
+                proposalDetails: 'No proposal sent',
+                documents: { count: 2, details: '2 docs shared<br>To: Inês Sousa' },
+                contracts: { count: 0, details: 'No contracts shared' }
+            },
+            {
+                id: 'TXN-2024-041',
+                title: 'Retail Space - Avenida',
+                type: 'Rental Tenant',
+                status: 'Pending',
+                date: 'Started 5 days ago',
+                category: 'Commercial',
+                location: 'Avenida da Liberdade',
+                participants: [
+                    { avatar: 'LR', name: 'Laura Reis', color: '#c7c3f7' }
+                ],
+                hasVisit: false,
+                visitDetails: 'No visit scheduled',
+                hasProposal: 'pending',
+                proposalDetails: 'Application: €2,800/month<br>Draft - Not sent',
+                documents: { count: 1, details: '1 doc shared<br>To: Laura Reis' },
+                contracts: { count: 0, details: 'No contracts shared' }
+            },
+            {
+                id: 'TXN-2024-042',
+                title: 'Family Home T4 - Sintra',
+                type: 'Buy',
+                status: 'Active',
+                date: 'Started 1 week ago',
+                category: 'Residential',
+                location: 'Sintra',
+                participants: [
+                    { avatar: 'PS', name: 'Paula Santos', color: '#c7c3f7' },
+                    { avatar: 'RM', name: 'Ricardo Monteiro', color: '#c7c3f7' }
+                ],
+                hasVisit: true,
+                visitDetails: 'Mar 7, 2024',
+                hasProposal: true,
+                proposalDetails: 'Proposal: €510.000,00<br>Sent Mar 8, 2024',
+                documents: { count: 3, details: '3 docs shared<br>To: Paula Santos' },
+                contracts: { count: 1, details: '1 contract shared<br>From: Ricardo Monteiro' }
+            },
+            {
+                id: 'TXN-2024-043',
+                title: 'Penthouse T2 - Parque Nações',
+                type: 'Sell',
+                status: 'Pending',
+                date: 'Started 10 days ago',
+                category: 'Luxury',
+                location: 'Parque das Nações',
+                participants: [
+                    { avatar: 'MC', name: 'Mariana Costa', color: '#c7c3f7' }
+                ],
+                hasVisit: false,
+                visitDetails: 'No visit scheduled',
+                hasProposal: 'pending',
+                proposalDetails: 'Proposal: €690.000,00<br>Draft - Not sent',
+                documents: { count: 1, details: '1 doc shared<br>To: Mariana Costa' },
+                contracts: { count: 0, details: 'No contracts shared' }
+            }
+        ];
+
+        const relatedTransactionCatalog = Object.values(relatedTransactionsData).flat().concat(catalogExtras);
+        const relatedTransactions = relatedTransactionCatalog.slice(0, 4);
+        const relatedTransactionSelection = new Set();
+
+        function normalizeRelatedType(typeLabel) {
+            const label = (typeLabel || '').toLowerCase();
+            if (label.includes('sell')) return 'sell';
+            if (label.includes('buy')) return 'buy';
+            if (label.includes('tenant')) return 'rent_tenant';
+            if (label.includes('landlord')) return 'rent_landlord';
+            return '';
+        }
+
+        function getParentId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('parentId') || 'WF-001';
+        }
+
+        function goToParentTransaction() {
+            const parentId = getParentId();
+            window.location.href = `../002-detail/transaction-detail-mockup.html?id=${encodeURIComponent(parentId)}`;
+        }
+
+        function navigateToTransaction(transactionId) {
+            const parentId = getParentId();
+            window.location.href = `../005-related/related-transaction-detail-mockup.html?id=${encodeURIComponent(transactionId)}&parentId=${encodeURIComponent(parentId)}`;
+        }
+
+        function renderRelatedTransactions() {
+            const list = document.getElementById('relatedTransactionsList');
+            const summary = document.getElementById('relatedSummary');
+            if (!list) return;
+
+            const activeCount = relatedTransactions.filter(txn => txn.status === 'Active').length;
+            const pendingCount = relatedTransactions.filter(txn => txn.status === 'Pending').length;
+
+            if (summary) {
+                summary.innerHTML = `
+                    <span class="summary-pill">${relatedTransactions.length} total</span>
+                    <span class="summary-pill">${activeCount} active</span>
+                    <span class="summary-pill">${pendingCount} pending</span>
+                `;
+            }
+
+            list.innerHTML = relatedTransactions.map(txn => `
+                <div class="related-transaction-item" onclick="navigateToTransaction('${txn.id}')">
+                    <div class="related-transaction-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        </svg>
+                    </div>
+                    <div class="related-transaction-info">
+                        <div class="related-transaction-title">${txn.title}</div>
+                        <div class="related-transaction-meta">
+                            <span class="related-transaction-type">${txn.type}</span>
+                            <span class="related-transaction-separator">•</span>
+                            <span>${txn.status}</span>
+                            <span class="related-transaction-separator">•</span>
+                            <span class="related-transaction-date">${txn.date}</span>
+                        </div>
+                        <div class="related-transaction-tags">
+                            <span class="related-transaction-tag">${txn.category}</span>
+                            <span class="related-transaction-tag">${txn.location}</span>
+                        </div>
+                    </div>
+                    <div class="related-transaction-participants" onclick="event.stopPropagation()">
+                        ${txn.participants.map(p => `
+                            <div class="related-participant-avatar ${p.privacy ? 'privacy-limited' : ''}" style="background: ${p.color};">
+                                ${p.avatar}
+                                <div class="participant-mini-tooltip">${p.name}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="related-transaction-status" onclick="event.stopPropagation()">
+                        <div class="status-icon ${txn.hasVisit === true ? 'active' : 'inactive'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <div class="status-tooltip">
+                                <span class="status-tooltip-line">${txn.hasVisit === true ? '<span class="status-tooltip-label">Visit:</span>' : ''}${txn.visitDetails}</span>
+                            </div>
+                        </div>
+                        <div class="status-icon ${txn.hasProposal === true ? 'active' : txn.hasProposal === 'pending' ? 'pending' : 'inactive'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                            <div class="status-tooltip">
+                                ${txn.proposalDetails.split('<br>').map(line => `<span class="status-tooltip-line">${line}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="status-icon ${txn.documents.count > 0 ? 'active' : 'inactive'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                                <polyline points="13 2 13 9 20 9"/>
+                            </svg>
+                            ${txn.documents.count > 0 ? `<span class="status-icon-badge">${txn.documents.count}</span>` : ''}
+                            <div class="status-tooltip">
+                                ${txn.documents.details.split('<br>').map(line => `<span class="status-tooltip-line">${line}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="status-icon ${txn.contracts.count > 0 ? 'active' : 'inactive'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="9" y1="15" x2="15" y2="15"/>
+                            </svg>
+                            ${txn.contracts.count > 0 ? `<span class="status-icon-badge">${txn.contracts.count}</span>` : ''}
+                            <div class="status-tooltip">
+                                ${txn.contracts.details.split('<br>').map(line => `<span class="status-tooltip-line">${line}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="related-transaction-arrow">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openRelatedTransactionModal() {
+            const modal = document.getElementById('relatedTransactionModal');
+            if (!modal) return;
+            modal.classList.add('active');
+            modal.setAttribute('aria-hidden', 'false');
+            const idInput = document.getElementById('relatedFilterId');
+            const categorySelect = document.getElementById('relatedFilterCategory');
+            const locationInput = document.getElementById('relatedFilterLocation');
+            if (idInput) idInput.value = '';
+            if (locationInput) locationInput.value = '';
+            if (categorySelect) categorySelect.value = 'all';
+            renderRelatedTransactionModal();
+        }
+
+        function closeRelatedTransactionModal() {
+            const modal = document.getElementById('relatedTransactionModal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+            relatedTransactionSelection.clear();
+        }
+
+        function toggleRelatedTransactionSelection(id) {
+            if (!id) return;
+            if (relatedTransactionSelection.has(id)) {
+                relatedTransactionSelection.delete(id);
+            } else {
+                relatedTransactionSelection.add(id);
+            }
+            renderRelatedTransactionModal();
+        }
+
+        function confirmRelatedTransactionSelection() {
+            if (!relatedTransactionSelection.size) {
+                alert('Select at least one transaction to relate.');
+                return;
+            }
+
+            relatedTransactionSelection.forEach(id => {
+                const exists = relatedTransactions.some(txn => txn.id === id);
+                if (exists) return;
+                const match = relatedTransactionCatalog.find(txn => txn.id === id);
+                if (match) relatedTransactions.push(match);
+            });
+
+            alert(`Linked ${relatedTransactionSelection.size} transaction(s).`);
+            relatedTransactionSelection.clear();
+            closeRelatedTransactionModal();
+            renderRelatedTransactions();
+        }
+
+        function renderRelatedTransactionModal() {
+            const list = document.getElementById('relatedTransactionModalList');
+            const count = document.getElementById('relatedTransactionModalCount');
+            const addBtn = document.getElementById('relatedTransactionModalAddBtn');
+            if (!list || !count) return;
+
+            if (addBtn) {
+                addBtn.textContent = relatedTransactionSelection.size
+                    ? `Add Selected (${relatedTransactionSelection.size})`
+                    : 'Add Selected';
+            }
+
+            const idQuery = (document.getElementById('relatedFilterId')?.value || '').trim().toLowerCase();
+            const categoryFilter = (document.getElementById('relatedFilterCategory')?.value || 'all').toLowerCase();
+            const locationQuery = (document.getElementById('relatedFilterLocation')?.value || '').trim().toLowerCase();
+
+            let catalog = [];
+            try {
+                catalog = relatedTransactionCatalog || [];
+            } catch (err) {
+                catalog = [];
+            }
+            if (!catalog.length) {
+                try {
+                    if (typeof catalogExtras !== 'undefined' && catalogExtras.length) {
+                        catalog = catalogExtras.slice();
+                    }
+                } catch (err) {
+                    catalog = [];
+                }
+            }
+            if (!catalog.length) {
+                catalog = [
+                    {
+                        id: 'TXN-2024-002',
+                        title: 'Property Purchase - 123 Main St',
+                        type: 'Buy',
+                        status: 'Active',
+                        date: 'Started 5 days ago',
+                        category: 'Residential',
+                        location: 'Lisbon - 123 Main St',
+                        participants: [
+                            { avatar: 'MS', name: 'Maria Santos', color: '#c7c3f7' },
+                            { avatar: 'PA', name: 'Pedro Alves', color: '#c7c3f7' }
+                        ],
+                        hasVisit: true,
+                        visitDetails: 'Mar 10, 2024',
+                        hasProposal: true,
+                        proposalDetails: 'Proposal: €395.000,00<br>Sent Mar 12, 2024',
+                        documents: { count: 3, details: '3 docs shared<br>To: Maria Santos' },
+                        contracts: { count: 0, details: 'No contracts shared' }
+                    },
+                    {
+                        id: 'TXN-2024-010',
+                        title: 'Single-family Dwelling T3 - Mafra',
+                        type: 'Sell',
+                        status: 'Active',
+                        date: 'Started 2 weeks ago',
+                        category: 'Residential',
+                        location: 'Mafra',
+                        participants: [
+                            { avatar: 'JD', name: 'João Da Silva', color: '#c7c3f7' },
+                            { avatar: 'AL', name: 'António Lima', color: '#c7c3f7' }
+                        ],
+                        hasVisit: true,
+                        visitDetails: 'Mar 8, 2024',
+                        hasProposal: true,
+                        proposalDetails: 'Proposal: €400.000,00<br>Sent Mar 9, 2024',
+                        documents: { count: 2, details: '2 docs shared<br>To: António Lima' },
+                        contracts: { count: 1, details: '1 contract shared<br>From: João Da Silva' }
+                    }
+                ];
+            }
+
+            const hasFilters = idQuery || locationQuery || categoryFilter !== 'all';
+            const transactions = hasFilters
+                ? catalog.filter(txn => {
+                    const idOk = !idQuery || txn.id.toLowerCase().includes(idQuery);
+                    const categoryOk = categoryFilter === 'all' || normalizeRelatedType(txn.type) === categoryFilter;
+                    const locationOk = !locationQuery || (txn.location || '').toLowerCase().includes(locationQuery);
+                    return idOk && categoryOk && locationOk;
+                })
+                : catalog;
+
+            count.textContent = `${transactions.length} result${transactions.length === 1 ? '' : 's'}`;
+
+            if (!transactions.length) {
+                list.innerHTML = '<div style="text-align: center; padding: 2rem; color: #747474;">No transactions match those filters.</div>';
+                return;
+            }
+
+            list.innerHTML = transactions.map(txn => `
+                <div class="related-transaction-item related-transaction-item--modal ${relatedTransactionSelection.has(txn.id) ? 'selected' : ''}">
+                    <div class="related-transaction-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        </svg>
+                    </div>
+                    <div class="related-transaction-info">
+                        <div class="related-transaction-title">${txn.title}</div>
+                        <div class="related-transaction-meta">
+                            <span class="related-transaction-type">${txn.type}</span>
+                            <span class="related-transaction-separator">•</span>
+                            <span>${txn.status}</span>
+                            <span class="related-transaction-separator">•</span>
+                            <span class="related-transaction-date">${txn.date}</span>
+                        </div>
+                        <div class="related-transaction-tags">
+                            <span class="related-transaction-tag">${txn.category}</span>
+                            <span class="related-transaction-tag">${txn.location}</span>
+                        </div>
+                    </div>
+                    <div class="related-transaction-participants">
+                        ${txn.participants.map(p => `
+                            <div class="related-participant-avatar ${p.privacy ? 'privacy-limited' : ''}" style="background: ${p.color};">
+                                ${p.avatar}
+                                <div class="participant-mini-tooltip">${p.name}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="related-transaction-status">
+                        <div class="status-icon ${txn.hasVisit === true ? 'active' : 'inactive'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <div class="status-tooltip">
+                                <span class="status-tooltip-line">${txn.hasVisit === true ? '<span class="status-tooltip-label">Visit:</span>' : ''}${txn.visitDetails}</span>
+                            </div>
+                        </div>
+                        <div class="status-icon ${txn.hasProposal === true ? 'active' : txn.hasProposal === 'pending' ? 'pending' : 'inactive'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                            <div class="status-tooltip">
+                                ${txn.proposalDetails.split('<br>').map(line => `<span class="status-tooltip-line">${line}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="status-icon ${txn.documents.count > 0 ? 'active' : 'inactive'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                                <polyline points="13 2 13 9 20 9"/>
+                            </svg>
+                            ${txn.documents.count > 0 ? `<span class="status-icon-badge">${txn.documents.count}</span>` : ''}
+                            <div class="status-tooltip">
+                                ${txn.documents.details.split('<br>').map(line => `<span class="status-tooltip-line">${line}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="status-icon ${txn.contracts.count > 0 ? 'active' : 'inactive'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="9" y1="15" x2="15" y2="15"/>
+                            </svg>
+                            ${txn.contracts.count > 0 ? `<span class="status-icon-badge">${txn.contracts.count}</span>` : ''}
+                            <div class="status-tooltip">
+                                ${txn.contracts.details.split('<br>').map(line => `<span class="status-tooltip-line">${line}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="related-transaction-select">
+                        <button type="button" class="${relatedTransactionSelection.has(txn.id) ? 'selected' : ''}" onclick="toggleRelatedTransactionSelection('${txn.id}')">
+                            ${relatedTransactionSelection.has(txn.id) ? 'Selected' : 'Select'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        const parentId = getParentId();
+        const parentLabel = document.getElementById('parentTransactionId');
+        const backLink = document.getElementById('backToTransaction');
+
+        if (parentLabel) parentLabel.textContent = `# ${parentId}`;
+        if (backLink) backLink.href = `../002-detail/transaction-detail-mockup.html?id=${encodeURIComponent(parentId)}`;
+
+        renderRelatedTransactions();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterIds = ['relatedFilterId', 'relatedFilterCategory', 'relatedFilterLocation'];
+            filterIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const eventName = el.tagName === 'SELECT' ? 'change' : 'input';
+                el.addEventListener(eventName, renderRelatedTransactionModal);
+            });
+        });
+    </script>
+</body>
+</html>

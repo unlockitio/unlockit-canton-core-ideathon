@@ -1,0 +1,56 @@
+/* Base Reset and Typography */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-weight: 400;
+    font-family: "Aeonik Fono", sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    color: #3a3b45;
+}
+
+/* Typography Scale */
+.page-title {
+    font-size: 1.286rem;
+    color: #3a3b45;
+    font-weight: 600;
+    margin: 0;
+}
+
+.page-description {
+    color: #747474;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 1.429rem;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #3a3b45;
+    margin: 0;
+}
+
+.breadcrumb {
+    font-size: 14px;
+    color: #747474;
+    margin-bottom: 10px;
+}
+
+.breadcrumb a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+/* Utility Classes */
+.hidden {
+    display: none;
+}

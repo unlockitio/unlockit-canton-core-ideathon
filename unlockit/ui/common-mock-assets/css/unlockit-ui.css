@@ -1,0 +1,19 @@
+/* Unlockit UI Framework - Consolidated Styles */
+
+/* Import design system variables first */
+@import url('./variables.css');
+
+/* Import base and layout styles */
+@import url('./base.css');
+@import url('./layout.css');
+
+/* Import navigation styles */
+@import url('./navigation.css');
+
+/* Import component styles */
+@import url('./components.css');
+@import url('./badges.css');
+
+/* Import specialized layouts (optional - only load when needed) */
+/* To use auth-layout.css, import it directly in auth pages */
+/* @import url('./auth-layout.css'); */

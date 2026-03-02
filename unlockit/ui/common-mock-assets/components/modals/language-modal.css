@@ -1,0 +1,236 @@
+/* Language Modal Styles */
+.language-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+}
+
+.language-modal-content {
+    background-color: #fefefe;
+    border-radius: 12px;
+    padding: 0;
+    border: 1px solid #e0e0e0;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.language-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+.language-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.close-modal:hover {
+    background-color: #f8f9fa;
+    color: #495057;
+}
+
+.language-modal-body {
+    padding: 1.5rem 2rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.language-modal-body p {
+    margin: 0 0 1.5rem 0;
+    color: #6c757d;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.language-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.language-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid #f1f3f4;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.language-option:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    transform: translateY(-1px);
+}
+
+.language-option input[type="radio"] {
+    margin: 0;
+    transform: scale(1.2);
+    accent-color: #007bff;
+}
+
+.language-flag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 24px;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.language-flag svg {
+    width: 100%;
+    height: 100%;
+    border-radius: 3px;
+}
+
+.language-name {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.language-check {
+    opacity: 0;
+    color: #28a745;
+    font-weight: bold;
+    font-size: 1.1rem;
+    transition: opacity 0.2s ease;
+}
+
+.language-option:has(input[type="radio"]:checked) {
+    background-color: #e7f3ff;
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
+
+.language-option:has(input[type="radio"]:checked) .language-check {
+    opacity: 1;
+}
+
+.language-option:has(input[type="radio"]:checked) .language-name {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.language-modal-footer {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #f0f0f0;
+    background: #fafbfc;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--color-secondary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+    transform: translateY(-1px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .language-modal-content {
+        max-width: 95%;
+        margin: 1rem;
+    }
+
+    .language-modal-header,
+    .language-modal-body,
+    .language-modal-footer {
+        padding: 1rem 1.5rem;
+    }
+
+    .language-option {
+        padding: 10px 12px;
+    }
+
+    .language-flag {
+        width: 28px;
+        height: 20px;
+    }
+}
+
+/* Animation for modal appearance */
+.language-modal[style*="flex"] {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
