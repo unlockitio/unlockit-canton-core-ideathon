@@ -148,7 +148,7 @@ class ComponentLoader {
 }
 
 function getFeaturesBasePath() {
-    const match = window.location.pathname.match(/^(.*?\/(?:docs\/)?features\/)/);
+    const match = window.location.pathname.match(/^(.*?\/unlockit\/ui\/)/);
     if (match) return match[1];
     return window.location.pathname.replace(/\/[^/]*$/, '/');
 }
