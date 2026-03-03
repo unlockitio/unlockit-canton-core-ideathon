@@ -13,7 +13,7 @@ Supporting material and code:
 - Daml codebase: [daml](./unlockit/canton)
 - Slide Deck: https://drive.google.com/file/d/15jtV2z0LIA9lyvhAjQqDQxpilwlIUkXX/view?usp=sharing
 - Video demo (advanced mode): https://drive.google.com/file/d/1JWz0oTlnJ8nlZBSOgkdfPYVU0h-Tnjvo/view?usp=sharing 
-- Video demo (realtor ux): Coming soon...
+- Video demo (realtor ux): https://drive.google.com/file/d/1UWNIQlqD1XSRdGs7fphzdT1oZDDo8U2X/view?usp=sharing
 - Additional details: [unlockit](./unlockit) - Feel free to check other files under this folder
 
 The experience focused on the project presented can be seen at [mockups.unlockit.io](https://mockups.unlockit.io/features/003-transactions/002-detail/transaction-detail-mockup.html?id=WF-003). User and pass: `canton-core`.
