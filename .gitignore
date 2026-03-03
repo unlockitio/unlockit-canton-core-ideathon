@@ -1,5 +1,6 @@
 # Daml
-/.daml
+
+.daml
 /log
 .dlint.yaml
 

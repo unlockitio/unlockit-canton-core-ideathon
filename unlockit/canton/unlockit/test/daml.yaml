@@ -8,7 +8,7 @@ version: 1.0.0
 dependencies:
   - daml-prim
   - daml-stdlib
-  - daml-script-lts
+  - daml-script
 #data-dependencies:
 #  - ../interfaces/.daml/dist/unlockit-interfaces-1.0.0.dar
 #  - ../main/.daml/dist/unlockit-main-1.0.0.dar

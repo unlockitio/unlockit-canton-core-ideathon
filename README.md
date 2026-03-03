@@ -9,7 +9,6 @@ Work actively underway since the last milestone of the Canton Core hackathon:
 
 Supporting material and code:
 - PDF overview: [Unlockit Trust Layer Resume 2026 v2](./unlockit/Unlockit%20Trust%20Layer%20Resume%202026%20v2.pdf)
-- Slide Deck: [unlockit](./unlockit/...)
 - UI codebase: [ui](./unlockit/ui) - Open locally individual html pages
 - Daml codebase: [daml](./unlockit/canton)
 - Slide Deck: https://drive.google.com/file/d/15jtV2z0LIA9lyvhAjQqDQxpilwlIUkXX/view?usp=sharing
@@ -31,7 +30,7 @@ When the agent opens the notification, a widget appears with insights and sugges
 
 ![Insights widget with initial follow ups](./unlockit/screenshots/image%202.png)
 
-The Realtor AI Assistante suggests the agent to request for more real time insights to support the journey with the prospective buyer. Throughout the journey the Realtor AI Assistant supports the refinement of the data request.
+The Realtor AI Assistant suggests requesting more real time insights to support the buyer journey. Throughout the journey the Realtor AI Assistant helps refine the data request.
 
 ![Refined follow up inputs](./unlockit/screenshots/image%203.png)
 
@@ -43,7 +42,7 @@ At checkout, the user is offered different ways to settle the request, including
 
 ![Wallet selection and balances](./unlockit/screenshots/image%205.png)
 
-After selecting the wallet and confirming payment, a summary is provided, including the split of the used tokens between the different stakeholder roles that provided the needed information to settle the transaction.
+After selecting the wallet and confirming payment, a summary is provided, including the split of the used tokens across stakeholder roles that provided the information used to settle the transaction.
 
 ![Settlement summary and value split](./unlockit/screenshots/image%206.png)
 
