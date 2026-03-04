@@ -1,0 +1,11 @@
+# Token Holding Model
+sdk-version: 3.4.0-rc2
+name: model-token-holding
+source: daml
+version: 1.0.0
+dependencies:
+  - daml-prim
+  - daml-stdlib
+data-dependencies:
+  - ../../../lib/splice-api-token-holding-v1-1.0.0.dar
+  - ../../../lib/splice-api-token-metadata-v1-1.0.0.dar

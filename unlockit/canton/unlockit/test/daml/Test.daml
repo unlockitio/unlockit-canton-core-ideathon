@@ -1,9 +1,304 @@
+-- | Test scenarios for Unlockit Token/Wallet System
 module Test where
 
 import Daml.Script
 import DA.Assert
+import DA.Time
+import DA.Date (Month(..), date)
 
+import Unlockit.Interface.W3C.BaseVerifiableCredential qualified as BaseVC
+import Unlockit.W3C.TransactionValueSplitCredential qualified as TVS
+import Unlockit.W3C.OpenDataSourceCredential qualified as ODS
+import Unlockit.W3C.TransactionEvidenceCredential qualified as TEC
+import Unlockit.W3C.DelegationCredential qualified as WD
+import Unlockit.Token.Holding
+
+-- | Test basic holding operations: create
+testBasicHolding : Party -> Party -> Decimal -> Script ()
+testBasicHolding issuer owner amount = script do
+
+  -- Create initial holding with 100 EUR (admin creates holding for owner)
+  agentHoldingCid <- submit issuer do
+    createCmd UnlockitHolding with
+      issuer = issuer
+      owner = owner
+      admin = issuer
+      amount
+      lock = None
+
+  -- Verify holding was created
+  holding <- queryContractId owner agentHoldingCid
+  case holding of
+    Some h -> h.amount === amount
+    None -> abort "Holding not found"
+
+  pure ()
+
+-- | Test TransactionValueSplitCredential
+testTransactionValueSplitCredential : Party -> Party -> Script ()
+testTransactionValueSplitCredential issuer holder = script do
+  
+  let dataCollectedFrom =
+        [ TVS.DataCollectedFromEntry with
+            stakeholderType = "MasterFranchise"
+            count = 4
+        , TVS.DataCollectedFromEntry with
+            stakeholderType = "Broker"
+            count = 6
+        , TVS.DataCollectedFromEntry with
+            stakeholderType = "RealtorAgent"
+            count = 15
+          ]
+
+  let valueSplit =
+        TVS.ValueSplit with
+          currency = "EUR"
+          totalAmount = "1000.00"
+          allocations =
+            [ TVS.ValueSplitAllocation with
+                stakeholderType = "MasterFranchise"
+                amount = "400.00"
+                percentage = 40
+            , TVS.ValueSplitAllocation with
+                stakeholderType = "Broker"
+                amount = "300.00"
+                percentage = 30
+            , TVS.ValueSplitAllocation with
+                stakeholderType = "RealtorAgent"
+                amount = "300.00"
+                percentage = 30
+              ]
+
+  let unlockedDataQualityDistribution =
+        TVS.UnlockedDataQualityDistribution with
+          scheme = "DQL"
+          splits =
+            [ TVS.DataQualitySplit with
+                level = "DQL4"
+                percentage = 90
+            , TVS.DataQualitySplit with
+                level = "DQL1"
+                percentage = 10
+              ]
+
+  cid <- submit (actAs [issuer, holder]) do
+    createCmd TVS.TransactionValueSplitCredential with
+      credentialId = "urn:uuid:8b1b3b6a-3d8b-4a5d-9c3e-0f2c4b4f9c1a"
+      issuer
+      holder
+      validFrom = time (date 2026 Mar 3) 10 15 0
+      expirationDate = None
+      credentialSubjectId = "urn:transaction:tx_001"
+      dataCollectedFrom
+      valueSplit
+      unlockedDataQualityDistribution
+      proof = BaseVC.Proof with
+        proofType = "DataIntegrityProof"
+        created = time (date 2026 Mar 3) 10 15 0
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:issuer123#keys-1"
+        proofValue = "zMockProofValue"
+      status = BaseVC.Active
+
+  vcView <- submit issuer do
+    exerciseCmd (toInterfaceContractId @BaseVC.I cid) BaseVC.GetView with
+      viewer = issuer
+
+  debug vcView.subject.claims
+
+  contracts <- query @TVS.TransactionValueSplitCredential issuer
+  debug contracts
+
+  pure ()
+
+-- | Test OpenDataSourceCredential
+testOpenDataSourceCredential : Party -> Party -> Script ()
+testOpenDataSourceCredential issuer holder = script do
+  verifier <- allocateParty "RegistryVerifier"
+
+  let contentHash =
+        ODS.ContentHash with
+          algorithm = "sha-256"
+          encoding = "hex"
+          value = "b1946ac92492d2347c6235b4d2611184f5b9e1d5d1f6f1f0c6f9b1d0d3a2c1e4"
+
+  cid <- submit (actAs [issuer, holder]) do
+    createCmd ODS.OpenDataSourceCredential with
+      credentialId = "urn:uuid:2d7f7e7c-4f64-4b18-9c37-5b76f7a41d6b"
+      issuer
+      holder
+      validFrom = time (date 2026 Mar 3) 11 0 0
+      expirationDate = None
+      credentialSubjectId = "urn:open-data-source:pt:example:dataset-123"
+      sourceUrl = "https://data.example.gov/datasets/transactions.csv"
+      retrievedAt = time (date 2026 Mar 3) 10 58 12
+      contentHash
+      proof = BaseVC.Proof with
+        proofType = "DataIntegrityProof"
+        created = time (date 2026 Mar 3) 11 0 0
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:registry-issuer#key-1"
+        proofValue = "z3hQ...<snip>...Q"
+      status = BaseVC.Active
+
+  vcView <- submit issuer do
+    exerciseCmd (toInterfaceContractId @BaseVC.I cid) BaseVC.GetView with
+      viewer = issuer
+
+  debug vcView.subject.claims
+
+  contracts <- query @ODS.OpenDataSourceCredential issuer
+  debug contracts
+
+  pure ()
+
+-- | Test TransactionEvidenceCredential with 10 rows from detailed transaction evidence
+testTransactionEvidenceCredential : Party -> Party -> Script ()
+testTransactionEvidenceCredential issuer holder = script do
+  
+  let evidenceRows =
+        [ TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 24
+            askingEur = "€560,000"
+            registryEur = "€542,000"
+            deltaEur = "€18,000"
+            dql = "DQL4 (Authority)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 24
+            askingEur = "€585,000"
+            registryEur = "€563,000"
+            deltaEur = "€22,000"
+            dql = "DQL4 (Authority)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 24
+            askingEur = "€610,000"
+            registryEur = "€590,000"
+            deltaEur = "€20,000"
+            dql = "DQL4 (Authority)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 24
+            askingEur = "€625,000"
+            registryEur = "€602,000"
+            deltaEur = "€23,000"
+            dql = "DQL4 (Authority)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 25
+            askingEur = "€640,000"
+            registryEur = "€618,000"
+            deltaEur = "€22,000"
+            dql = "DQL4 (Authority)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 25
+            askingEur = "€655,000"
+            registryEur = "€632,000"
+            deltaEur = "€23,000"
+            dql = "DQL4 (Authority)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 25
+            askingEur = "€670,000"
+            registryEur = "€645,000"
+            deltaEur = "€25,000"
+            dql = "DQL4 (Authority)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 25
+            askingEur = "€690,000"
+            registryEur = "€662,000"
+            deltaEur = "€28,000"
+            dql = "DQL1 (Anchored)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 26
+            askingEur = "€705,000"
+            registryEur = "€678,000"
+            deltaEur = "€27,000"
+            dql = "DQL4 (Authority)"
+        , TEC.TransactionEvidenceClaim with
+            transactionDate = date 2026 Feb 26
+            askingEur = "€720,000"
+            registryEur = "€690,000"
+            deltaEur = "€30,000"
+            dql = "DQL4 (Authority)"
+          ]
+
+  cids <- submit (actAs [issuer, holder]) do
+    mapA
+      (\(idx, row) ->
+        createCmd TEC.TransactionEvidenceCredential with
+          credentialId = "urn:tx-evidence:" <> show idx
+          issuer
+          holder
+          validFrom = time row.transactionDate 12 0 0
+          expirationDate = None
+          credentialSubjectId = "urn:transaction-evidence:listing-001"
+          claim = row
+          proof = BaseVC.Proof with
+            proofType = "DataIntegrityProof"
+            created = time row.transactionDate 12 0 0
+            proofPurpose = "assertionMethod"
+            verificationMethod = "did:example:evidence-issuer#key-1"
+            proofValue = "zEvidenceProofValue"
+          status = BaseVC.Active
+      )
+      (zip [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] evidenceRows)
+
+  debug cids
+
+  contracts <- query @TEC.TransactionEvidenceCredential issuer
+  length contracts === 10
+
+  pure ()
+
+-- | Test WalletDelegation credential
+testWalletDelegationCredential : Party -> Party -> Script ()
+testWalletDelegationCredential issuer holder = script do
+  
+  let delegationClaim =
+        WD.DelegationClaim with
+          delegationName = "Wallet Delegation"
+          delegationPurpose = "Can Spend From Wallet"
+
+  cid <- submit (actAs [issuer, holder]) do
+    createCmd WD.WalletDelegation with
+      credentialId = "urn:uuid:delegation-001"
+      issuer
+      holder
+      validFrom = time (date 2026 Mar 4) 10 0 0
+      expirationDate = Some (time (date 2027 Mar 4) 10 0 0)
+      credentialSubjectId = "did:example:maria-santos"
+      claim = delegationClaim
+      proof = BaseVC.Proof with
+        proofType = "DataIntegrityProof"
+        created = time (date 2026 Mar 4) 10 0 0
+        proofPurpose = "assertionMethod"
+        verificationMethod = "did:example:c21-portugal#key-1"
+        proofValue = "zDelegationProofValue"
+      status = BaseVC.Active
+
+  vcView <- submit issuer do
+    exerciseCmd (toInterfaceContractId @BaseVC.I cid) BaseVC.GetView with
+      viewer = issuer
+
+  debug vcView.subject.claims
+
+  -- Verify credential type
+  vcView.credentialType === ["VerifiableCredential", "WalletDelegationCredential"]
+
+  contracts <- query @WD.WalletDelegation issuer
+  length contracts === 1
+
+  pure ()
+
+-- | Main test runner
 main : Script ()
 main = do
-  a <- allocateParty "Alice"
+
+  c21 <- allocateParty "C21Portugal"
+  agent <- allocateParty "MariaSantos"
+  unlock <- allocateParty "Unlockit"
+  testBasicHolding unlock agent 120.0
+  testBasicHolding unlock agent 100.0
+  testBasicHolding unlock c21 1920.0
+  testTransactionValueSplitCredential unlock agent
+  testOpenDataSourceCredential unlock unlock
+  testTransactionEvidenceCredential unlock agent
+  testWalletDelegationCredential unlock agent
   pure ()

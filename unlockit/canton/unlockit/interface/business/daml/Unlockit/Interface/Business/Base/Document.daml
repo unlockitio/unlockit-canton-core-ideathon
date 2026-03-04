@@ -1,0 +1,50 @@
+module Unlockit.Interface.Document.Base.Document where
+
+-- | Type synonym for `BaseDocument`.
+type I = BaseDocument
+
+-- | Type synonym for `View`.
+type V = View
+
+-- | Association configuration for a transaction type (e.g. buy, sell).
+data TransactionAssignment = TransactionAssignment
+  with
+    assigned : Bool
+    required : Bool
+  deriving (Eq, Show)
+
+-- | View for `Instrument`.
+
+data View = View
+  with
+    owner : Party
+    observers : Set Party
+    documentTypeId : Text             -- slug/identifier (e.g. \"property-deed\")
+    name : Text                       -- display name
+    description : Optional Text       -- human readable description
+    isContract : Bool                 -- contract flag
+    isExpirable : Bool                -- expirable flag
+    assignments : [(Text, TransactionAssignment)] -- keyed by transaction type name
+    documentHash : Text
+    createdAt : Time                  -- created timestamp
+    lastModifiedAt : Time             -- last modified timestamp
+  deriving (Eq, Show)
+  deriving (Eq, Show)
+
+-- | Interface to expose a consistent view for any Verifiable Credential implementation.
+interface BaseDocument where
+  viewtype V
+  {-
+  getIssuer : Party
+  getHolder : Party
+  -}
+  nonconsuming choice GetView : View
+    -- ^ Retrieves the interface view.
+    with
+      viewer : Party
+        -- ^ The party retrieving the view.
+    controller viewer
+    do
+      pure $ view this
+
+  

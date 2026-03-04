@@ -4,8 +4,8 @@ packages:
 - ./interface/document
 - ./model/w3c/vc
 - ./model/w3c/did
+- ./model/token/holding
 #- ./interface/profile
-
 #- ./interface/rent
 #- ./service/profile
 #- ./service/rent
@@ -13,4 +13,4 @@ packages:
 #- ./model/profile
 #- ./model/rent
 #- ./model/document
-#- ./test/profile
+- ./test

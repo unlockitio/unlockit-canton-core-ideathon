@@ -1,7 +1,7 @@
 module Unlockit.Interface.Transaction.Base.Transaction where
 
 -- | Type synonym for `BaseTransaction`.
-type I = BaseVerifiableCredential
+type I = BaseTransaction
 
 -- | Type synonym for `View`.
 type V = View
@@ -10,25 +10,24 @@ type V = View
 
 data View = View
   with
-    data Transaction = Transaction with
-      -- BaseEntity
-      id               : Int        -- sequence id
-      externalIds  : [(Text, Text)] -- list of external id's
-      -- UnlockitResource
-      owner        : Party               -- User      
-      
-      -- Transaction-specific
-      participants    : [Party]          -- Participant entities
-      title           : Text
-      description     : Text
-      transactionType : Text             -- TransactionTypeEnum (SELL | RENTAL | EXCHANGE)
-      --commissionType  : Text             -- CommissionTypeEnum (NONE | PERCENTAGE | FIXED | RENT)
-      --frequencyType   : Text             -- FrequencyTypeEnum (NONE | MONTHLY | YEARLY)
-      --commission      : Money
-      --value           : Money
-      expiresAt       : Time      
-      propertyId      : Optional Text     -- Reference/ID to Property
-      documentIds     : [Text]            -- Document references
+    -- BaseEntity
+    id               : Int        -- sequence id
+    externalIds  : [(Text, Text)] -- list of external id's
+    -- UnlockitResource
+    owner        : Party               -- User      
+    
+    -- Transaction-specific
+    participants    : [Party]          -- Participant entities
+    title           : Text
+    description     : Text
+    transactionType : Text             -- TransactionTypeEnum (SELL | RENTAL | EXCHANGE)
+    --commissionType  : Text             -- CommissionTypeEnum (NONE | PERCENTAGE | FIXED | RENT)
+    --frequencyType   : Text             -- FrequencyTypeEnum (NONE | MONTHLY | YEARLY)
+    --commission      : Money
+    --value           : Money
+    expiresAt       : Time      
+    propertyId      : Optional Text     -- Reference/ID to Property
+    documentIds     : [Text]            -- Document references
   deriving (Eq, Show)
 
 -- | Interface to expose a consistent view for any BaseTransaction implementation.
@@ -46,7 +45,7 @@ interface BaseTransaction where
     controller viewer
     do
       pure $ view this
-
+  {-
   nonconsuming choice GetStatus : CredentialStatus
     -- ^ Retrieves the interface Status.
     with
@@ -57,7 +56,7 @@ interface BaseTransaction where
       let v = view this
       pure v.status
 
-  {-
+  
   nonconsuming choice IsValid : Bool
     with currentTime : Time
     controller (getHolder this)
