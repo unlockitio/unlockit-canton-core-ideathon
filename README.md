@@ -18,6 +18,19 @@ Supporting material and code:
 
 The experience focused on the project presented can be seen at [mockups.unlockit.io](https://mockups.unlockit.io/features/003-transactions/002-detail/transaction-detail-mockup.html?id=WF-003). User and pass: `canton-core`.
 
+**Local Demo Proxy (Caddy)**
+This repo includes a Caddy proxy config at [unlockit/Caddyfile](./unlockit/Caddyfile). It serves the UI and proxies ledger API calls to avoid CORS issues.
+
+Run:
+```bash
+caddy run --config /Users/marado/Documents/Unlockit/Code/canton-core-ideathon/unlockit-canton-core-ideathon/unlockit/Caddyfile
+```
+
+Open:
+```bash
+http://localhost:8099/unlockit/ui/003-transactions/002-detail/transaction-detail-mockup.html?id=WF-003
+```
+
 **Walkthrough**
 Use the screenshots below and follow the widget prompts to move through the experience.
 

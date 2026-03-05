@@ -1607,6 +1607,141 @@
             margin-bottom: 0.35rem;
         }
 
+        .buy-data-widget-transaction-evidence {
+            margin-top: 0.85rem;
+            padding: 0.75rem;
+            border-radius: 12px;
+            border: 1px solid #e9e6ff;
+            background: #f8f7ff;
+        }
+
+        .buy-data-widget-transaction-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2d2b3f;
+            margin-bottom: 0.5rem;
+        }
+
+        .buy-data-widget-transaction-evidence table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            color: #3f4151;
+        }
+
+        .buy-data-widget-transaction-evidence th,
+        .buy-data-widget-transaction-evidence td {
+            padding: 0.35rem 0.4rem;
+            border-bottom: 1px solid #e3defc;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .buy-data-widget-transaction-evidence th {
+            font-size: 10px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: #5b5f75;
+        }
+
+        .buy-data-widget-transaction-evidence td .data-ledger-metric {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .buy-data-widget-transaction-evidence td a {
+            color: #6f5be0;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .buy-data-widget-transaction-evidence td a:hover {
+            text-decoration: underline;
+        }
+
+        .buy-data-widget-transaction-list {
+            display: grid;
+            gap: 0.4rem;
+        }
+
+        .buy-data-widget-transaction-row {
+            position: relative;
+            display: grid;
+            grid-template-columns: 88px 1fr 1fr 1fr 140px;
+            gap: 0.5rem;
+            align-items: center;
+            padding: 0.45rem 0.6rem;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e6e3f7;
+            font-size: 11px;
+            color: #3f4151;
+            cursor: pointer;
+        }
+
+        .buy-data-widget-transaction-row.buy-data-widget-transaction-header {
+            cursor: default;
+            background: #f1effc;
+            border-color: #dcd6fb;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 10px;
+            color: #5b5f75;
+        }
+
+        .buy-data-widget-transaction-row.buy-data-widget-transaction-header:hover {
+            border-color: #dcd6fb;
+            box-shadow: none;
+        }
+
+        .buy-data-widget-transaction-row strong {
+            font-weight: 600;
+            color: #2d2b3f;
+        }
+
+        .buy-data-widget-transaction-row:hover {
+            border-color: #6f5be0;
+            box-shadow: 0 10px 20px rgba(97, 82, 225, 0.12);
+        }
+
+        .buy-data-widget-transaction-row:hover .data-ledger-tooltip {
+            opacity: 1;
+            transform: translate(-50%, 0);
+            pointer-events: auto;
+        }
+
+        .buy-data-widget-transaction-row .data-ledger-metric {
+            position: static;
+        }
+
+        .buy-data-widget-transaction-row .data-ledger-tooltip {
+            left: 50%;
+            bottom: 115%;
+        }
+
+        .buy-data-widget-callout {
+            margin-top: 0.75rem;
+            padding: 0.65rem 0.7rem;
+            border-radius: 10px;
+            background: #f2f5ff;
+            border: 1px solid #dfe6ff;
+            display: grid;
+            gap: 0.35rem;
+            font-size: 12px;
+            color: #2d2b3f;
+        }
+
+        .buy-data-widget-callout a {
+            color: #6f5be0;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .buy-data-widget-callout a:hover {
+            text-decoration: underline;
+        }
+
         .buy-data-widget-message.user .step-summary .btn-icon:hover {
             background: #f8f9fa;
             border-color: #664EE0;
@@ -3438,6 +3573,41 @@
         .document-meta {
             font-size: 12px;
             color: #878787;
+        }
+
+        .document-ledger-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.2rem;
+            font-size: 11px;
+            color: #6f5be0;
+            text-decoration: none;
+        }
+
+        .document-ledger-link:hover {
+            text-decoration: underline;
+        }
+
+        .document-ledger-badge {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-left: 0.35rem;
+            padding: 0.15rem 0.45rem;
+            border-radius: 999px;
+            background: #f1effc;
+            border: 1px solid #dcd6fb;
+            font-size: 10px;
+            font-weight: 600;
+            color: #5b4bd6;
+        }
+
+        .document-ledger-badge:hover .data-ledger-tooltip {
+            opacity: 1;
+            transform: translate(-50%, 0);
+            pointer-events: auto;
         }
 
         .document-status {
@@ -10600,8 +10770,10 @@
                 'Rita Costa': 'https://randomuser.me/api/portraits/women/65.jpg',
                 'Rita Torres': 'https://randomuser.me/api/portraits/women/68.jpg',
                 'Diana Marques': 'https://randomuser.me/api/portraits/women/57.jpg',
+                'Maria Santos': 'https://randomuser.me/api/portraits/women/44.jpg',
                 'Pedro Alves': 'https://randomuser.me/api/portraits/men/36.jpg',
                 'Pedro Martins': 'https://randomuser.me/api/portraits/men/47.jpg',
+                'João Da Silva': 'https://randomuser.me/api/portraits/men/32.jpg',
                 'António Lima': 'https://randomuser.me/api/portraits/men/52.jpg',
                 'Miguel Fonseca': 'https://randomuser.me/api/portraits/men/19.jpg',
                 'Tiago Moreira': 'https://randomuser.me/api/portraits/men/61.jpg',
@@ -11247,6 +11419,20 @@
             documentsList.innerHTML = (data.documents || []).map(d => {
                 const category = d.category || 'other';
                 const icon = documentTypeIcons[category] || documentTypeIcons.other;
+                const observerNames = (d.observers || []).map(name => String(name || '').trim()).filter(Boolean);
+                const ledgerBadge = d.ledgerUrl
+                    ? `
+                        <span class="document-ledger-badge">
+                            Ledger
+                            <span class="data-ledger-tooltip">
+                                <div class="data-ledger-tooltip-title">Document ledger</div>
+                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>${escapeHtml(String(d.ledgerUrl).replace('https://lighthouse.fivenorth.io/transactions/', ''))}</strong></div>
+                                <div class="data-ledger-tooltip-row"><span>Observers</span><strong>${observerNames.length ? observerNames.join(', ') : '—'}</strong></div>
+                                <div class="data-ledger-tooltip-row"><span>Ledger link</span><a href="${escapeAttribute(d.ledgerUrl)}" target="_blank" rel="noopener">View entry</a></div>
+                            </span>
+                        </span>
+                    `
+                    : '';
                 const sharedWith = (d.sharedWith || []).map(user => {
                     const photo = getSharedPersonPhoto(user.name);
                     return `
@@ -11282,7 +11468,10 @@
                                         </div>`
                                     : ''}
                                 </div>
-                                <div class="document-meta">${d.meta}</div>
+                                <div class="document-meta">
+                                    ${d.meta || ''}
+                                    ${ledgerBadge ? `<div>${ledgerBadge}</div>` : ''}
+                                </div>
                             </div>
                             ${sharedMarkup}
                         </div>
@@ -11332,6 +11521,412 @@
             return { min, max };
         }
 
+        const LEDGER_API_URL = `${window.location.origin}/ledger`;
+        const LEDGER_SECRET = 'mydevsecretkeythatshouldbelongenough123';
+        const LEDGER_USER_IDS = {
+            maria: 'MariaSantos',
+            unlockit: 'Unlockit'
+        };
+        const LEDGER_AUTH_SUBJECTS = {
+            maria: 'MariaSantos',
+            unlockit: 'Unlockit'
+        };
+        const LEDGER_PACKAGES = {
+            w3cVc: '7a9af7be421bb37d63b6728e3f7c3e91acb8288ce382c5c1ea7d956a6f31d091',
+            tokenHolding: 'ccce66c330a8ac6ab10e4b4851b4ed8acbc049a4091bb81df8f7f5b6e98a6b0b'
+        };
+        const LEDGER_TEMPLATES = {
+            openDataSource: `${LEDGER_PACKAGES.w3cVc}:Unlockit.W3C.OpenDataSourceCredential:OpenDataSourceCredential`,
+            valueSplit: `${LEDGER_PACKAGES.w3cVc}:Unlockit.W3C.TransactionValueSplitCredential:TransactionValueSplitCredential`,
+            walletDelegation: `${LEDGER_PACKAGES.w3cVc}:Unlockit.W3C.DelegationCredential:WalletDelegation`,
+            transactionEvidence: `${LEDGER_PACKAGES.w3cVc}:Unlockit.W3C.TransactionEvidenceCredential:TransactionEvidenceCredential`,
+            holding: `${LEDGER_PACKAGES.tokenHolding}:Unlockit.Token.Holding:UnlockitHolding`
+        };
+
+        let ledgerStatePromise = null;
+        let ledgerUsersPromise = null;
+        let currentLedgerView = null;
+        let currentLedgerState = null;
+
+        const fallbackLedgerView = {
+            metricUpdateIds: ['0x9f3a2c...e21b', '0x1c4e8f...7a2d'],
+            dataUrl: 'https://www.ine.pt/ngt_server/attachfileu.jsp?look_parentBoui=774718738&att_display=n&att_download=y',
+            dataHash: '0372dcfb...bdf07',
+            dataCollectedFrom: [
+                { stakeholderType: 'master franchises', count: 4 },
+                { stakeholderType: 'brokers', count: 6 },
+                { stakeholderType: 'realtor agents', count: 15 }
+            ],
+            dqlSplitLabel: '90% DQL4 · 10% DQL1',
+            wallets: {
+                personal: {
+                    updateId: '0x6f2b1a...e9c1',
+                    owner: 'Pedro Martins',
+                    admin: 'UnlockIt-validator-1::1220008c...6dfbb',
+                    instrument: 'EUR (€) - Unlockit Internal',
+                    amount: '€120.00'
+                },
+                org: {
+                    updateId: '0x6f2b1a...e9c1',
+                    owner: 'C21 Portugal',
+                    admin: 'UnlockIt-validator-1::1220008c...6dfbb',
+                    instrument: 'EUR (€) - Unlockit Internal',
+                    amount: '€1,920.00'
+                }
+            },
+            delegation: {
+                updateId: '0x6f2b1a...e9c1',
+                issuer: 'C21 Portugal',
+                subject: 'Maria Santos',
+                type: 'Wallet Delegation',
+                name: 'Can Spend From Wallet'
+            }
+        };
+
+        const textEncoder = new TextEncoder();
+
+        const base64UrlEncode = (buffer) => {
+            const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+            let binary = '';
+            bytes.forEach((b) => {
+                binary += String.fromCharCode(b);
+            });
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        };
+
+        const signHmac = async (message, secret) => {
+            const key = await crypto.subtle.importKey(
+                'raw',
+                textEncoder.encode(secret),
+                { name: 'HMAC', hash: 'SHA-256' },
+                false,
+                ['sign']
+            );
+            const signature = await crypto.subtle.sign('HMAC', key, textEncoder.encode(message));
+            return base64UrlEncode(signature);
+        };
+
+        const makeLocalToken = async (userId) => {
+            const header = base64UrlEncode(textEncoder.encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })));
+            const payload = base64UrlEncode(textEncoder.encode(JSON.stringify({
+                sub: userId,
+                aud: 'daml_ledger_api',
+                exp: Math.floor(Date.now() / 1000) + 2 * 60 * 60
+            })));
+            const body = `${header}.${payload}`;
+            const signature = await signHmac(body, LEDGER_SECRET);
+            return `${body}.${signature}`;
+        };
+
+        const fetchLedgerOffset = async () => {
+            const response = await fetch(`${LEDGER_API_URL}/v2/state/ledger-end`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Ledger end query failed: ${response.status} ${errorText}`);
+            }
+            const payload = await response.json();
+            return payload?.offset ? String(payload.offset) : '0';
+        };
+
+        const fetchLedgerUsers = async (token) => {
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const response = await fetch(`${LEDGER_API_URL}/v2/users`, { headers });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Ledger users query failed: ${response.status} ${errorText}`);
+            }
+            const payload = await response.json();
+            return Array.isArray(payload?.users) ? payload.users : [];
+        };
+
+        const resolveLedgerUsers = async (token) => {
+            if (ledgerUsersPromise) return ledgerUsersPromise;
+            ledgerUsersPromise = (async () => {
+                try {
+                    const users = await fetchLedgerUsers(token);
+                    const maria = users.find((user) => user.id === LEDGER_USER_IDS.maria)?.primaryParty;
+                    const unlockit = users.find((user) => user.id === LEDGER_USER_IDS.unlockit)?.primaryParty;
+                    return {
+                        maria: maria || LEDGER_USER_IDS.maria,
+                        unlockit: unlockit || LEDGER_USER_IDS.unlockit
+                    };
+                } catch (error) {
+                    return {
+                        maria: LEDGER_USER_IDS.maria,
+                        unlockit: LEDGER_USER_IDS.unlockit
+                    };
+                }
+            })();
+            return ledgerUsersPromise;
+        };
+
+        const extractContracts = (response) => {
+            const items = Array.isArray(response)
+                ? response
+                : Array.isArray(response?.result)
+                    ? response.result
+                    : Array.isArray(response?.contracts)
+                        ? response.contracts
+                        : [];
+            return items.map((item) => {
+                const createdEvent = item?.contractEntry?.JsActiveContract?.createdEvent || item?.createdEvent || item;
+                return {
+                    contractId: createdEvent?.contractId,
+                    eventId: createdEvent?.eventId,
+                    payload: createdEvent?.createArgument || createdEvent?.payload || createdEvent?.argument || createdEvent?.data || createdEvent
+                };
+            });
+        };
+
+        const formatLedgerId = (value) => {
+            if (!value) return null;
+            const text = String(value);
+            if (text.length <= 12) return text;
+            return `${text.slice(0, 6)}...${text.slice(-4)}`;
+        };
+
+        const queryActiveContracts = async (party, token, templateId, offset) => {
+            const response = await fetch(`${LEDGER_API_URL}/v2/state/active-contracts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    filter: {
+                        filtersByParty: {
+                            [party]: {
+                                cumulative: [
+                                    {
+                                        identifierFilter: {
+                                            TemplateFilter: {
+                                                value: {
+                                                    templateId,
+                                                    includeCreatedEventBlob: true
+                                                }
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    verbose: true,
+                    activeAtOffset: offset
+                })
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Ledger query failed: ${response.status} ${errorText}`);
+            }
+            return extractContracts(await response.json());
+        };
+
+        const getLedgerView = (state) => {
+            if (!state) return { ...fallbackLedgerView };
+
+            const openData = state.openDataSource?.[0];
+            const valueSplit = state.valueSplit?.[0];
+            const delegation = state.delegation?.[0];
+            const holdings = state.holdings || [];
+
+            const updateId = formatLedgerId(openData?.contractId) || fallbackLedgerView.metricUpdateIds[0];
+
+            const dataCollectedFrom = valueSplit?.payload?.dataCollectedFrom || fallbackLedgerView.dataCollectedFrom;
+            const dqlSplits = valueSplit?.payload?.unlockedDataQualityDistribution?.splits || [];
+            const dqlSplitLabel = dqlSplits.length
+                ? dqlSplits.map((split) => `${split.percentage}% ${split.level}`).join(' · ')
+                : fallbackLedgerView.dqlSplitLabel;
+
+            const sortedHoldings = [...holdings].sort((a, b) => {
+                const amountA = Number(a?.payload?.amount || 0);
+                const amountB = Number(b?.payload?.amount || 0);
+                return amountA - amountB;
+            });
+            const personalHolding = sortedHoldings[0] || null;
+            const orgHolding = sortedHoldings[sortedHoldings.length - 1] || null;
+
+            const formatAmount = (amount) => {
+                const num = Number(amount);
+                if (Number.isNaN(num)) return amount;
+                return `€${num.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            };
+
+            const buildHoldingView = (holding, fallback) => {
+                if (!holding) return fallback;
+                return {
+                    updateId: formatLedgerId(holding.contractId) || fallback.updateId,
+                    owner: holding.payload?.owner || fallback.owner,
+                    admin: holding.payload?.admin || fallback.admin,
+                    instrument: fallback.instrument,
+                    amount: formatAmount(holding.payload?.amount ?? fallback.amount)
+                };
+            };
+
+            return {
+                metricUpdateIds: [updateId],
+                dataUrl: openData?.payload?.sourceUrl || fallbackLedgerView.dataUrl,
+                dataHash: openData?.payload?.contentHash?.value || fallbackLedgerView.dataHash,
+                dataCollectedFrom,
+                dqlSplitLabel,
+                wallets: {
+                    personal: buildHoldingView(personalHolding, fallbackLedgerView.wallets.personal),
+                    org: buildHoldingView(orgHolding, fallbackLedgerView.wallets.org)
+                },
+                delegation: {
+                    updateId: formatLedgerId(delegation?.contractId) || fallbackLedgerView.delegation.updateId,
+                    issuer: delegation?.payload?.issuer || fallbackLedgerView.delegation.issuer,
+                    subject: delegation?.payload?.credentialSubjectId || fallbackLedgerView.delegation.subject,
+                    type: delegation?.payload?.claim?.delegationName || fallbackLedgerView.delegation.type,
+                    name: delegation?.payload?.claim?.delegationPurpose || fallbackLedgerView.delegation.name
+                }
+            };
+        };
+
+        const loadLedgerState = async () => {
+            if (ledgerStatePromise) return ledgerStatePromise;
+            ledgerStatePromise = (async () => {
+                const offset = await fetchLedgerOffset();
+                const [mariaToken, unlockitToken] = await Promise.all([
+                    makeLocalToken(LEDGER_AUTH_SUBJECTS.maria),
+                    makeLocalToken(LEDGER_AUTH_SUBJECTS.unlockit)
+                ]);
+                const resolvedUsers = await resolveLedgerUsers(unlockitToken || mariaToken);
+                const [openDataSource, valueSplit, delegation, holdings, transactionEvidence] = await Promise.all([
+                    queryActiveContracts(resolvedUsers.unlockit, unlockitToken, LEDGER_TEMPLATES.openDataSource, offset),
+                    queryActiveContracts(resolvedUsers.maria, mariaToken, LEDGER_TEMPLATES.valueSplit, offset),
+                    queryActiveContracts(resolvedUsers.maria, mariaToken, LEDGER_TEMPLATES.walletDelegation, offset),
+                    queryActiveContracts(resolvedUsers.maria, mariaToken, LEDGER_TEMPLATES.holding, offset),
+                    queryActiveContracts(resolvedUsers.maria, mariaToken, LEDGER_TEMPLATES.transactionEvidence, offset)
+                ]);
+                return { openDataSource, valueSplit, delegation, holdings, transactionEvidence };
+            })();
+            return ledgerStatePromise;
+        };
+
+        const parseEuroAmount = (value) => {
+            if (value === null || value === undefined) return 0;
+            const raw = String(value).replace(/[€\s]/g, '').replace(/\./g, '').replace(',', '.');
+            const num = Number(raw);
+            return Number.isNaN(num) ? 0 : num;
+        };
+
+        const applyLedgerTooltips = (container, ledgerView) => {
+            if (!container || !ledgerView) return;
+            const tooltips = container.querySelectorAll('.data-ledger-tooltip');
+            tooltips.forEach((tooltip) => {
+                const titleEl = tooltip.querySelector('.data-ledger-tooltip-title');
+                const titleText = titleEl ? titleEl.textContent : '';
+                const isCredential = titleText.includes('Verifiable');
+                const isWallet = titleText.includes('Wallet');
+
+                if (isWallet && !isCredential) {
+                    const ownerEl = tooltip.querySelector('.data-ledger-tooltip-row span + strong');
+                    const ownerText = ownerEl ? ownerEl.textContent : '';
+                    const holding = /C21|Unlockit|Org/i.test(ownerText)
+                        ? ledgerView.wallets.org
+                        : ledgerView.wallets.personal;
+                    const rows = tooltip.querySelectorAll('.data-ledger-tooltip-row');
+                    rows.forEach((row) => {
+                        const label = row.querySelector('span')?.textContent || '';
+                        const valueEl = row.querySelector('strong');
+                        if (!valueEl) return;
+                        if (label.includes('Update Id')) valueEl.textContent = holding.updateId;
+                        if (label.includes('Owner')) valueEl.textContent = formatLedgerId(holding.owner) || holding.owner;
+                        if (label.includes('Instrument admin')) valueEl.textContent = formatLedgerId(holding.admin) || holding.admin;
+                        if (label.includes('Instrument Id')) valueEl.textContent = holding.instrument;
+                        if (label.includes('Amount')) valueEl.textContent = holding.amount;
+                    });
+                }
+
+                if (isCredential) {
+                    const rows = tooltip.querySelectorAll('.data-ledger-tooltip-row');
+                    rows.forEach((row) => {
+                        const label = row.querySelector('span')?.textContent || '';
+                        const valueEl = row.querySelector('strong');
+                        if (!valueEl) return;
+                        if (label.includes('Update Id')) valueEl.textContent = ledgerView.delegation.updateId;
+                        if (label.includes('Issuer')) valueEl.textContent = formatLedgerId(ledgerView.delegation.issuer) || ledgerView.delegation.issuer;
+                        if (label.toLowerCase().includes('credential subject')) valueEl.textContent = formatLedgerId(ledgerView.delegation.subject) || ledgerView.delegation.subject;
+                        if (label.includes('Type')) valueEl.textContent = ledgerView.delegation.type;
+                        if (label.includes('Name')) valueEl.textContent = ledgerView.delegation.name;
+                    });
+                }
+
+                if (titleText.includes('Ledger update')) {
+                    const rows = tooltip.querySelectorAll('.data-ledger-tooltip-row');
+                    const seenUpdateIds = new Set();
+                    let updateIndex = 0;
+                    rows.forEach((row) => {
+                        const label = row.querySelector('span')?.textContent || '';
+                        if (label.includes('Ledger Update Id')) {
+                            const strong = row.querySelector('strong');
+                            const updateId = ledgerView.metricUpdateIds[updateIndex] || ledgerView.metricUpdateIds[0];
+                            if (strong) {
+                                strong.textContent = updateId;
+                                if (seenUpdateIds.has(updateId)) {
+                                    row.style.display = 'none';
+                                } else {
+                                    seenUpdateIds.add(updateId);
+                                    row.style.display = '';
+                                }
+                            }
+                            updateIndex += 1;
+                            if (updateIndex > 1) {
+                                row.style.display = 'none';
+                            }
+                        }
+                        if (label.includes('Data URL')) {
+                            const link = row.querySelector('a');
+                            if (link) link.href = ledgerView.dataUrl;
+                        }
+                        if (label.includes('Data Hash')) {
+                            const strong = row.querySelector('strong');
+                            if (strong) strong.textContent = formatLedgerId(ledgerView.dataHash);
+                        }
+                        if (label.includes('DQL split')) {
+                            const strong = row.querySelector('strong');
+                            if (strong) strong.textContent = ledgerView.dqlSplitLabel;
+                        }
+                    });
+
+                    const hasDataCollectedFrom = Array.from(rows).some((row) =>
+                        (row.querySelector('span')?.textContent || '').includes('Data collected from')
+                    );
+                    if (hasDataCollectedFrom) {
+                        const rowsContainer = tooltip;
+                        const rowsToRemove = Array.from(rows).filter((row) =>
+                            (row.querySelector('span')?.textContent || '').includes('Data collected from') ||
+                            (row.querySelector('span')?.textContent || '') === ''
+                        );
+                        rowsToRemove.forEach((row) => row.remove());
+                        const insertAfter = rowsContainer.querySelector('.data-ledger-tooltip-row');
+                        if (insertAfter) {
+                            ledgerView.dataCollectedFrom.forEach((entry, index) => {
+                                const row = document.createElement('div');
+                                row.className = 'data-ledger-tooltip-row';
+                                row.innerHTML = `<span>${index === 0 ? 'Data collected from' : ''}</span><strong>${entry.count} ${entry.stakeholderType}</strong>`;
+                                insertAfter.after(row);
+                            });
+                        }
+                    }
+                }
+            });
+
+            const walletLabelEls = container.querySelectorAll('.buy-data-widget-followups-option');
+            walletLabelEls.forEach((label) => {
+                if (label.textContent.includes('Charge my personal wallet')) {
+                    label.innerHTML = label.innerHTML.replace(/Balance €[0-9.,]+/g, `Balance ${ledgerView.wallets.personal.amount}`);
+                }
+                if (label.textContent.includes('Bill the organization wallet')) {
+                    label.innerHTML = label.innerHTML.replace(/Balance €[0-9.,]+/g, `Balance ${ledgerView.wallets.org.amount}`);
+                }
+                if (label.textContent.includes('profile subscription credits')) {
+                    label.innerHTML = label.innerHTML.replace(/€[0-9.,]+/g, ledgerView.wallets.personal.amount);
+                }
+            });
+        };
+
         function getBuyDataPrefill() {
             const data = currentTransactionData || {};
             const type = String(data.type || '').toLowerCase();
@@ -11374,14 +11969,14 @@
             if (selections.dqlMin) params.set('dqlMin', selections.dqlMin);
             if (selections.dqlMax) params.set('dqlMax', selections.dqlMax);
             if (selections.visualization) params.set('visualization', selections.visualization);
-            return `../../004-assistants/003-trust-layer/ai-trust-layer-chat-mockup.html?${params.toString()}`;
+            return `../../004-assistants/003-tbd/ai-trust-layer-chat-mockup.html?${params.toString()}`;
         }
 
         const assistantChats = [
             {
                 id: 'chat-documents-1',
                 category: 'documents',
-                title: 'Document checklist',
+                title: 'Due Diligence Navigation',
                 unreadCount: 0,
                 updatedAt: '3d ago'
             },
@@ -11583,7 +12178,8 @@
                     : prefill.typologyRange
             }, selections);
 
-            const walletBalance = 120;
+            let walletBalance = 120;
+            let orgWalletBalance = 1920;
             const openTransactionsAddon = 2;
             const calcPrice = () => {
                 const base = 0;
@@ -11974,6 +12570,7 @@
                     streamOptions: {
                         delay,
                         onRendered: (msg) => {
+                            applyLedgerTooltips(msg, currentLedgerView || fallbackLedgerView);
                             const radios = msg.querySelectorAll(`input[name="${groupId}"]`);
                             const useBtn = msg.querySelector('[data-use]');
                             let selected = '';
@@ -11982,11 +12579,21 @@
                                 radio.addEventListener('change', () => {
                                     selected = radio.value;
                                     const label = radio.closest('label');
-                                    selectedLabel = label ? label.cloneNode(true).childNodes[1].textContent.trim() : selected;
+                                    const labelText = label ? label.querySelector('span')?.textContent : '';
+                                    selectedLabel = labelText ? labelText.trim() : selected;
                                     useBtn.disabled = !selected;
                                 });
                             });
                             useBtn.addEventListener('click', () => {
+                                if (!selected) {
+                                    const checked = msg.querySelector(`input[name="${groupId}"]:checked`);
+                                    if (checked) {
+                                        selected = checked.value;
+                                        const label = checked.closest('label');
+                                        const labelText = label ? label.querySelector('span')?.textContent : '';
+                                        selectedLabel = labelText ? labelText.trim() : selected;
+                                    }
+                                }
                                 if (!selected) return;
                                 let summary = selectedLabel || selected;
                                 if (selected.includes('Set time series')) {
@@ -12034,6 +12641,8 @@
                         <button class="buy-data-widget-primary buy-data-widget-followups-btn" type="button" data-use disabled>Use question</button>
                     </div>
                 `;
+                applyLedgerTooltips(bubble, currentLedgerView || fallbackLedgerView);
+                if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
                 const radios = bubble.querySelectorAll(`input[name="${groupId}"]`);
                 const useBtn = bubble.querySelector('[data-use]');
                 let selected = '';
@@ -12042,11 +12651,22 @@
                     radio.addEventListener('change', () => {
                         selected = radio.value;
                         const label = radio.closest('label');
-                        selectedLabel = label ? label.cloneNode(true).childNodes[1].textContent.trim() : selected;
+                        const labelText = label ? label.querySelector('span')?.textContent : '';
+                        selectedLabel = labelText ? labelText.trim() : selected;
                         useBtn.disabled = !selected;
+                        if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
                     });
                 });
                 useBtn.addEventListener('click', () => {
+                    if (!selected) {
+                        const checked = bubble.querySelector(`input[name="${groupId}"]:checked`);
+                        if (checked) {
+                            selected = checked.value;
+                            const label = checked.closest('label');
+                            const labelText = label ? label.querySelector('span')?.textContent : '';
+                            selectedLabel = labelText ? labelText.trim() : selected;
+                        }
+                    }
                     if (!selected) return;
                     let summary = selectedLabel || selected;
                     if (selected.includes('Set time series')) {
@@ -12073,7 +12693,7 @@
                 const processedSentence = `Your transaction has been processed and settled successfully.`;
                 const processedDetails = `
                     <ul class="buy-data-widget-summary-list">
-                        <li>Data collected from 4 master franchises, 6 brokers, and 15 realtor agents.</li>
+                        <li>${getDataCollectedLine()}</li>
                         <li>3 notaries verified 9 of the 10 transactions, grading the data with high authority (DQL 4).</li>
                     </ul>
                     <div class="buy-data-widget-stakeholders">
@@ -12116,6 +12736,133 @@
                     'Create a branded report'
                 ];
 
+                const renderLedgerTooltipRow = (label, value) => {
+                    return `<div class="data-ledger-tooltip-row"><span>${label}</span><strong>${value}</strong></div>`;
+                };
+
+                const buildTransactionEvidenceList = () => {
+                    const formatShort = (value) => {
+                        if (!value) return value;
+                        const text = String(value);
+                        return text.length <= 12 ? text : `${text.slice(0, 6)}...${text.slice(-4)}`;
+                    };
+                    const evidenceContracts = currentLedgerState?.transactionEvidence || [];
+                    const evidenceRows = evidenceContracts.length
+                        ? evidenceContracts.map((contract) => {
+                            const claim = contract?.payload?.claim || {};
+                            return {
+                                date: claim.transactionDate || '-',
+                                asking: claim.askingEur || '-',
+                                registry: claim.registryEur || '-',
+                                delta: claim.deltaEur || '-',
+                                dql: claim.dql || 'DQL-',
+                                ledgerId: contract?.contractId || ''
+                            };
+                        })
+                        : [
+                            { date: '2026-02-24', asking: '€560,000', registry: '€542,000', delta: '€18,000', dql: 'DQL4 (Authority)', ledgerId: '' },
+                            { date: '2026-02-24', asking: '€585,000', registry: '€563,000', delta: '€22,000', dql: 'DQL4 (Authority)', ledgerId: '' },
+                            { date: '2026-02-24', asking: '€610,000', registry: '€590,000', delta: '€20,000', dql: 'DQL4 (Authority)', ledgerId: '' },
+                            { date: '2026-02-24', asking: '€625,000', registry: '€602,000', delta: '€23,000', dql: 'DQL4 (Authority)', ledgerId: '' },
+                            { date: '2026-02-25', asking: '€640,000', registry: '€618,000', delta: '€22,000', dql: 'DQL4 (Authority)', ledgerId: '' },
+                            { date: '2026-02-25', asking: '€655,000', registry: '€632,000', delta: '€23,000', dql: 'DQL4 (Authority)', ledgerId: '' },
+                            { date: '2026-02-25', asking: '€670,000', registry: '€645,000', delta: '€25,000', dql: 'DQL4 (Authority)', ledgerId: '' },
+                            { date: '2026-02-25', asking: '€690,000', registry: '€662,000', delta: '€28,000', dql: 'DQL1 (Anchored)', ledgerId: '' },
+                            { date: '2026-02-26', asking: '€705,000', registry: '€678,000', delta: '€27,000', dql: 'DQL4 (Authority)', ledgerId: '' },
+                            { date: '2026-02-26', asking: '€720,000', registry: '€690,000', delta: '€30,000', dql: 'DQL4 (Authority)', ledgerId: '' }
+                        ];
+
+                    return `
+                        <div class="buy-data-widget-transaction-evidence">
+                            <div class="buy-data-widget-transaction-title">Detailed Transaction Evidence</div>
+                            <div class="buy-data-widget-transaction-list">
+                                <div class="buy-data-widget-transaction-row buy-data-widget-transaction-header">
+                                    <strong>Date</strong>
+                                    <strong>Asking €</strong>
+                                    <strong>Registry €</strong>
+                                    <strong>Delta €</strong>
+                                    <strong>DQL</strong>
+                                </div>
+                                ${evidenceRows.map(row => `
+                                    <div class="buy-data-widget-transaction-row">
+                                        <strong>${row.date}</strong>
+                                        <span>${row.asking}</span>
+                                        <span>${row.registry}</span>
+                                        <span>${row.delta}</span>
+                                        <span class="data-ledger-metric">
+                                            <span>${row.dql}</span>
+                                            <span class="data-verified-icon"></span>
+                                            <span class="data-ledger-tooltip">
+                                                <div class="data-ledger-tooltip-title">Transaction details <span class="data-verified-pill"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.007 2.104a3 3 0 0 0-3.595 1.49L5.606 5.17a1 1 0 0 1-.436.436l-1.577.806a3 3 0 0 0-1.49 3.595l.546 1.685a1 1 0 0 1 0 .616l-.545 1.685a3 3 0 0 0 1.49 3.595l1.576.806a1 1 0 0 1 .436.436l.806 1.577a3 3 0 0 0 3.595 1.49l1.685-.546a1 1 0 0 1 .616 0l1.685.545a3 3 0 0 0 3.595-1.489l.806-1.577a1 1 0 0 1 .436-.436l1.577-.805a3 3 0 0 0 1.49-3.596l-.546-1.685a1 1 0 0 1 0-.616l.545-1.685a3 3 0 0 0-1.489-3.595l-1.577-.806a1 1 0 0 1-.436-.436l-.805-1.577a3 3 0 0 0-3.596-1.49l-1.685.546a1 1 0 0 1-.616 0zM6.76 11.757l1.414-1.414l2.828 2.829l5.657-5.657l1.415 1.414l-7.072 7.07z"/></svg> Verified</span></div>
+                                                ${renderLedgerTooltipRow('Date', row.date)}
+                                                ${renderLedgerTooltipRow('Asking', row.asking)}
+                                                ${renderLedgerTooltipRow('Registry', row.registry)}
+                                                ${renderLedgerTooltipRow('Delta', row.delta)}
+                                                ${renderLedgerTooltipRow('DQL', row.dql)}
+                                                ${renderLedgerTooltipRow('Ledger Update Id', formatShort(row.ledgerId))}
+                                            </span>
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                const renderLedgerShareDocumentFlow = (docName, docCategory) => {
+                    if (!currentTransactionData) {
+                        currentTransactionData = { documents: [] };
+                    }
+                    currentTransactionData.documents = currentTransactionData.documents || [];
+
+                    const newDoc = {
+                        name: docName,
+                        category: docCategory,
+                        status: 'approved',
+                        meta: 'Shared with buyer just now',
+                        sharedWith: [{ name: 'Maria Santos' }, { name: 'João Da Silva' }],
+                        ledgerUrl: 'https://lighthouse.fivenorth.io/transactions/0xf4c9812a7d93b104',
+                        observers: ['Maria Santos', 'João Da Silva']
+                    };
+
+                    currentTransactionData.documents.unshift(newDoc);
+                    renderDocumentsList(currentTransactionData);
+                    const documentCount = document.getElementById('documentCount');
+                    if (documentCount) {
+                        documentCount.textContent = `Documents (${currentTransactionData.documents.length})`;
+                    }
+
+                    const followupMessage = `
+                        Done. I shared <strong>${escapeHtml(docName)}</strong> with the buyer and added it to the transaction documents. The buyer will be notified about the document within the platform.
+                        <br><br>
+                        Is there an action on that notification you want me to take?
+                    `;
+                    const msg = appendAssistantMessage(followupMessage, {
+                        stream: true,
+                        streamOptions: {
+                            onDone: () => {
+                                const bubble = msg.querySelector('.buy-data-widget-bubble');
+                                const followups = [
+                                    'Send a WhatsApp follow-up tied to this notification.',
+                                    'Ping the buyer on fleck.chat about the document update.',
+                                    'Alert me when the buyer marks the Unlockit notice as read.'
+                                ];
+                                renderFollowupsInline(bubble, followupMessage, followups, (choice) => {
+                                    if (choice.includes('WhatsApp')) {
+                                        appendStreamingMessage('Understood. I will send the WhatsApp follow-up and confirm when it is delivered.');
+                                        return;
+                                    }
+                                    if (choice.includes('fleck.chat')) {
+                                        appendStreamingMessage('Will do. I will reach out on fleck.chat and confirm once it is delivered.');
+                                        return;
+                                    }
+                                    appendStreamingMessage('Got it. I will let you know as soon as the buyer reads the Unlockit notification.');
+                                }, bubble);
+                            }
+                        }
+                    });
+                };
+
                 appendStreamingMessage(`
                     <div class="buy-data-widget-fulfillment">
                         <p class="buy-data-widget-confirm">${confirmationLine}</p>
@@ -12145,7 +12892,50 @@
                                             <div style="margin-top:0.6rem;">
                                                 <a class="buy-data-widget-primary" href="WF-003-registry-insights.pdf" download>Download PDF</a>
                                             </div>
-                                        `);
+                                        `, {
+                                            onDone: () => {
+                                                const followups = [
+                                                    'Let me see the detailed transaction evidence from the report',
+                                                    'Break down how many transactions have been done under a realtor partnership.',
+                                                    'Let me refine the search based on other dimensions'
+                                                ];
+                                                renderFollowups('What would you like to do next?', followups, (choice) => {
+                                                    if (choice.includes('detailed transaction evidence')) {
+                                                        appendStreamingMessage(`
+                                                            <div class="buy-data-widget-fulfillment">
+                                                                <p>Here is the detailed transaction evidence from the report. Hover a row to see the ledger-backed details.</p>
+                                                                ${buildTransactionEvidenceList()}
+                                                            </div>
+                                                        `, {
+                                                            onDone: () => {
+                                                                const followupsAfterEvidence = [
+                                                                    'Share the report with the buyer and add it to the transaction documents.',
+                                                                    'Break down how many transactions have been done under a realtor partnership.',
+                                                                    'Let me refine the search based on other dimensions'
+                                                                ];
+                                                                renderFollowups('Want me to take another action?', followupsAfterEvidence, (nextChoice) => {
+                                                                    if (nextChoice.includes('Share the report')) {
+                                                                        renderLedgerShareDocumentFlow('WF-003 Registry Insights.pdf', 'financial');
+                                                                        return;
+                                                                    }
+                                                                    if (nextChoice.includes('realtor partnership')) {
+                                                                        appendStreamingMessage('I will break down the transactions by realtor partnership activity and show the distribution.');
+                                                                        return;
+                                                                    }
+                                                                    appendStreamingMessage('I can refine by neighborhood, typology, price deltas, DQL level, or stakeholder mix. Tell me your preference.');
+                                                                }, 500);
+                                                            }
+                                                        });
+                                                        return;
+                                                    }
+                                                    if (choice.includes('realtor partnership')) {
+                                                        appendStreamingMessage('I will break down the transactions by realtor partnership activity and show the distribution.');
+                                                        return;
+                                                    }
+                                                    appendStreamingMessage('I can refine by neighborhood, typology, price deltas, DQL level, or stakeholder mix. Tell me your preference.');
+                                                }, 700);
+                                            }
+                                        });
                                         return;
                                     }
                                     appendStreamingMessage(`Got it. I will present the data as a ${vizChoice.replace('View as ', '').toLowerCase()}.`);
@@ -12164,8 +12954,32 @@
                 renderCharacteristicsStep();
             };
 
-            const renderIntroConversation = () => {
-                const summary = `
+        const getDataCollectedLine = () => {
+            const entries = (currentLedgerView || fallbackLedgerView).dataCollectedFrom || [];
+            if (!entries.length) return 'Data collected from verified sources.';
+            const formatted = entries.map((entry) => `${entry.count} ${entry.stakeholderType}`);
+            if (formatted.length === 1) return `Data collected from ${formatted[0]}.`;
+            if (formatted.length === 2) return `Data collected from ${formatted[0]} and ${formatted[1]}.`;
+            return `Data collected from ${formatted.slice(0, -1).join(', ')}, and ${formatted[formatted.length - 1]}.`;
+        };
+
+        const renderIntroConversation = async () => {
+            try {
+                const ledgerState = await loadLedgerState();
+                currentLedgerState = ledgerState;
+                currentLedgerView = getLedgerView(ledgerState);
+            } catch (error) {
+                currentLedgerState = null;
+                currentLedgerView = getLedgerView(null);
+            }
+
+            const ledgerView = currentLedgerView || fallbackLedgerView;
+            walletBalance = parseEuroAmount(ledgerView.wallets.personal.amount) || walletBalance;
+            orgWalletBalance = parseEuroAmount(ledgerView.wallets.org.amount) || orgWalletBalance;
+            const updateIdPrimary = ledgerView.metricUpdateIds[0] || fallbackLedgerView.metricUpdateIds[0];
+            const updateIdSecondary = updateIdPrimary;
+
+            const summary = `
                     I reviewed the real estate buy transaction WF-003 with João Da Silva (Buyer) for an apartment, with 3 bedrooms in the Lisbon district.
                     Publicly available data (Q3 2025) can provide relevant insights to better serve the buyer. Find below some key metrics:
                     <ul style="margin: 0.5rem 0 0; padding-left: 1rem;">
@@ -12177,13 +12991,13 @@
                                 </span>
                                 <span class="data-ledger-tooltip">
                                     <div class="data-ledger-tooltip-title">Ledger update <span class="data-verified-pill"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.007 2.104a3 3 0 0 0-3.595 1.49L5.606 5.17a1 1 0 0 1-.436.436l-1.577.806a3 3 0 0 0-1.49 3.595l.546 1.685a1 1 0 0 1 0 .616l-.545 1.685a3 3 0 0 0 1.49 3.595l1.576.806a1 1 0 0 1 .436.436l.806 1.577a3 3 0 0 0 3.595 1.49l1.685-.546a1 1 0 0 1 .616 0l1.685.545a3 3 0 0 0 3.595-1.489l.806-1.577a1 1 0 0 1 .436-.436l1.577-.805a3 3 0 0 0 1.49-3.596l-.546-1.685a1 1 0 0 1 0-.616l.545-1.685a3 3 0 0 0-1.489-3.595l-1.577-.806a1 1 0 0 1-.436-.436l-.805-1.577a3 3 0 0 0-3.596-1.49l-1.685.546a1 1 0 0 1-.616 0zM6.76 11.757l1.414-1.414l2.828 2.829l5.657-5.657l1.415 1.414l-7.072 7.07z"/></svg> Verified</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
-                                    <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
+                                    <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>${updateIdPrimary}</strong></div>
+                                    <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>${updateIdSecondary}</strong></div>
                                     <div class="data-ledger-tooltip-row">
                                         <span>Data URL</span>
-                                        <a href="https://www.ine.pt/ngt_server/attachfileu.jsp?look_parentBoui=774718738&att_display=n&att_download=y" target="_blank" rel="noopener">ine.pt/attachfile</a>
+                                        <a href="${ledgerView.dataUrl}" target="_blank" rel="noopener">ine.pt/attachfile</a>
                                     </div>
-                                    <div class="data-ledger-tooltip-row"><span>Data Hash</span><strong>0372dcfb...bdf07</strong></div>
+                                    <div class="data-ledger-tooltip-row"><span>Data Hash</span><strong>${ledgerView.dataHash}</strong></div>
                                 </span>
                             </span>
                         </li>
@@ -12195,13 +13009,13 @@
                                 </span>
                                 <span class="data-ledger-tooltip">
                                     <div class="data-ledger-tooltip-title">Ledger update <span class="data-verified-pill"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.007 2.104a3 3 0 0 0-3.595 1.49L5.606 5.17a1 1 0 0 1-.436.436l-1.577.806a3 3 0 0 0-1.49 3.595l.546 1.685a1 1 0 0 1 0 .616l-.545 1.685a3 3 0 0 0 1.49 3.595l1.576.806a1 1 0 0 1 .436.436l.806 1.577a3 3 0 0 0 3.595 1.49l1.685-.546a1 1 0 0 1 .616 0l1.685.545a3 3 0 0 0 3.595-1.489l.806-1.577a1 1 0 0 1 .436-.436l1.577-.805a3 3 0 0 0 1.49-3.596l-.546-1.685a1 1 0 0 1 0-.616l.545-1.685a3 3 0 0 0-1.489-3.595l-1.577-.806a1 1 0 0 1-.436-.436l-.805-1.577a3 3 0 0 0-3.596-1.49l-1.685.546a1 1 0 0 1-.616 0zM6.76 11.757l1.414-1.414l2.828 2.829l5.657-5.657l1.415 1.414l-7.072 7.07z"/></svg> Verified</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x1c4e8f...7a2d</strong></div>
-                                    <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x1c4e8f...7a2d</strong></div>
+                                    <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>${updateIdSecondary}</strong></div>
+                                    <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>${updateIdSecondary}</strong></div>
                                     <div class="data-ledger-tooltip-row">
                                         <span>Data URL</span>
-                                        <a href="https://www.ine.pt/ngt_server/attachfileu.jsp?look_parentBoui=774718738&att_display=n&att_download=y" target="_blank" rel="noopener">ine.pt/attachfile</a>
+                                        <a href="${ledgerView.dataUrl}" target="_blank" rel="noopener">ine.pt/attachfile</a>
                                     </div>
-                                    <div class="data-ledger-tooltip-row"><span>Data Hash</span><strong>0372dcfb...bdf07</strong></div>
+                                    <div class="data-ledger-tooltip-row"><span>Data Hash</span><strong>${ledgerView.dataHash}</strong></div>
                                 </span>
                             </span>
                         </li>

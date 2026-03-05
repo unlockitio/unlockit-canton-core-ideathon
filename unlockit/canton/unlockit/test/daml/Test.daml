@@ -114,7 +114,6 @@ testTransactionValueSplitCredential issuer holder = script do
 -- | Test OpenDataSourceCredential
 testOpenDataSourceCredential : Party -> Party -> Script ()
 testOpenDataSourceCredential issuer holder = script do
-  verifier <- allocateParty "RegistryVerifier"
 
   let contentHash =
         ODS.ContentHash with
@@ -291,14 +290,23 @@ testWalletDelegationCredential issuer holder = script do
 main : Script ()
 main = do
 
-  c21 <- allocateParty "C21Portugal"
+  century21 <- allocateParty "C21Portugal"
   agent <- allocateParty "MariaSantos"
   unlock <- allocateParty "Unlockit"
+  --
+  century21Id <- validateUserId "C21Portugal"
+  agentId <- validateUserId "MariaSantos"
+  unlockId <- validateUserId "Unlockit"
+  --
+  createUser (User century21Id (Some century21)) [CanActAs century21]
+  createUser (User agentId (Some agent)) [CanActAs agent]
+  createUser (User unlockId (Some unlock)) [CanActAs unlock]
+  --
   testBasicHolding unlock agent 120.0
   testBasicHolding unlock agent 100.0
-  testBasicHolding unlock c21 1920.0
+  testBasicHolding unlock century21 1920.0
   testTransactionValueSplitCredential unlock agent
   testOpenDataSourceCredential unlock unlock
   testTransactionEvidenceCredential unlock agent
-  testWalletDelegationCredential unlock agent
+  testWalletDelegationCredential century21 agent
   pure ()
