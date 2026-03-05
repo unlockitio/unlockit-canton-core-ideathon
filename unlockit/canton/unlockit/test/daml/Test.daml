@@ -12,19 +12,20 @@ import Unlockit.W3C.OpenDataSourceCredential qualified as ODS
 import Unlockit.W3C.TransactionEvidenceCredential qualified as TEC
 import Unlockit.W3C.DelegationCredential qualified as WD
 import Unlockit.Token.Holding
+import Splice.Api.Token.HoldingV1 qualified as Api.Token.HoldingV1
 
 -- | Test basic holding operations: create
-testBasicHolding : Party -> Party -> Decimal -> Script ()
-testBasicHolding issuer owner amount = script do
+testBasicHolding : Party -> Party -> Decimal -> Optional Api.Token.HoldingV1.Lock ->  Script ()
+testBasicHolding issuer owner amount lock = script do
 
   -- Create initial holding with 100 EUR (admin creates holding for owner)
-  agentHoldingCid <- submit issuer do
+  agentHoldingCid <- submit [issuer, owner] do
     createCmd UnlockitHolding with
       issuer = issuer
       owner = owner
       admin = issuer
       amount
-      lock = None
+      lock
 
   -- Verify holding was created
   holding <- queryContractId owner agentHoldingCid
@@ -302,9 +303,10 @@ main = do
   createUser (User agentId (Some agent)) [CanActAs agent]
   createUser (User unlockId (Some unlock)) [CanActAs unlock]
   --
-  testBasicHolding unlock agent 120.0
-  testBasicHolding unlock agent 100.0
-  testBasicHolding unlock century21 1920.0
+  let lock = Some Api.Token.HoldingV1.Lock with holders = [agent]; expiresAt = None; expiresAfter = None; context = Some "Delegation"
+  testBasicHolding unlock agent 120.0 None
+  testBasicHolding unlock agent 100.0 None
+  testBasicHolding unlock century21 1920.0 lock
   testTransactionValueSplitCredential unlock agent
   testOpenDataSourceCredential unlock unlock
   testTransactionEvidenceCredential unlock agent

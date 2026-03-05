@@ -20,8 +20,8 @@ template UnlockitHolding
     amount : Decimal         -- Token amount (1 token = 1 EUR)
     lock : Optional Api.Token.HoldingV1.Lock     -- Optional lock on tokens
   where
-    signatory admin
-    observer owner
+    signatory admin, owner
+    observer getHolders lock
 
     ensure amount >= 0.0
 
@@ -37,3 +37,9 @@ template UnlockitHolding
             values = TextMap.fromList [
               ("Unlockit", "Unlockit")
               ]
+
+getHolders :  Optional Api.Token.HoldingV1.Lock -> [Party]
+getHolders lock = 
+  case lock of
+    Some a -> a.holders
+    None -> []
