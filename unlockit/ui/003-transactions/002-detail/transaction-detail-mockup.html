@@ -12543,14 +12543,14 @@
                     if (typeof option === 'object') {
                         return `
                             <label class="buy-data-widget-followups-option">
-                                <input type="radio" name="${groupId}" value="${option.value}">
+                                <input type="radio" name="${groupId}" value="${option.value}" data-summary="${option.summary || option.value}">
                                 <span>${option.html}</span>
                             </label>
                         `;
                     }
                     return `
                         <label class="buy-data-widget-followups-option">
-                            <input type="radio" name="${groupId}" value="${option}">
+                            <input type="radio" name="${groupId}" value="${option}" data-summary="${option}">
                             <span>${option}</span>
                         </label>
                     `;
@@ -12578,9 +12578,7 @@
                             radios.forEach(radio => {
                                 radio.addEventListener('change', () => {
                                     selected = radio.value;
-                                    const label = radio.closest('label');
-                                    const labelText = label ? label.querySelector('span')?.textContent : '';
-                                    selectedLabel = labelText ? labelText.trim() : selected;
+                                    selectedLabel = radio.dataset.summary || selected;
                                     useBtn.disabled = !selected;
                                 });
                             });
@@ -12589,9 +12587,7 @@
                                     const checked = msg.querySelector(`input[name="${groupId}"]:checked`);
                                     if (checked) {
                                         selected = checked.value;
-                                        const label = checked.closest('label');
-                                        const labelText = label ? label.querySelector('span')?.textContent : '';
-                                        selectedLabel = labelText ? labelText.trim() : selected;
+                                        selectedLabel = checked.dataset.summary || selected;
                                     }
                                 }
                                 if (!selected) return;
@@ -12619,14 +12615,14 @@
                     if (typeof option === 'object') {
                         return `
                             <label class="buy-data-widget-followups-option">
-                                <input type="radio" name="${groupId}" value="${option.value}">
+                                <input type="radio" name="${groupId}" value="${option.value}" data-summary="${option.summary || option.value}">
                                 <span>${option.html}</span>
                             </label>
                         `;
                     }
                     return `
                         <label class="buy-data-widget-followups-option">
-                            <input type="radio" name="${groupId}" value="${option}">
+                            <input type="radio" name="${groupId}" value="${option}" data-summary="${option}">
                             <span>${option}</span>
                         </label>
                     `;
@@ -12650,9 +12646,7 @@
                 radios.forEach(radio => {
                     radio.addEventListener('change', () => {
                         selected = radio.value;
-                        const label = radio.closest('label');
-                        const labelText = label ? label.querySelector('span')?.textContent : '';
-                        selectedLabel = labelText ? labelText.trim() : selected;
+                        selectedLabel = radio.dataset.summary || selected;
                         useBtn.disabled = !selected;
                         if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
                     });
@@ -12662,9 +12656,7 @@
                         const checked = bubble.querySelector(`input[name="${groupId}"]:checked`);
                         if (checked) {
                             selected = checked.value;
-                            const label = checked.closest('label');
-                            const labelText = label ? label.querySelector('span')?.textContent : '';
-                            selectedLabel = labelText ? labelText.trim() : selected;
+                            selectedLabel = checked.dataset.summary || selected;
                         }
                     }
                     if (!selected) return;
@@ -13226,8 +13218,8 @@
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
-                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Holding</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>0x6f2b1a...e9c1</strong></div>
+                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Pedro Martins</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
@@ -13245,9 +13237,9 @@
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
-                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Holding</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>0x6f2b1a...e9c1</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>C21 Portugal</strong></div>
+                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Unlockit Org Treasury</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Amount</span><strong>€1,920.00</strong></div>
@@ -13277,8 +13269,8 @@
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
-                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Holding</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>0x6f2b1a...e9c1</strong></div>
+                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Pedro Martins</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
                                                                 <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
