@@ -1,8 +1,8 @@
 :8099
 
-root * /Users/marado/Documents/Unlockit/Code/canton-core-ideathon/unlockit-canton-core-ideathon
+root * /home/c4rrao/unlockit/ideathon/unlockit-canton-core-ideathon
 file_server
 
 handle_path /ledger/* {
-  reverse_proxy http://localhost:7575
+	reverse_proxy http://localhost:7575
 }

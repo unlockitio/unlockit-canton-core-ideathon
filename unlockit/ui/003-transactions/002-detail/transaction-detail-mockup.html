@@ -11533,7 +11533,7 @@
         };
         const LEDGER_PACKAGES = {
             w3cVc: '7a9af7be421bb37d63b6728e3f7c3e91acb8288ce382c5c1ea7d956a6f31d091',
-            tokenHolding: 'ccce66c330a8ac6ab10e4b4851b4ed8acbc049a4091bb81df8f7f5b6e98a6b0b'
+            tokenHolding: '5b54cdc61d0d8603ea9325dd87e3134976e291909d45a235c070f2a78dad1202'
         };
         const LEDGER_TEMPLATES = {
             openDataSource: `${LEDGER_PACKAGES.w3cVc}:Unlockit.W3C.OpenDataSourceCredential:OpenDataSourceCredential`,
@@ -11763,7 +11763,7 @@
                 };
             };
 
-            return {
+            const result = {
                 metricUpdateIds: [updateId],
                 dataUrl: openData?.payload?.sourceUrl || fallbackLedgerView.dataUrl,
                 dataHash: openData?.payload?.contentHash?.value || fallbackLedgerView.dataHash,
@@ -11781,6 +11781,7 @@
                     name: delegation?.payload?.claim?.delegationPurpose || fallbackLedgerView.delegation.name
                 }
             };
+            return result;
         };
 
         const loadLedgerState = async () => {
@@ -11821,12 +11822,22 @@
                 const isWallet = titleText.includes('Wallet');
 
                 if (isWallet && !isCredential) {
-                    const ownerEl = tooltip.querySelector('.data-ledger-tooltip-row span + strong');
-                    const ownerText = ownerEl ? ownerEl.textContent : '';
-                    const holding = /C21|Unlockit|Org/i.test(ownerText)
-                        ? ledgerView.wallets.org
-                        : ledgerView.wallets.personal;
+                    // Find the Owner row specifically by looking for the row with "Owner" label
                     const rows = tooltip.querySelectorAll('.data-ledger-tooltip-row');
+                    let ownerText = '';
+                    rows.forEach((row) => {
+                        const label = row.querySelector('span')?.textContent || '';
+                        if (label.includes('Owner')) {
+                            const valueEl = row.querySelector('strong');
+                            ownerText = valueEl ? valueEl.textContent : '';
+                        }
+                    });
+
+                    // Match party IDs: "Unlockit-xxx" or "C21-xxx" for org, "MariaSantos-xxx" etc for personal
+                    const isOrg = /^(Unlockit|C21|Century21)/i.test(ownerText) || /Org|Treasury/i.test(ownerText);
+                    const holding = isOrg ? ledgerView.wallets.org : ledgerView.wallets.personal;
+
+                    // Update all the rows with the correct holding data
                     rows.forEach((row) => {
                         const label = row.querySelector('span')?.textContent || '';
                         const valueEl = row.querySelector('strong');
@@ -13208,6 +13219,7 @@
                                 `;
                                 renderFollowups(mergedPrompt, purchaseOptions, (purchaseChoice) => {
                                     if (purchaseChoice.includes('Proceed to checkout')) {
+                                            const lv = currentLedgerView || fallbackLedgerView;
                                             const settlementOptions = [
                                                 {
                                                     value: 'Charge my personal wallet',
@@ -13218,12 +13230,12 @@
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
-                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Pedro Martins</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>€120.00</strong></div>
+                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Holding</span></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>${lv.wallets.personal.updateId}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>${lv.wallets.personal.owner}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="${lv.wallets.personal.admin}">${lv.wallets.personal.admin}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>${lv.wallets.personal.instrument}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>${lv.wallets.personal.amount}</strong></div>
                                                             </span>
                                                         </span>
                                                     `
@@ -13237,12 +13249,12 @@
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
-                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Unlockit Org Treasury</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>€1,920.00</strong></div>
+                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Holding</span></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>${lv.wallets.org.updateId}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>${lv.wallets.org.owner}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="${lv.wallets.org.admin}">${lv.wallets.org.admin}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>${lv.wallets.org.instrument}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>${lv.wallets.org.amount}</strong></div>
                                                             </span>
                                                         </span>
                                                         <span class="data-ledger-metric">
@@ -13251,11 +13263,11 @@
                                                             </span>
                                                             <span class="data-ledger-tooltip">
                                                                 <div class="data-ledger-tooltip-title">Verifiable <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8 8h8"/><circle cx="10" cy="13" r="1.6"/><path d="M13 12.5h4"/><path d="M13 15.5h4"/></svg> Credential</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>0x6f2b1a...e9c1</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Issuer</span><strong>C21 Portugal</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Credential Subject ID</span><strong>Maria Santos</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Type</span><strong>Wallet Delegation</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Name</span><strong>Can Spend From Wallet</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>${lv.delegation.updateId}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Issuer</span><strong>${lv.delegation.issuer}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Credential Subject ID</span><strong>${lv.delegation.subject}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Type</span><strong>${lv.delegation.type}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Name</span><strong>${lv.delegation.name}</strong></div>
                                                             </span>
                                                         </span>
                                                     `
@@ -13269,12 +13281,12 @@
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
-                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Pedro Martins</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>€120.00</strong></div>
+                                                                <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Holding</span></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>${lv.wallets.personal.updateId}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>${lv.wallets.personal.owner}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="${lv.wallets.personal.admin}">${lv.wallets.personal.admin}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>${lv.wallets.personal.instrument}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>${lv.wallets.personal.amount}</strong></div>
                                                             </span>
                                                         </span>
                                                     `
@@ -13392,22 +13404,23 @@
                                             `;
                                             renderFollowups(mergedPrompt, purchaseOptions, (purchaseChoice) => {
                                                 if (purchaseChoice.includes('Proceed to checkout')) {
+                                            const lv = currentLedgerView || fallbackLedgerView;
                                             const settlementOptions = [
                                                 {
                                                     value: 'Charge my personal wallet',
                                                     html: `
-                                                        Charge my personal wallet (Balance €120.00)
+                                                        Charge my personal wallet (Balance ${lv.wallets.personal.amount})
                                                         <span class="data-ledger-metric">
                                                             <span class="settlement-icon wallet-status" aria-hidden="true">
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
                                                                 <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Pedro Martins</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>€120.00</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>${lv.wallets.personal.updateId}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>${lv.wallets.personal.owner}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="${lv.wallets.personal.admin}">${lv.wallets.personal.admin}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>${lv.wallets.personal.instrument}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>${lv.wallets.personal.amount}</strong></div>
                                                             </span>
                                                         </span>
                                                     `
@@ -13415,18 +13428,18 @@
                                                 {
                                                     value: 'Bill the organization wallet',
                                                     html: `
-                                                        Bill the organization wallet (Balance €1,920.00)
+                                                        Bill the organization wallet (Balance ${lv.wallets.org.amount})
                                                         <span class="data-ledger-metric">
                                                             <span class="settlement-icon wallet-status" aria-hidden="true">
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
                                                                 <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>0x9f3a2c...e21b</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Unlockit Org Treasury</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>€1,920.00</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Ledger Update Id</span><strong>${lv.wallets.org.updateId}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>${lv.wallets.org.owner}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="${lv.wallets.org.admin}">${lv.wallets.org.admin}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>${lv.wallets.org.instrument}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>${lv.wallets.org.amount}</strong></div>
                                                             </span>
                                                         </span>
                                                         <span class="data-ledger-metric">
@@ -13435,25 +13448,30 @@
                                                             </span>
                                                             <span class="data-ledger-tooltip">
                                                                 <div class="data-ledger-tooltip-title">Verifiable <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8 8h8"/><circle cx="10" cy="13" r="1.6"/><path d="M13 12.5h4"/><path d="M13 15.5h4"/></svg> Credential</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>0x6f2b1a...e9c1</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Issuer</span><strong>C21 Portugal</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>credentialSubject id</span><strong>Maria Santos</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Type</span><strong>Wallet Delegation</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Name</span><strong>Can Spend From Wallet</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>${lv.delegation.updateId}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Issuer</span><strong>${lv.delegation.issuer}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Credential Subject ID</span><strong>${lv.delegation.subject}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Type</span><strong>${lv.delegation.type}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Name</span><strong>${lv.delegation.name}</strong></div>
                                                             </span>
                                                         </span>
-Use profile subscription credits (€120.00 available)
+                                                    `
+                                                },
+                                                {
+                                                    value: 'Use profile subscription credits',
+                                                    html: `
+                                                        Use profile subscription credits (${lv.wallets.personal.amount} available)
                                                         <span class="data-ledger-metric">
                                                             <span class="settlement-icon wallet-status" aria-hidden="true">
                                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg>
                                                             </span>
                                                             <span class="data-ledger-tooltip">
                                                                 <div class="data-ledger-tooltip-title">Wallet <span class="data-verified-pill wallet-ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 12h4"/></svg> Verified</span></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>0x6f2b1a...e9c1</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>Pedro Martins</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="UnlockIt-validator-1::1220008c240a6fc16b0aee01d9d93604b64327ae2d181fc43306ab8bbd39e096dfbb">UnlockIt-validator-1::1220008c...6dfbb</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>EUR (€) - Unlockit Internal</strong></div>
-                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>€120.00</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Update Id</span><strong>${lv.wallets.personal.updateId}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Owner</span><strong>${lv.wallets.personal.owner}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument admin</span><strong title="${lv.wallets.personal.admin}">${lv.wallets.personal.admin}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Instrument Id</span><strong>${lv.wallets.personal.instrument}</strong></div>
+                                                                <div class="data-ledger-tooltip-row"><span>Amount</span><strong>${lv.wallets.personal.amount}</strong></div>
                                                             </span>
                                                         </span>
                                                     `
