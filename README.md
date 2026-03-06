@@ -11,9 +11,9 @@ Supporting material and code:
 - PDF overview: [Unlockit Trust Layer Resume 2026 v2](./unlockit/Unlockit%20Trust%20Layer%20Resume%202026%20v2.pdf)
 - UI codebase: [ui](./unlockit/ui) - Open locally individual html pages
 - Daml codebase: [daml](./unlockit/canton)
-- Slide Deck: https://drive.google.com/file/d/15jtV2z0LIA9lyvhAjQqDQxpilwlIUkXX/view?usp=sharing
+- Slide Deck: https://drive.google.com/file/d/1CPV-5citG0S_qgxOAJ6ySrW1pHxT4Lv3/view?usp=sharing
 - Video demo (advanced mode): https://drive.google.com/file/d/1JWz0oTlnJ8nlZBSOgkdfPYVU0h-Tnjvo/view?usp=sharing 
-- Video demo (realtor ux): https://drive.google.com/file/d/1UWNIQlqD1XSRdGs7fphzdT1oZDDo8U2X/view?usp=sharing
+- Video demo (realtor ux): https://docs.google.com/videos/d/1q_kUVggVh0gm1grBmVGCUwAfx3gD83XK9omAmZnJXtw/edit?usp=sharing
 - Additional details: [unlockit](./unlockit) - Feel free to check other files under this folder
 
 The experience focused on the project presented can be seen at [mockups.unlockit.io](https://mockups.unlockit.io/features/003-transactions/002-detail/transaction-detail-mockup.html?id=WF-003). User and pass: `canton-core`.
