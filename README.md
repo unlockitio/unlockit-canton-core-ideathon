@@ -14,6 +14,7 @@ Supporting material and code:
 - Slide Deck: https://drive.google.com/file/d/1CPV-5citG0S_qgxOAJ6ySrW1pHxT4Lv3/view?usp=sharing
 - Video demo (advanced mode): https://drive.google.com/file/d/1JWz0oTlnJ8nlZBSOgkdfPYVU0h-Tnjvo/view?usp=sharing 
 - Video demo (realtor ux): https://docs.google.com/videos/d/1q_kUVggVh0gm1grBmVGCUwAfx3gD83XK9omAmZnJXtw/edit?usp=sharing
+- Video demo (Canton Catalyst Showcase Day): https://drive.google.com/file/d/1sg5nmD4xnnwXnhBBVGIOsZTOx7CgQts0/view?usp=sharing
 - Additional details: [unlockit](./unlockit) - Feel free to check other files under this folder
 
 The experience focused on the project presented can be seen at [mockups.unlockit.io](https://mockups.unlockit.io/features/003-transactions/002-detail/transaction-detail-mockup.html?id=WF-003). User and pass: `canton-core`.
